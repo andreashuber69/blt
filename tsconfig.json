@@ -1,0 +1,18 @@
+{
+  // node-lts-strictest-esm is deprecated in favor of using an array to combine node-lts, esm and strictest but doing so
+  // currently leads to problems with the eslint-plugin-import package, see
+  // https://github.com/import-js/eslint-plugin-import/issues/2751
+  "extends": "@tsconfig/node-lts-strictest-esm/tsconfig.json",
+  "compilerOptions": {
+    // The base sets the option below to "error" leading to a depreciation warning with TS >= 5.0. To avoid the warning,
+    // we set it back to its default and use the new option verbatimModuleSyntax instead.
+    "importsNotUsedAsValues": "remove",
+    "importHelpers": true,
+    "outDir": "dist",
+    "sourceMap": true,
+    "verbatimModuleSyntax": true
+  },
+  "include": [
+    "src/**/*"
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "version": "0.2",
+  "words": [
+    "andreas"
+  ],
+  "dictionaries": [
+    "bash",
+    "typescript"
+  ],
+  "ignorePaths": [
+    "/coverage/**",
+    "/dist/**",
+    "/package.json"
+  ]
+}

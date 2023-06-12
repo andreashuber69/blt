@@ -1,0 +1,18 @@
+# https://github.com/andreashuber69/blt/blob/develop/README.md
+os: linux
+dist: focal
+language: node_js
+node_js:
+- lts/*
+
+branches:
+  only:
+  - develop
+  - /^release\/.*/
+  - master
+
+script:
+- npm run ci
+
+after_script:
+- npx coveralls <./coverage/lcov.info

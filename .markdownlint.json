@@ -1,0 +1,7 @@
+{
+  "default": true,
+  "first-heading-h1": { "level": 2 },
+  "line-length": { "line_length": 120 },
+  "no-inline-html": { "allowed_elements": ["a", "br", "h1", "img", "p"] },
+  "first-line-h1": false
+}
