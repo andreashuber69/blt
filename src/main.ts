@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // https://github.com/andreashuber69/blt/develop/README.md
 import { createRequire } from "node:module";
-import { createInterface } from "node:readline/promises";
-import { authenticatedLndGrpc, getUtxos } from "lightning";
+import { authenticatedLndGrpc, getFailedPayments } from "lightning";
+import { getAuthData } from "./getAuthData.js";
 
 interface PackageJson {
     readonly name: string;
@@ -17,14 +17,9 @@ try {
     const { name, version } = createRequire(import.meta.url)("../package.json") as PackageJson;
     console.log(`${name} v${version}`);
 
-    const { stdin: input, stdout: output } = process;
-    const readlineInterface = createInterface({ input, output });
-    const cert = await readlineInterface.question("cert: ");
-    const macaroon = await readlineInterface.question("macaroon: ");
-    readlineInterface.close();
-    const authenticatedLnd = authenticatedLndGrpc({ cert, macaroon, socket: "b-pi.local:10009" });
-    const { utxos } = await getUtxos(authenticatedLnd);
-    console.log(utxos);
+    const authenticatedLnd = authenticatedLndGrpc({ ...await getAuthData(), socket: "b-pi.local:10009" });
+    const result = await getFailedPayments({ ...authenticatedLnd, limit: 5 });
+    console.log(result);
 } catch (error: unknown) {
     console.error(error);
     process.exitCode = 1;
