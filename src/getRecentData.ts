@@ -6,7 +6,7 @@ const getDateRange = <const After extends string, const Before extends string>(
     days: number,
     after: After,
     before: Before,
-): Record<After | Before, string> => {
+) => {
     const now = Date.now();
 
     // The suggested fix does not seem to work
