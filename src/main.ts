@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // https://github.com/andreashuber69/blt/develop/README.md
 import { createRequire } from "node:module";
-import { authenticatedLndGrpc, getFailedPayments } from "lightning";
+import { authenticatedLndGrpc, getFailedPayments, getForwards } from "lightning";
+import type { GetForwardsArgs } from "lightning";
 import { getAuthData } from "./getAuthData.js";
 
 interface PackageJson {
@@ -18,8 +19,19 @@ try {
     console.log(`${name} v${version}`);
 
     const authenticatedLnd = authenticatedLndGrpc({ ...await getAuthData(), socket: "b-pi.local:10009" });
-    const result = await getFailedPayments({ ...authenticatedLnd, limit: 5 });
-    console.log(result);
+    const failedPayments = await getFailedPayments({ ...authenticatedLnd, limit: 5 });
+    console.log(failedPayments);
+
+    const forwardsArgs: GetForwardsArgs =
+        {
+            ...authenticatedLnd,
+            after: new Date(Date.now() - (1000 * 60 * 60 * 24 * 7)).toISOString(),
+            before: new Date(Date.now()).toISOString(),
+            limit: 50,
+        };
+
+    const forwards = await getForwards(forwardsArgs);
+    console.log(forwards);
 } catch (error: unknown) {
     console.error(error);
     process.exitCode = 1;
