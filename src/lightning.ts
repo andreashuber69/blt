@@ -1,5 +1,7 @@
-import { getForwards as lndGetForwards } from "lightning";
-import type { AuthenticatedLightningArgs, AuthenticatedLightningMethod, GetForwardsArgs } from "lightning";
+import { getFailedPayments as lndGetFailedPayments, getForwards as lndGetForwards } from "lightning";
+import type {
+    AuthenticatedLightningArgs, AuthenticatedLightningMethod, GetFailedPaymentsArgs, GetForwardsArgs,
+} from "lightning";
 
 const limit = 50;
 
@@ -37,3 +39,6 @@ const getLatestData = async <
 
 export const getForwards = async (args: Days & GetForwardsArgs) =>
     await getLatestData(lndGetForwards, args, "after", "before", "forwards");
+
+export const getFailedPayments = async (args: Days & GetFailedPaymentsArgs) =>
+    await getLatestData(lndGetFailedPayments, args, "created_after", "created_before", "payments");

@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // https://github.com/andreashuber69/blt/develop/README.md
 import { createRequire } from "node:module";
-import { authenticatedLndGrpc, getFailedPayments } from "lightning";
+import { authenticatedLndGrpc } from "lightning";
 import { getAuthData } from "./getAuthData.js";
-import { getForwards } from "./lightning.js";
+import { getFailedPayments, getForwards } from "./lightning.js";
 
 interface PackageJson {
     readonly name: string;
@@ -23,9 +23,8 @@ try {
         days: 7,
     };
 
-    const failedPayments = await getFailedPayments({ ...authenticatedLnd, limit: 5 });
+    const failedPayments = await getFailedPayments(authenticatedLnd);
     console.log(failedPayments);
-
     const forwards = await getForwards(authenticatedLnd);
     console.log(forwards);
 } catch (error: unknown) {
