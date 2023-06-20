@@ -9,7 +9,7 @@ interface Days {
 
 const toIsoString = (date: number) => new Date(date).toISOString();
 
-const getAfterBeforeData = async <
+const getLatestData = async <
     Args extends AuthenticatedLightningArgs,
     Return extends Record<Prop, unknown[]> & { next?: string },
     const After extends string,
@@ -36,4 +36,4 @@ const getAfterBeforeData = async <
 };
 
 export const getForwards = async (args: Days & GetForwardsArgs) =>
-    await getAfterBeforeData(lndGetForwards, args, "after", "before", "forwards");
+    await getLatestData(lndGetForwards, args, "after", "before", "forwards");
