@@ -26,13 +26,10 @@ const getAfterBeforeData = async <
     const baseArgs = { ...args, [after]: toIsoString(Date.now() - span), [before]: toIsoString(Date.now()) };
     let result = new Array<Return[Prop][number]>();
 
-    for (
-        // eslint-disable-next-line sort-vars
-        let pageArgs: Args = { ...baseArgs, limit }, batch = await func(pageArgs);
-        batch[prop].length === limit;
-        pageArgs = { ...baseArgs, token: batch.next }
-    ) {
+    for (let batch = await func({ ...baseArgs, limit }); batch[prop].length > 0;) {
         result = [...result, ...batch[prop]];
+        // eslint-disable-next-line no-await-in-loop
+        batch = await func({ ...baseArgs, token: batch.next });
     }
 
     return result;
