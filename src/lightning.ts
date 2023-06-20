@@ -1,35 +1,20 @@
 import { getForwards as lndGetForwards } from "lightning";
 import type { AuthenticatedLightningArgs, AuthenticatedLightningMethod, GetForwardsArgs } from "lightning";
 
-const toIsoString = (date: number) => new Date(date).toISOString();
-
-const getDateRange = <const After extends string, const Before extends string>(
-    days: number,
-    after: After,
-    before: Before,
-) => {
-    const now = Date.now();
-
-    // The suggested fix does not seem to work
-    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-    return {
-        [after]: toIsoString(now - (days * 24 * 60 * 60 * 1000)),
-        [before]: toIsoString(now),
-    } as Record<After | Before, string>;
-};
-
 const limit = 50;
 
 interface Days {
     readonly days: number;
 }
 
+const toIsoString = (date: number) => new Date(date).toISOString();
+
 const getAfterBeforeData = async <
     Args extends AuthenticatedLightningArgs,
     Return extends Record<Prop, unknown[]> & { next?: string },
-    Prop extends keyof Return,
     const After extends string,
     const Before extends string,
+    Prop extends keyof Return,
 >(
     func: AuthenticatedLightningMethod<Args, Return>,
     args: Args & Days,
@@ -37,12 +22,13 @@ const getAfterBeforeData = async <
     before: Before,
     prop: Prop,
 ) => {
-    const baseArgs = { ...args, ...getDateRange(args.days, after, before) };
-    let pageArgs: Args = { ...baseArgs, limit };
+    const span = args.days * 24 * 60 * 60 * 1000;
+    const baseArgs = { ...args, [after]: toIsoString(Date.now() - span), [before]: toIsoString(Date.now()) };
     let result = new Array<Return[Prop][number]>();
 
     for (
-        let batch = await func(pageArgs);
+        // eslint-disable-next-line sort-vars
+        let pageArgs: Args = { ...baseArgs, limit }, batch = await func(pageArgs);
         batch[prop].length === limit;
         pageArgs = { ...baseArgs, token: batch.next }
     ) {
