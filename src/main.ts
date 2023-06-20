@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // https://github.com/andreashuber69/blt/develop/README.md
 import { createRequire } from "node:module";
-import { authenticatedLndGrpc, getFailedPayments, getForwards } from "lightning";
+import { authenticatedLndGrpc, getFailedPayments } from "lightning";
 import { getAuthData } from "./getAuthData.js";
-import { getRecentData } from "./getRecentData.js";
+import { getForwards } from "./lightning.js";
 
 interface PackageJson {
     readonly name: string;
@@ -18,11 +18,15 @@ try {
     const { name, version } = createRequire(import.meta.url)("../package.json") as PackageJson;
     console.log(`${name} v${version}`);
 
-    const authenticatedLnd = authenticatedLndGrpc({ ...await getAuthData(), socket: "b-pi.local:10009" });
+    const authenticatedLnd = {
+        ...authenticatedLndGrpc({ ...await getAuthData(), socket: "b-pi.local:10009" }),
+        days: 7,
+    };
+
     const failedPayments = await getFailedPayments({ ...authenticatedLnd, limit: 5 });
     console.log(failedPayments);
 
-    const forwards = await getRecentData(getForwards, authenticatedLnd, 7);
+    const forwards = await getForwards(authenticatedLnd);
     console.log(forwards);
 } catch (error: unknown) {
     console.error(error);
