@@ -2,8 +2,8 @@
 // https://github.com/andreashuber69/blt/develop/README.md
 import { createRequire } from "node:module";
 import { authenticatedLndGrpc, getFailedPayments, getForwards } from "lightning";
-import type { GetForwardsArgs } from "lightning";
 import { getAuthData } from "./getAuthData.js";
+import { getRecentData } from "./getRecentData.js";
 
 interface PackageJson {
     readonly name: string;
@@ -22,15 +22,7 @@ try {
     const failedPayments = await getFailedPayments({ ...authenticatedLnd, limit: 5 });
     console.log(failedPayments);
 
-    const forwardsArgs: GetForwardsArgs =
-        {
-            ...authenticatedLnd,
-            after: new Date(Date.now() - (1000 * 60 * 60 * 24 * 7)).toISOString(),
-            before: new Date(Date.now()).toISOString(),
-            limit: 50,
-        };
-
-    const forwards = await getForwards(forwardsArgs);
+    const forwards = await getRecentData(getForwards, authenticatedLnd, 7);
     console.log(forwards);
 } catch (error: unknown) {
     console.error(error);
