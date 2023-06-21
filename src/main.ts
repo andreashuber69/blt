@@ -3,8 +3,8 @@
 import { createRequire } from "node:module";
 import { authenticatedLndGrpc } from "lightning";
 import { getAuthData } from "./getAuthData.js";
-import { getFailedPayments } from "./getFailedPayments.js";
 import { getForwards } from "./getForwards.js";
+import { getPayments } from "./getPayments.js";
 
 interface PackageJson {
     readonly name: string;
@@ -24,8 +24,8 @@ try {
         days: 3,
     };
 
-    const failedPayments = await getFailedPayments(authenticatedLnd);
-    console.log(failedPayments);
+    const payments = await getPayments(authenticatedLnd);
+    console.log(payments);
     const forwards = await getForwards(authenticatedLnd);
     console.log(forwards);
 } catch (error: unknown) {
