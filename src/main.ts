@@ -3,7 +3,8 @@
 import { createRequire } from "node:module";
 import { authenticatedLndGrpc } from "lightning";
 import { getAuthData } from "./getAuthData.js";
-import { getFailedPayments, getForwards } from "./lightning.js";
+import { getFailedPayments } from "./getFailedPayments.js";
+import { getForwards } from "./getForwards.js";
 
 interface PackageJson {
     readonly name: string;
@@ -20,7 +21,7 @@ try {
 
     const authenticatedLnd = {
         ...authenticatedLndGrpc({ ...await getAuthData(), socket: "b-pi.local:10009" }),
-        days: 7,
+        days: 3,
     };
 
     const failedPayments = await getFailedPayments(authenticatedLnd);

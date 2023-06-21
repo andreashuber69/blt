@@ -1,17 +1,13 @@
-import { getFailedPayments as lndGetFailedPayments, getForwards as lndGetForwards } from "lightning";
-import type {
-    AuthenticatedLightningArgs, AuthenticatedLightningMethod, GetFailedPaymentsArgs, GetForwardsArgs,
-} from "lightning";
+import type { AuthenticatedLightningArgs, AuthenticatedLightningMethod } from "lightning";
 
-const limit = 50;
+const limit = 10;
+const toIsoString = (date: number) => new Date(date).toISOString();
 
-interface Days {
+export interface Days {
     readonly days: number;
 }
 
-const toIsoString = (date: number) => new Date(date).toISOString();
-
-const getLatestData = async <
+export const getLatestData = async <
     Args extends AuthenticatedLightningArgs,
     Return extends Record<Prop, unknown[]> & { next?: string },
     const After extends string,
@@ -36,9 +32,3 @@ const getLatestData = async <
 
     return result;
 };
-
-export const getForwards = async (args: Days & GetForwardsArgs) =>
-    await getLatestData(lndGetForwards, args, "after", "before", "forwards");
-
-export const getFailedPayments = async (args: Days & GetFailedPaymentsArgs) =>
-    await getLatestData(lndGetFailedPayments, args, "created_after", "created_before", "payments");
