@@ -1,6 +1,7 @@
 import { readFile, writeFile } from "node:fs/promises";
-import { createInterface } from "node:readline/promises";
+
 import type { Interface } from "node:readline/promises";
+import { createInterface } from "node:readline/promises";
 
 const getContents = async (name: string, readLineInterface: Interface) => {
     try {
