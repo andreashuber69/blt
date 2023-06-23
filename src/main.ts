@@ -21,13 +21,14 @@ try {
 
     const authenticatedLnd = {
         ...authenticatedLndGrpc({ ...await getAuthData(), socket: "b-pi.local:10009" }),
-        days: 3,
+        days: 7,
     };
 
+    const start = Date.now();
     const payments = await getPayments(authenticatedLnd);
-    console.log(payments);
+    console.log(`${(Date.now() - start) / 1000} ${payments.length}`);
     const forwards = await getForwards(authenticatedLnd);
-    console.log(forwards);
+    console.log(`${(Date.now() - start) / 1000} ${forwards.length}`);
 } catch (error: unknown) {
     console.error(error);
     process.exitCode = 1;
