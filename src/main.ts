@@ -22,6 +22,7 @@ try {
     const authenticatedLnd = {
         ...authenticatedLndGrpc({ ...await getAuthData(), socket: "b-pi.local:10009" }),
         days: 7,
+        limit: 5,
     };
 
     const start = Date.now();

@@ -1,8 +1,8 @@
 import type { GetForwardsArgs } from "lightning";
 import { getForwards as lndGetForwards } from "lightning";
 
-import type { Days } from "./getLatestData.js";
+import type { OptionalArgs } from "./getLatestData.js";
 import { getLatestData } from "./getLatestData.js";
 
-export const getForwards = async (args: Days & GetForwardsArgs) =>
+export const getForwards = async (args: GetForwardsArgs & OptionalArgs) =>
     await getLatestData(lndGetForwards, args, "after", "before", "forwards");
