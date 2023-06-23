@@ -20,29 +20,28 @@ export const getLatestData = async <
     before: Before,
     prop: Prop,
 ) => {
-    const { limit, days } = args;
-    let baseArgs = { ...args };
-    delete baseArgs.limit;
-    delete baseArgs.days;
+    let currentArgs: Args & OptionalArgs;
 
-    if (days) {
-        const span = days * 24 * 60 * 60 * 1000;
-        baseArgs = { ...baseArgs, [after]: toIsoString(Date.now() - span), [before]: toIsoString(Date.now()) };
+    if (args.days) {
+        const span = args.days * 24 * 60 * 60 * 1000;
+        currentArgs = { ...args, [after]: toIsoString(Date.now() - span), [before]: toIsoString(Date.now()) };
+        delete currentArgs.days;
+    } else {
+        currentArgs = { ...args };
     }
 
-    let result = new Array<Return[Prop][number]>();
+    const result = new Array<Return[Prop][number]>();
 
-    let currentArgs: Args & OptionalArgs = { ...baseArgs, limit };
-    let batch: Return;
+    let getNextPage: boolean;
 
     do {
         // eslint-disable-next-line no-await-in-loop
-        batch = await func(currentArgs);
-        result = [...result, ...batch[prop]];
-        currentArgs = { ...baseArgs, token: batch.next };
-    // We only want to retrieve multiple pages if days is set, otherwise one page is enough
-    // eslint-disable-next-line no-unmodified-loop-condition
-    } while (days && batch[prop].length > 0);
+        const { [prop]: page, next: token } = await func(currentArgs);
+        result.push(...page);
+        delete currentArgs.limit;
+        currentArgs = { ...currentArgs, token };
+        getNextPage = Boolean(args.days) && page.length > 0;
+    } while (getNextPage);
 
     return result;
 };
