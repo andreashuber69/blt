@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 // https://github.com/andreashuber69/blt/develop/README.md
 import { createRequire } from "node:module";
-import { authenticatedLndGrpc } from "lightning";
-import { getAuthData } from "./getAuthData.js";
+import { connectLnd } from "./connectLnd.js";
 import { getForwards } from "./getForwards.js";
 import { getPayments } from "./getPayments.js";
 
@@ -19,11 +18,7 @@ try {
     const { name, version } = createRequire(import.meta.url)("../package.json") as PackageJson;
     console.log(`${name} v${version}`);
 
-    const authenticatedLnd = {
-        ...authenticatedLndGrpc({ ...await getAuthData(), socket: "b-pi.local:10009" }),
-        days: 7,
-        limit: 5,
-    };
+    const authenticatedLnd = await connectLnd(7);
 
     const start = Date.now();
     const payments = await getPayments(authenticatedLnd);
@@ -36,3 +31,5 @@ try {
 } finally {
     console.log("\r\n");
 }
+
+
