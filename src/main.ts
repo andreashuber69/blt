@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // https://github.com/andreashuber69/blt/develop/README.md
 import { createRequire } from "node:module";
-import { connectLnd } from "./connectLnd.js";
 import { getForwards } from "./getForwards.js";
 import { getPayments } from "./getPayments.js";
+import { connectLnd } from "./test/connectLnd.js";
 
 interface PackageJson {
     readonly name: string;

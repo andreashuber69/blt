@@ -38,7 +38,7 @@
     "prebuild": "npm run lint",
     "build": "tsc",
     "test-no-coverage": "ts-mocha --loader=ts-node/esm 'src/**/*.spec.ts'",
-    "test": "c8 --exclude 'src/**/*.spec.ts' --reporter=text --reporter=lcov npm run test-no-coverage",
+    "test": "c8 --exclude 'src/**/*.spec.ts' --exclude 'src/test/*' --reporter=text --reporter=lcov npm run test-no-coverage",
     "show-coverage": "vite 'coverage/lcov-report' --logLevel error --open",
     "preci": "npm run build",
     "ci": "npm test"
