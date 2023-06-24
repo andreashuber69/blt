@@ -3,8 +3,8 @@ import type { AuthenticatedLightningArgs, AuthenticatedLightningMethod } from "l
 const toIsoString = (date: number) => new Date(date).toISOString();
 
 export interface OptionalArgs {
-    days?: number | undefined;
-    limit?: number | undefined;
+    days?: number;
+    limit?: number;
 }
 
 export const getLatestData = async <
