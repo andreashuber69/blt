@@ -1,9 +1,9 @@
 import { expect } from "chai";
 import type { AuthenticatedLightningArgs } from "lightning";
-import type { OptionalArgs } from "../getLatestData.js";
+import type { OptionalArgs } from "../getPagedArrayData.js";
 import { connectLnd } from "./connectLnd.js";
 
-export const testArrayResultFunction = <
+export const testPagedArrayResultFunction = <
     Args extends AuthenticatedLightningArgs,
     // eslint-disable-next-line @typescript-eslint/naming-convention
     Return extends Array<{ created_at: string }>,

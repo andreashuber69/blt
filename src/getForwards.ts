@@ -1,8 +1,8 @@
 import type { GetForwardsArgs } from "lightning";
 import { getForwards as lndGetForwards } from "lightning";
 
-import type { OptionalArgs } from "./getLatestData.js";
-import { getLatestData } from "./getLatestData.js";
+import type { OptionalArgs } from "./getPagedArrayData.js";
+import { getPagedArrayData } from "./getPagedArrayData.js";
 
 export const getForwards = async (args: GetForwardsArgs & OptionalArgs) =>
-    await getLatestData(lndGetForwards, args, "after", "before", "forwards");
+    await getPagedArrayData(lndGetForwards, args, "after", "before", "forwards");

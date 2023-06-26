@@ -7,7 +7,7 @@ export interface OptionalArgs {
     limit?: number;
 }
 
-export const getLatestData = async <
+export const getPagedArrayData = async <
     Args extends AuthenticatedLightningArgs,
     Return extends Record<Prop, unknown[]> & { next?: string },
     const After extends string,

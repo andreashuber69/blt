@@ -1,4 +1,4 @@
 import { getForwards } from "./getForwards.js";
-import { testArrayResultFunction } from "./test/testArrayResultFunction.js";
+import { testPagedArrayResultFunction } from "./test/testPagedArrayResultFunction.js";
 
-testArrayResultFunction(getForwards);
+testPagedArrayResultFunction(getForwards);
