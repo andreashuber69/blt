@@ -3,7 +3,10 @@ import type { AuthenticatedLightningArgs, AuthenticatedLightningMethod, Paginati
 const toIsoString = (date: number) => new Date(date).toISOString();
 
 const getArgs = <const After extends string, const Before extends string>(
-    args: AuthenticatedLightningArgs<PaginationArgs> & OptionalArgs, after: After, before: Before, token?: string,
+    args: AuthenticatedLightningArgs<PaginationArgs> & OptionalArgs,
+    after: After,
+    before: Before,
+    token?: string,
 ) => {
     const { days, limit, token: _, ...pureArgs } = args;
 
