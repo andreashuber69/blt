@@ -1,4 +1,4 @@
-import type { AuthenticatedLightningArgs, AuthenticatedLightningMethod } from "lightning";
+import type { AuthenticatedLightningArgs, AuthenticatedLightningMethod, PaginationArgs } from "lightning";
 
 const toIsoString = (date: number) => new Date(date).toISOString();
 
@@ -8,39 +8,44 @@ export interface OptionalArgs {
 }
 
 export const getPagedArrayData = async <
-    Args extends AuthenticatedLightningArgs,
     Return extends Record<Prop, unknown[]> & { next?: string },
     const After extends string,
     const Before extends string,
     Prop extends keyof Return,
 >(
-    func: AuthenticatedLightningMethod<Args, Return>,
-    args: Args & OptionalArgs,
+    func: AuthenticatedLightningMethod<AuthenticatedLightningArgs<PaginationArgs>, Return>,
+    args: AuthenticatedLightningArgs<PaginationArgs> & OptionalArgs,
     after: After,
     before: Before,
     prop: Prop,
 ) => {
-    let currentArgs: Args & OptionalArgs;
+    // We need to remove token from args
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { days, limit, token, ...pureArgs } = args;
+    let currentArgs: AuthenticatedLightningArgs<PaginationArgs>;
 
-    if (args.days) {
-        const span = args.days * 24 * 60 * 60 * 1000;
-        currentArgs = { ...args, [after]: toIsoString(Date.now() - span), [before]: toIsoString(Date.now()) };
-        delete currentArgs.days;
+    if (days) {
+        const span = days * 24 * 60 * 60 * 1000;
+
+        currentArgs = {
+            ...pureArgs,
+            ...(limit ? { limit } : {}),
+            [after]: toIsoString(Date.now() - span),
+            [before]: toIsoString(Date.now()),
+        };
     } else {
-        currentArgs = { ...args };
+        currentArgs = { ...pureArgs };
     }
 
     const result = new Array<Return[Prop][number]>();
-
     let getNextPage: boolean;
 
     do {
         // eslint-disable-next-line no-await-in-loop
-        const { [prop]: page, next: token } = await func(currentArgs);
+        const { [prop]: page, next } = await func(currentArgs);
         result.push(...page);
-        delete currentArgs.limit;
-        currentArgs = { ...currentArgs, token };
-        getNextPage = Boolean(args.days) && page.length > 0;
+        currentArgs = { ...pureArgs, ...(next ? { token: next } : {}) };
+        getNextPage = Boolean(days) && page.length > 0;
     } while (getNextPage);
 
     return result;
