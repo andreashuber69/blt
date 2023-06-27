@@ -13,8 +13,7 @@ export const testPagedArrayResultFunction = <Return extends Array<{ created_at: 
             this.timeout(0);
 
             const resultCount = 3;
-            const authenticatedLnd = await connectLnd(undefined, resultCount);
-            const { length } = await func(authenticatedLnd);
+            const { length } = await func(await connectLnd(undefined, resultCount));
             expect(length).to.be.below(resultCount + 1);
             expect(length).to.be.above(0);
         });
@@ -24,8 +23,7 @@ export const testPagedArrayResultFunction = <Return extends Array<{ created_at: 
             this.timeout(0);
 
             const now = Date.now();
-            const authenticatedLnd = await connectLnd(1);
-            const results = await func(authenticatedLnd);
+            const results = await func(await connectLnd(1));
 
             for (const result of results) {
                 expect(now - new Date(result.created_at).valueOf()).to.be.below(24 * 60 * 60 * 1000);
