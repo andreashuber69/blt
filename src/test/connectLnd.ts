@@ -31,6 +31,8 @@ const getAuthData = async () => {
     }
 };
 
-export const connectLnd = async (days?: number, limit = 5) => ({
-    ...authenticatedLndGrpc({ ...await getAuthData(), socket: "b-pi.local:10009" }), limit, ...(days ? { days } : {}),
+export const connectLnd = async (days?: number, limit?: number) => ({
+    ...authenticatedLndGrpc({ ...await getAuthData(), socket: "b-pi.local:10009" }),
+    ...(days ? { days } : {}),
+    ...(limit ? { limit } : {}),
 });

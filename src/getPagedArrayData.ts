@@ -26,7 +26,6 @@ const getArgs = <const After extends string, const Before extends string>(
 
 export interface OptionalArgs {
     days?: number;
-    limit?: number;
 }
 
 export const getPagedArrayData = async <
