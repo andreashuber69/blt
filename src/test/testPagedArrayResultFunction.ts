@@ -8,7 +8,7 @@ export const testPagedArrayResultFunction = <Return extends Array<{ created_at: 
     func: (args: AuthenticatedLightningArgs<PaginationArgs> & OptionalArgs) => Promise<Return>,
 ) => {
     describe(func.name, () => {
-        it("should return results as requested", async function test2() {
+        it("should return an array not longer than defined by the limit", async function test() {
             // eslint-disable-next-line @typescript-eslint/no-invalid-this
             this.timeout(0);
 
@@ -19,7 +19,7 @@ export const testPagedArrayResultFunction = <Return extends Array<{ created_at: 
             expect(length).to.be.above(0);
         });
 
-        it("should return results of 1 day", async function test2() {
+        it("should return results of 1 day", async function test() {
             // eslint-disable-next-line @typescript-eslint/no-invalid-this
             this.timeout(0);
 
