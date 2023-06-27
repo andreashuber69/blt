@@ -5,9 +5,7 @@ const toIsoString = (date: number) => new Date(date).toISOString();
 const getArgs = <const After extends string, const Before extends string>(
     args: AuthenticatedLightningArgs<PaginationArgs> & OptionalArgs, after: After, before: Before, token?: string,
 ) => {
-    // We need to remove token from args
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { days, limit, token: unused, ...pureArgs } = args;
+    const { days, limit, token: _, ...pureArgs } = args;
 
     if (token) {
         return { ...pureArgs, token };

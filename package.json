@@ -44,11 +44,11 @@
     "ci": "npm test"
   },
   "dependencies": {
-    "lightning": "^9.6.0",
-    "tslib": "^2.5.3"
+    "lightning": "^9.7.1",
+    "tslib": "^2.6.0"
   },
   "devDependencies": {
-    "@andreashuber69/eslint-config": "^1.1.28",
+    "@andreashuber69/eslint-config": "^1.1.31",
     "@tsconfig/node-lts-strictest-esm": "^18.12.1",
     "@types/chai": "^4.3.5",
     "@types/mocha": "^10.0.1",
