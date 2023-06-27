@@ -12,16 +12,16 @@ const getArgs = <const After extends string, const Before extends string>(
 
     if (token) {
         return { ...pureArgs, token };
-    } else if (days) {
-        return {
-            ...pureArgs,
-            ...(limit ? { limit } : {}),
-            [after]: toIsoString(Date.now() - (days * 24 * 60 * 60 * 1000)),
-            [before]: toIsoString(Date.now()),
-        };
     }
 
-    return { ...pureArgs, ...(limit ? { limit } : {}) };
+    const argsWithLimit = { ...pureArgs, ...(limit ? { limit } : {}) };
+
+    if (days) {
+        const span = days * 24 * 60 * 60 * 1000;
+        return { ...argsWithLimit, [after]: toIsoString(Date.now() - span), [before]: toIsoString(Date.now()) };
+    }
+
+    return argsWithLimit;
 };
 
 export interface RangeArgs {
