@@ -2,7 +2,6 @@
 // https://github.com/andreashuber69/blt/develop/README.md
 import { createRequire } from "node:module";
 import { getForwards } from "./getForwards.js";
-import { getPayments } from "./getPayments.js";
 import { connectLnd } from "./test/connectLnd.js";
 
 interface PackageJson {
@@ -18,13 +17,12 @@ try {
     const { name, version } = createRequire(import.meta.url)("../package.json") as PackageJson;
     console.log(`${name} v${version}`);
 
-    const authenticatedLnd = await connectLnd(7);
+    const authenticatedLnd = await connectLnd(0.5);
 
     const start = Date.now();
-    const payments = await getPayments(authenticatedLnd);
-    console.log(`${(Date.now() - start) / 1000} ${payments.length}`);
     const forwards = await getForwards(authenticatedLnd);
     console.log(`${(Date.now() - start) / 1000} ${forwards.length}`);
+    console.log(forwards);
 } catch (error: unknown) {
     console.error(error);
     process.exitCode = 1;
