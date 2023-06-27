@@ -3,7 +3,7 @@ import type { AuthenticatedLightningArgs, AuthenticatedLightningMethod, Paginati
 const toIsoString = (date: number) => new Date(date).toISOString();
 
 const getArgs = <const After extends string, const Before extends string>(
-    args: AuthenticatedLightningArgs<PaginationArgs> & OptionalArgs,
+    args: AuthenticatedLightningArgs<PaginationArgs> & RangeArgs,
     after: After,
     before: Before,
     token?: string,
@@ -24,7 +24,8 @@ const getArgs = <const After extends string, const Before extends string>(
     return { ...pureArgs, ...(limit ? { limit } : {}) };
 };
 
-export interface OptionalArgs {
+export interface RangeArgs {
+    // From now, how many days back should timestamped data be retrieved?
     days?: number;
 }
 
@@ -35,7 +36,7 @@ export const getPagedArrayData = async <
     Prop extends keyof Return,
 >(
     func: AuthenticatedLightningMethod<AuthenticatedLightningArgs<PaginationArgs>, Return>,
-    args: AuthenticatedLightningArgs<PaginationArgs> & OptionalArgs,
+    args: AuthenticatedLightningArgs<PaginationArgs> & RangeArgs,
     after: After,
     before: Before,
     prop: Prop,

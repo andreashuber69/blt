@@ -1,11 +1,11 @@
 import { expect } from "chai";
 import type { AuthenticatedLightningArgs, PaginationArgs } from "lightning";
-import type { OptionalArgs } from "../getPagedArrayData.js";
+import type { RangeArgs } from "../getPagedArrayData.js";
 import { connectLnd } from "./connectLnd.js";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const testPagedArrayResultFunction = <Return extends Array<{ created_at: string }>>(
-    func: (args: AuthenticatedLightningArgs<PaginationArgs> & OptionalArgs) => Promise<Return>,
+    func: (args: AuthenticatedLightningArgs<PaginationArgs> & RangeArgs) => Promise<Return>,
 ) => {
     describe(func.name, () => {
         it("should return an array not longer than defined by the limit", async function test() {
