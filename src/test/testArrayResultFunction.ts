@@ -9,8 +9,7 @@ export const testArrayResultFunction = <Return extends unknown[]>(
         it("should return a non-empty array", async function test() {
             // eslint-disable-next-line @typescript-eslint/no-invalid-this
             this.timeout(0);
-            const { length } = await func(await connectLnd());
-            expect(length).to.be.above(0);
+            expect((await func(await connectLnd())).length).to.be.above(0);
         });
     });
 };
