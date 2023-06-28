@@ -29,7 +29,7 @@ export interface RangeArgs {
     days?: number;
 }
 
-export const getPagedArrayData = async <
+export const getPaginatedArrayData = async <
     Return extends Record<Prop, unknown[]> & { next?: string },
     const After extends string,
     const Before extends string,

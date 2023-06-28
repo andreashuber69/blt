@@ -1,4 +1,4 @@
 import { getPayments } from "./getPayments.js";
-import { testPagedArrayResultFunction } from "./test/testPagedArrayResultFunction.js";
+import { testPaginatedArrayResultFunction } from "./test/testPaginatedArrayResultFunction.js";
 
-testPagedArrayResultFunction(getPayments);
+testPaginatedArrayResultFunction(getPayments);

@@ -1,10 +1,10 @@
 import { expect } from "chai";
 import type { AuthenticatedLightningArgs, PaginationArgs } from "lightning";
-import type { RangeArgs } from "../getPagedArrayData.js";
+import type { RangeArgs } from "../getPaginatedArrayData.js";
 import { connectLnd } from "./connectLnd.js";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
-export const testPagedArrayResultFunction = <Return extends Array<{ created_at: string }>>(
+export const testPaginatedArrayResultFunction = <Return extends Array<{ created_at: string }>>(
     func: (args: AuthenticatedLightningArgs<PaginationArgs> & RangeArgs) => Promise<Return>,
 ) => {
     describe(func.name, () => {
