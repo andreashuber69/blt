@@ -1,6 +1,6 @@
 import type { getForwards } from "./getForwards.js";
 
-type Forward = Readonly<Awaited<ReturnType<typeof getForwards>>[number]>;
+export type Forward = Readonly<Awaited<ReturnType<typeof getForwards>>[number]>;
 
 export class NodeStatistics {
     /**
