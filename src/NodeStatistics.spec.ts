@@ -86,7 +86,7 @@ const assertKeyMatch = (sortedForwardsMap: SortedForwardsMap, channelKey: "incom
 };
 
 
-describe.only(NodeStatistics.name, () => {
+describe(NodeStatistics.name, () => {
     it("every original forward should appear in incoming and outgoing collections exactly once", () => {
         for (const originalForward of originalForwards) {
             assert(occurrenceCount(statistics.incomingForwards, originalForward) === 1);
