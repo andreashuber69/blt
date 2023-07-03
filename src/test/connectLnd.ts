@@ -23,6 +23,7 @@ const getAuthData = async () => {
 
     try {
         return {
+            socket: `${await getContents("host", readlineInterface)}:10009`,
             cert: await getContents("tls.cert", readlineInterface),
             macaroon: await getContents("admin.macaroon", readlineInterface),
         };
@@ -32,7 +33,7 @@ const getAuthData = async () => {
 };
 
 export const connectLnd = async (days?: number, limit?: number) => ({
-    ...authenticatedLndGrpc({ ...await getAuthData(), socket: "b-pi.local:10009" }),
+    ...authenticatedLndGrpc(await getAuthData()),
     ...(days ? { days } : {}),
     ...(limit ? { limit } : {}),
 });
