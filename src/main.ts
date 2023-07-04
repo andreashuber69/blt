@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // https://github.com/andreashuber69/blt/develop/README.md
 import { createRequire } from "node:module";
-import { deletePayment, getFailedPayments } from "lightning";
+import { deletePayment } from "lightning";
+import { getFailedPayments } from "./getFailedPayments.js";
 import { connectLnd } from "./test/connectLnd.js";
 
 interface PackageJson {
@@ -17,26 +18,28 @@ try {
     const { name, version } = createRequire(import.meta.url)("../package.json") as PackageJson;
     console.log(`${name} v${version}`);
 
-    const authenticatedLnd = await connectLnd();
+    const oneDay = 24 * 60 * 60 * 1000;
     const start = Date.now();
+    const after = new Date(start - (365 * oneDay)).toISOString();
+    const before = new Date(start - (30 * oneDay)).toISOString();
 
-    const { payments: failedPayments, next } =
-        await getFailedPayments({ ...authenticatedLnd, token: "{\"limit\":250,\"offset\":4057}" });
-
-    console.log(next);
-    console.log(`${(Date.now() - start) / 1000} ${failedPayments.length}`);
-
-    const oneMonth = 30 * 24 * 60 * 60 * 1000;
+    const authenticatedLnd = await connectLnd();
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    const failedPayments = getFailedPayments({ created_after: after, created_before: before, ...authenticatedLnd });
+    let deleteCount = 0;
 
     // eslint-disable-next-line @typescript-eslint/naming-convention
-    for (const { id, created_at } of failedPayments) {
-        if (Date.now() - new Date(created_at).valueOf() > oneMonth) {
-            // eslint-disable-next-line no-await-in-loop
-            await deletePayment({ ...authenticatedLnd, id });
+    for await (const { id, created_at } of failedPayments) {
+        console.log(created_at);
+        // eslint-disable-next-line no-await-in-loop
+        await deletePayment({ ...authenticatedLnd, id });
+
+        if (++deleteCount >= 1000) {
+            break;
         }
     }
 
-    console.log(`${(Date.now() - start) / 1000} ${failedPayments.length}`);
+    console.log(`${(Date.now() - start) / 1000} ${deleteCount}`);
 } catch (error: unknown) {
     console.error(error);
     process.exitCode = 1;
