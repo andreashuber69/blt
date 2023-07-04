@@ -1,8 +1,6 @@
 import type { AuthenticatedLightningArgs, AuthenticatedLightningMethod, PaginationArgs } from "lightning";
 
-const getArgs = (args: AuthenticatedLightningArgs<PaginationArgs>, token?: string) => {
-    const { limit, token: _, ...pureArgs } = args;
-
+const getArgs = ({ limit, token: _, ...pureArgs }: AuthenticatedLightningArgs<PaginationArgs>, token?: string) => {
     if (token) {
         return { ...pureArgs, token };
     }
