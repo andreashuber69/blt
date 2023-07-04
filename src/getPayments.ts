@@ -3,5 +3,5 @@ import { getPayments as lndGetPayments } from "lightning";
 
 import { getPaginatedArrayData } from "./getPaginatedArrayData.js";
 
-export const getPayments = async (args: GetPaymentsArgs) =>
-    await getPaginatedArrayData(lndGetPayments, args, "payments");
+export const getPayments = (args: GetPaymentsArgs) =>
+    getPaginatedArrayData(lndGetPayments, args, "payments");

@@ -5,18 +5,23 @@ import { connectLnd } from "./connectLnd.js";
 
 export const testPaginatedArrayResultFunction = <
     // eslint-disable-next-line @typescript-eslint/naming-convention
-    Return extends Array<{ created_at: string }>,
+    Element extends { created_at: string },
     After extends string,
     Before extends string,
 >(
-    func: (args: AuthenticatedLightningArgs<PaginationArgs>) => Promise<Return>,
+    func: (args: AuthenticatedLightningArgs<PaginationArgs>) => AsyncGenerator<Element, void, void>,
     after: After,
     before: Before,
 ) => {
     describe(func.name, () => {
-        it("should return an array not longer than defined by the limit", async () => {
+        it("should yield a number of elements not higher than defined by the limit", async () => {
             const limit = 3;
-            const { length } = await func({ limit, ...await connectLnd() });
+            let length = 0;
+
+            for await (const _ of func({ limit, ...await connectLnd() })) {
+                ++length;
+            }
+
             assert(length < limit + 1);
             assert(length > 0);
         });
@@ -26,13 +31,13 @@ export const testPaginatedArrayResultFunction = <
             const now = Date.now();
             const oneDayAgo = now - oneDay;
 
-            const results = await func({
+            const results = func({
                 [after]: new Date(oneDayAgo).toISOString(),
                 [before]: new Date(now).toISOString(),
                 ...await connectLnd(),
             });
 
-            for (const result of results) {
+            for await (const result of results) {
                 assert(now - new Date(result.created_at).valueOf() < oneDay);
             }
         });

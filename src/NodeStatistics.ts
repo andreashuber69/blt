@@ -1,6 +1,8 @@
 import type { getForwards } from "./getForwards.js";
 
-export type Forward = Readonly<Awaited<ReturnType<typeof getForwards>>[number]>;
+type YieldType<T> = T extends AsyncGenerator<infer R, unknown> ? R : never;
+
+export type Forward = YieldType<ReturnType<typeof getForwards>>;
 
 export class NodeStatistics {
     /**

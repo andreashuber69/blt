@@ -3,5 +3,4 @@ import { getForwards as lndGetForwards } from "lightning";
 
 import { getPaginatedArrayData } from "./getPaginatedArrayData.js";
 
-export const getForwards = async (args: GetForwardsArgs) =>
-    await getPaginatedArrayData(lndGetForwards, args, "forwards");
+export const getForwards = (args: GetForwardsArgs) => getPaginatedArrayData(lndGetForwards, args, "forwards");
