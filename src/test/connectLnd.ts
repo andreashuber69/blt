@@ -32,8 +32,4 @@ const getAuthData = async () => {
     }
 };
 
-export const connectLnd = async (days?: number, limit?: number) => ({
-    ...authenticatedLndGrpc(await getAuthData()),
-    ...(days ? { days } : {}),
-    ...(limit ? { limit } : {}),
-});
+export const connectLnd = async () => authenticatedLndGrpc(await getAuthData());

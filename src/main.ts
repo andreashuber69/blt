@@ -1,9 +1,7 @@
 #!/usr/bin/env node
 // https://github.com/andreashuber69/blt/develop/README.md
 import { createRequire } from "node:module";
-import { getChannels } from "./getChannels.js";
-import { getForwards } from "./getForwards.js";
-import { NodeStatistics } from "./NodeStatistics.js";
+import { deletePayment, getFailedPayments } from "lightning";
 import { connectLnd } from "./test/connectLnd.js";
 
 interface PackageJson {
@@ -19,19 +17,26 @@ try {
     const { name, version } = createRequire(import.meta.url)("../package.json") as PackageJson;
     console.log(`${name} v${version}`);
 
-    const authenticatedLnd = await connectLnd(14);
-
+    const authenticatedLnd = await connectLnd();
     const start = Date.now();
-    const channels = await getChannels(authenticatedLnd);
-    console.log(`${(Date.now() - start) / 1000} ${channels.length}`);
-    console.log(channels);
 
-    const forwards = await getForwards(authenticatedLnd);
-    console.log(`${(Date.now() - start) / 1000} ${forwards.length}`);
-    const statistics = new NodeStatistics();
-    statistics.addForwards(...forwards);
-    console.log(statistics.incomingForwards);
-    console.log(statistics.outgoingForwards);
+    const { payments: failedPayments, next } =
+        await getFailedPayments({ ...authenticatedLnd, token: "{\"limit\":250,\"offset\":4057}" });
+
+    console.log(next);
+    console.log(`${(Date.now() - start) / 1000} ${failedPayments.length}`);
+
+    const oneMonth = 30 * 24 * 60 * 60 * 1000;
+
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    for (const { id, created_at } of failedPayments) {
+        if (Date.now() - new Date(created_at).valueOf() > oneMonth) {
+            // eslint-disable-next-line no-await-in-loop
+            await deletePayment({ ...authenticatedLnd, id });
+        }
+    }
+
+    console.log(`${(Date.now() - start) / 1000} ${failedPayments.length}`);
 } catch (error: unknown) {
     console.error(error);
     process.exitCode = 1;

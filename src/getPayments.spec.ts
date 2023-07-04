@@ -1,4 +1,4 @@
 import { getPayments } from "./getPayments.js";
 import { testPaginatedArrayResultFunction } from "./test/testPaginatedArrayResultFunction.js";
 
-testPaginatedArrayResultFunction(getPayments);
+testPaginatedArrayResultFunction(getPayments, "created_after", "created_before");
