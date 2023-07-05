@@ -31,7 +31,6 @@ try {
     // eslint-disable-next-line @typescript-eslint/naming-convention
     for await (const { id, created_at } of failedPayments) {
         console.log(created_at);
-        // eslint-disable-next-line no-await-in-loop
         await deletePayment({ ...authenticatedLnd, id });
 
         if (++deleteCount >= 1000) {
@@ -46,5 +45,3 @@ try {
 } finally {
     console.log("\r\n");
 }
-
-
