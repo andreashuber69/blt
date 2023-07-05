@@ -1,6 +1,5 @@
 import type { getForwards } from "./getForwards.js";
-
-type YieldType<T> = T extends AsyncGenerator<infer R, unknown> ? R : never;
+import type { YieldType } from "./YieldType.js";
 
 export type Forward = YieldType<ReturnType<typeof getForwards>>;
 
