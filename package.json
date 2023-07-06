@@ -1,7 +1,7 @@
 {
   "name": "lightning-node-operator",
   "version": "0.1.0",
-  "description": "Automates various aspects of the operation of a lightning node based on LND",
+  "description": "Automates various aspects of the operation of an LND lightning node.",
   "keywords": [
     "bitcoin",
     "lightning",
