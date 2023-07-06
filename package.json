@@ -1,19 +1,21 @@
 {
-  "name": "blt",
-  "version": "1.0.0",
-  "description": "Bitcoin Lightning Test",
+  "name": "lightning-node-operator",
+  "version": "0.1.0",
+  "description": "Automates various aspects of the operation of a lightning node based on LND",
   "keywords": [
     "bitcoin",
     "lightning",
-    "test"
+    "node",
+    "operator",
+    "automation"
   ],
-  "homepage": "https://github.com/andreashuber69/blt/blob/develop/README.md",
+  "homepage": "https://github.com/andreashuber69/lightning-node-operator/blob/develop/README.md",
   "repository": {
     "type": "git",
-    "url": "https://github.com/andreashuber69/blt.git"
+    "url": "https://github.com/andreashuber69/lightning-node-operator.git"
   },
   "bugs": {
-    "url": "https://github.com/andreashuber69/blt/issues"
+    "url": "https://github.com/andreashuber69/lightning-node-operator/issues"
   },
   "license": "Unlicense",
   "author": {

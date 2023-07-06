@@ -1,4 +1,4 @@
-# https://github.com/andreashuber69/blt/blob/develop/README.md
+# https://github.com/andreashuber69/lightning-node-operator/blob/develop/README.md
 os: linux
 dist: focal
 language: node_js

@@ -1,3 +1,4 @@
+// https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import type { AuthenticatedLightningArgs, AuthenticatedLightningMethod, PaginationArgs } from "lightning";
 
 const getArgs = ({ limit, token: _, ...pureArgs }: AuthenticatedLightningArgs<PaginationArgs>, token?: string) => {

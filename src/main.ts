@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// https://github.com/andreashuber69/blt/develop/README.md
+// https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import { createRequire } from "node:module";
 import { deletePayment } from "lightning";
 import { getFailedPayments } from "./getFailedPayments.js";

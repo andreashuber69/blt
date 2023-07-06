@@ -1,3 +1,4 @@
+// https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import type { GetChannelsArgs } from "lightning";
 import { getChannels as lndGetChannels } from "lightning";
 

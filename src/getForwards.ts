@@ -1,3 +1,4 @@
+// https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import type { GetForwardsArgs } from "lightning";
 import { getForwards as lndGetForwards } from "lightning";
 
