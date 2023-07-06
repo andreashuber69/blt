@@ -17,7 +17,7 @@
   "bugs": {
     "url": "https://github.com/andreashuber69/lightning-node-operator/issues"
   },
-  "license": "Unlicense",
+  "license": "MIT",
   "author": {
     "name": "Andreas Huber"
   },
