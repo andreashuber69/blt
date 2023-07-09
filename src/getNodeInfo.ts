@@ -17,6 +17,14 @@ const toSortedArray = async <T extends { readonly created_at: string }>(generato
     return result;
 };
 
+class NodeInfoImpl implements NodeInfo {
+    public constructor(
+        public readonly identity: GetIdentityResult,
+        public readonly channels: Channel[],
+        public readonly forwards: Forward[],
+        public readonly payments: Payment[],
+    ) {}
+}
 
 export type Identity = Readonly<GetIdentityResult>;
 
@@ -58,11 +66,11 @@ export const getNodeInfo = async (args: AuthenticatedLightningArgs<NodeInfoArgs>
     const before = new Date(Date.now()).toISOString();
     const after = new Date(new Date(before).valueOf() - (days * 24 * 60 * 60 * 1000)).toISOString();
 
-    return {
-        identity: await getIdentity(lnd),
-        channels: await getChannels(lnd),
-        forwards: await toSortedArray(getForwards({ after, before, ...lnd })),
+    return new NodeInfoImpl(
+        await getIdentity(lnd),
+        await getChannels(lnd),
+        await toSortedArray(getForwards({ after, before, ...lnd })),
         // eslint-disable-next-line @typescript-eslint/naming-convention
-        payments: await toSortedArray(getPayments({ created_after: after, created_before: before, ...lnd })),
-    };
+        await toSortedArray(getPayments({ created_after: after, created_before: before, ...lnd })),
+    );
 };
