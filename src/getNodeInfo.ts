@@ -36,7 +36,9 @@ export type Payment = Readonly<YieldType<ReturnType<typeof getPayments>>>;
 
 /**
  * Provides various information about a node.
- * @description All time-bound data (like {@link NodeInfo.forwards}) will be sorted earliest to latest.
+ * @description All time-bound data (like {@link NodeInfo.forwards}) will be sorted earliest to latest. Apart from
+ * being sorted, the data is provided as it came from LND. Further sanitation will be necessary, for example, a forward
+ * may refer to a channel that is no longer open and will thus not appear in {@link NodeInfo.channels}.
  */
 export interface NodeInfo {
     readonly identity: Identity;
