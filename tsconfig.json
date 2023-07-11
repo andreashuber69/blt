@@ -8,6 +8,8 @@
     // we set it back to its default and use the new option verbatimModuleSyntax instead.
     "importsNotUsedAsValues": "remove",
     "importHelpers": true,
+    // The base erroneously sets "node", see https://github.com/tsconfig/bases/issues/204
+    "moduleResolution": "node16",
     "outDir": "dist",
     "sourceMap": true,
     "verbatimModuleSyntax": true
