@@ -42,6 +42,11 @@ const getRange = (days: number) => {
 
 const nodeInfoEventName = "change";
 
+type TimeBoundProperty = {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    [K in keyof NodeInfoBase]: NodeInfoBase[K] extends ReadonlyArray<{ created_at: string }> ? K : never;
+}[keyof NodeInfoBase];
+
 class NodeInfoImpl implements NodeInfo {
     public constructor(
         private readonly lnd: AuthenticatedLightningArgs,
@@ -52,7 +57,7 @@ class NodeInfoImpl implements NodeInfo {
         public readonly payments: Payment[],
     ) {}
 
-    public on(_eventName: typeof nodeInfoEventName, listener: () => void) {
+    public on(_eventName: typeof nodeInfoEventName, listener: ChangeListener) {
         this.changeEmitter.on(nodeInfoEventName, listener);
 
         if (this.changeEmitter.listenerCount(nodeInfoEventName) === 1) {
@@ -77,21 +82,16 @@ class NodeInfoImpl implements NodeInfo {
         return this;
     }
 
-    public off(_eventName: typeof nodeInfoEventName, listener: () => void) {
-        if (this.changeEmitter.listenerCount(nodeInfoEventName) === 1) {
+    public off(_eventName: typeof nodeInfoEventName, listener: ChangeListener) {
+        this.changeEmitter.off(nodeInfoEventName, listener);
+
+        if (this.changeEmitter.listenerCount(nodeInfoEventName) === 0) {
             this.channelEmitter?.removeAllListeners();
             this.forwardEmitter?.removeAllListeners();
             this.paymentEmitter?.removeAllListeners();
         }
 
-        this.changeEmitter.off(nodeInfoEventName, listener);
         return this;
-    }
-
-    // eslint-disable-next-line @typescript-eslint/naming-convention
-    private static removeOutdatedElements<T extends { created_at: string }>(array: T[], after: string) {
-        const deleteCount = array.findIndex((v) => v.created_at >= after);
-        array.splice(0, deleteCount);
     }
 
     // eslint-disable-next-line unicorn/prefer-event-target
@@ -102,7 +102,7 @@ class NodeInfoImpl implements NodeInfo {
 
     private async handleChannelOpen(_event: SubscribeToChannelsChannelOpenedEvent) {
         this.channels.splice(0, this.channels.length, ...await getChannels(this.lnd));
-        this.emitChange();
+        this.emitChange("channels");
     }
 
     private handleChannelClose({ id }: SubscribeToChannelsChannelClosedEvent) {
@@ -110,7 +110,7 @@ class NodeInfoImpl implements NodeInfo {
 
         if (index >= 0) {
             this.channels.splice(index, 1);
-            this.emitChange();
+            this.emitChange("channels");
         }
     }
 
@@ -126,21 +126,32 @@ class NodeInfoImpl implements NodeInfo {
         this.appendAndEmit(this.payments, await getSortedPayments(this.lnd, created_at, created_at), "payments");
     }
 
-    private appendAndEmit<T>(array: T[], newElements: T[], propertyName: keyof NodeInfoBase) {
+    private appendAndEmit<T>(array: T[], newElements: T[], propertyName: TimeBoundProperty) {
         array.push(...newElements);
 
         if (newElements.length !== 1) {
             console.error(`Unexpected ${propertyName}:\n${newElements}`);
         }
 
-        this.emitChange();
+        this.emitChange(propertyName);
     }
 
-    private emitChange() {
+    private emitChange(propertyName: keyof NodeInfoBase) {
         const { after } = getRange(this.days);
-        NodeInfoImpl.removeOutdatedElements(this.forwards, after);
-        NodeInfoImpl.removeOutdatedElements(this.payments, after);
-        this.changeEmitter.emit(nodeInfoEventName);
+
+        const propertyNames = [
+            propertyName,
+            ...this.keepElements("forwards", after),
+            ...this.keepElements("payments", after),
+        ];
+
+        this.changeEmitter.emit(nodeInfoEventName, [...new Set(propertyNames)]);
+    }
+
+    private keepElements(propertyName: TimeBoundProperty, after: string) {
+        const deleteCount = this[propertyName].findIndex((v) => v.created_at >= after);
+        this[propertyName].splice(0, deleteCount);
+        return deleteCount > 0 ? [propertyName] : [];
     }
 }
 
@@ -165,6 +176,8 @@ export interface NodeInfoBase {
     readonly payments: readonly Payment[];
 }
 
+export type ChangeListener = (properties: ReadonlyArray<keyof NodeInfoBase>) => void;
+
 /**
  * Provides various information about a node.
  * @description All time-bound data (like {@link NodeInfo.forwards}) will be sorted earliest to latest. Apart from
@@ -179,7 +192,7 @@ export interface NodeInfo extends NodeInfoBase {
      * @param _eventName Always ignored, just there for signature compatibility with {@link EventEmitter.on}.
      * @param listener The listener to add.
      */
-    readonly on: (_eventName: typeof nodeInfoEventName, listener: () => void) => NodeInfo;
+    readonly on: (_eventName: typeof nodeInfoEventName, listener: ChangeListener) => NodeInfo;
 
     /**
      * Removes the specified `listener` from the listener array for the event named "change".
@@ -188,7 +201,7 @@ export interface NodeInfo extends NodeInfoBase {
      * @param _eventName Always ignored, just there for signature compatibility with {@link EventEmitter.off}.
      * @param listener The listener to remove.
      */
-    readonly off: (_eventName: typeof nodeInfoEventName, listener: () => void) => NodeInfo;
+    readonly off: (_eventName: typeof nodeInfoEventName, listener: ChangeListener) => NodeInfo;
 }
 
 export interface NodeInfoArgs {
