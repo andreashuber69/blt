@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import { createRequire } from "node:module";
+import { connectLnd } from "./connectLnd.js";
 import type { NodeInfoBase } from "./getNodeInfo.js";
 import { getNodeInfo } from "./getNodeInfo.js";
-import { connectLnd } from "./test/connectLnd.js";
 
 interface PackageJson {
     readonly name: string;
