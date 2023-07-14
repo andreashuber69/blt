@@ -29,6 +29,7 @@
   "bin": "dist/main.js",
   "files": [
     "/dist/",
+    "!/dist/test/**",
     "!/**/*.spec.*",
     "!/**/*.map",
     "/*.md"
