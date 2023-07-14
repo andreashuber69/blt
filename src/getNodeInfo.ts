@@ -114,23 +114,26 @@ class NodeInfoImpl implements NodeInfo {
         }
     }
 
-    // eslint-disable-next-line @typescript-eslint/naming-convention
-    private async handleForward({ is_confirmed, at }: SubscribeToForwardsForwardEvent) {
+    private async handleForward(event: SubscribeToForwardsForwardEvent) {
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        const { is_confirmed, at } = event;
+
         if (is_confirmed) {
-            this.appendAndEmit(this.forwards, await getSortedForwards(this.lnd, at, at), "forwards");
+            this.appendAndEmit(this.forwards, await getSortedForwards(this.lnd, at, at), "forwards", event);
         }
     }
 
-    // eslint-disable-next-line @typescript-eslint/naming-convention
-    private async handlePayment({ created_at }: SubscribeToPaymentsPaymentEvent) {
-        this.appendAndEmit(this.payments, await getSortedPayments(this.lnd, created_at, created_at), "payments");
+    private async handlePayment(event: SubscribeToPaymentsPaymentEvent) {
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        const { created_at } = event;
+        this.appendAndEmit(this.payments, await getSortedPayments(this.lnd, created_at, created_at), "payments", event);
     }
 
-    private appendAndEmit<T>(array: T[], newElements: T[], propertyName: TimeBoundProperty) {
+    private appendAndEmit<T>(array: T[], newElements: T[], propertyName: TimeBoundProperty, event: unknown) {
         array.push(...newElements);
 
         if (newElements.length !== 1) {
-            console.error(`Unexpected ${propertyName}:\n${newElements}`);
+            console.error(`Can't find new ${propertyName} element with event:\n${JSON.stringify(event)}`);
         }
 
         this.emitChange(propertyName);
