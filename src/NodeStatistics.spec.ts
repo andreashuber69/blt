@@ -1,8 +1,8 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import assert from "node:assert";
 import { describe, it } from "node:test";
-import type { Forward } from "./NodeStatistics";
-import { NodeStatistics } from "./NodeStatistics";
+import type { Forward } from "./NodeStatistics.js";
+import { NodeStatistics } from "./NodeStatistics.js";
 
 const originalForwards = [
     /* eslint-disable @typescript-eslint/naming-convention */

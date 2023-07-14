@@ -9,8 +9,7 @@ const getArgs = ({ limit, token: _, ...pureArgs }: AuthenticatedLightningArgs<Pa
     return { ...pureArgs, ...(limit ? { limit } : {}) };
 };
 
-// eslint-disable-next-line func-style
-export async function *getPaginatedArrayData<
+export const getPaginatedArrayData = async function *<
     Return extends Record<Prop, unknown[]> & { next?: string },
     Prop extends keyof Return,
 >(
@@ -29,4 +28,4 @@ export async function *getPaginatedArrayData<
             yield element;
         }
     } while (!args.limit && next);
-}
+};

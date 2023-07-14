@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import { createRequire } from "node:module";
-import { deletePayment } from "lightning";
-import { getFailedPayments } from "./getFailedPayments.js";
+import type { NodeInfoBase } from "./getNodeInfo.js";
+import { getNodeInfo } from "./getNodeInfo.js";
 import { connectLnd } from "./test/connectLnd.js";
 
 interface PackageJson {
@@ -17,31 +17,30 @@ try {
     // https://stackoverflow.com/questions/58172911/typescript-compiler-options-trying-to-get-flat-output-to-outdir
     const { name, version } = createRequire(import.meta.url)("../package.json") as PackageJson;
     console.log(`${name} v${version}`);
-
-    const oneDay = 24 * 60 * 60 * 1000;
     const start = Date.now();
-    const after = new Date(start - (365 * oneDay)).toISOString();
-    const before = new Date(start - (30 * oneDay)).toISOString();
+    const nodeInfo = await getNodeInfo(await connectLnd());
 
-    const authenticatedLnd = await connectLnd();
-    // eslint-disable-next-line @typescript-eslint/naming-convention
-    const failedPayments = getFailedPayments({ created_after: after, created_before: before, ...authenticatedLnd });
-    let deleteCount = 0;
+    const handler = (properties: ReadonlyArray<keyof NodeInfoBase>) => {
+        console.log(properties);
 
-    // eslint-disable-next-line @typescript-eslint/naming-convention
-    for await (const { id, created_at } of failedPayments) {
-        console.log(created_at);
-        await deletePayment({ ...authenticatedLnd, id });
-
-        if (++deleteCount >= 1000) {
-            break;
+        for (const arrayProperty of ["channels", "forwards", "payments"] as const) {
+            if (properties.includes(arrayProperty)) {
+                console.log(`${arrayProperty}: ${nodeInfo[arrayProperty].length}`);
+            }
         }
-    }
+    };
 
-    console.log(`${(Date.now() - start) / 1000} ${deleteCount}`);
+    nodeInfo.on("change", handler);
+    console.log(`Entering event loop: ${(Date.now() - start) / 1000}`);
+
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+        // eslint-disable-next-line no-await-in-loop
+        await new Promise((resolve) => setTimeout(resolve, 10_000));
+    }
 } catch (error: unknown) {
     console.error(error);
-    process.exitCode = 1;
+    process.exit(1);
 } finally {
     console.log("\r\n");
 }
