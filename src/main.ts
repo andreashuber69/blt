@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import { createRequire } from "node:module";
+import type { NodeInfoBase } from "./getNodeInfo.js";
 import { getNodeInfo } from "./getNodeInfo.js";
 import { connectLnd } from "./test/connectLnd.js";
 
@@ -18,11 +19,28 @@ try {
     console.log(`${name} v${version}`);
     const start = Date.now();
     const nodeInfo = await getNodeInfo(await connectLnd());
-    console.log(`${(Date.now() - start) / 1000}`);
-    console.log(nodeInfo);
+
+    const handler = (properties: ReadonlyArray<keyof NodeInfoBase>) => {
+        console.log(properties);
+
+        for (const arrayProperty of ["channels", "forwards", "payments"] as const) {
+            if (properties.includes(arrayProperty)) {
+                console.log(`${arrayProperty}: ${nodeInfo[arrayProperty].length}`);
+            }
+        }
+    };
+
+    nodeInfo.on("change", handler);
+    console.log(`Entering event loop: ${(Date.now() - start) / 1000}`);
+
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+        // eslint-disable-next-line no-await-in-loop
+        await new Promise((resolve) => setTimeout(resolve, 10_000));
+    }
 } catch (error: unknown) {
     console.error(error);
-    process.exitCode = 1;
+    process.exit(1);
 } finally {
     console.log("\r\n");
 }
