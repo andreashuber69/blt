@@ -2,7 +2,7 @@
 import assert from "node:assert";
 import { describe, it } from "node:test";
 import type { AuthenticatedLightningArgs, PaginationArgs } from "lightning";
-import { connectLnd } from "./connectLnd.js";
+import { connectLnd } from "../connectLnd.js";
 
 export const testPaginatedArrayResultFunction = <
     // eslint-disable-next-line @typescript-eslint/naming-convention
