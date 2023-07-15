@@ -33,12 +33,8 @@ const getSortedPayments = async (lnd: AuthenticatedLightningArgs, after: string,
     // eslint-disable-next-line @typescript-eslint/naming-convention
     await toSortedArray(getPayments({ ...lnd, created_after: after, created_before: before }));
 
-const getRange = (days: number) => {
-    const before = new Date(Date.now()).toISOString();
-    const after = new Date(new Date(before).valueOf() - (days * 24 * 60 * 60 * 1000)).toISOString();
-
-    return { after, before };
-};
+const getRangeAfter = (after: Date) => ({ after: after.toISOString(), before: new Date(Date.now()).toISOString() });
+const getRangeDays = (days: number) => getRangeAfter(new Date(Date.now() - (days * 24 * 60 * 60 * 1000)));
 
 const nodeInfoEventName = "change";
 
@@ -140,7 +136,7 @@ class NodeInfoImpl implements NodeInfo {
     }
 
     private emitChange(propertyName: keyof NodeInfoBase) {
-        const { after } = getRange(this.days);
+        const { after } = getRangeDays(this.days);
 
         const propertyNames = [
             propertyName,
@@ -219,7 +215,7 @@ export interface NodeInfoArgs {
  */
 export const getNodeInfo = async (args: AuthenticatedLightningArgs<NodeInfoArgs>): Promise<NodeInfo> => {
     const { days = 14, ...lnd } = { ...args };
-    const { after, before } = getRange(days);
+    const { after, before } = getRangeDays(days);
 
     return new NodeInfoImpl(
         lnd,
