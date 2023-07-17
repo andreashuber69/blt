@@ -12,6 +12,7 @@ import { getIdentity, subscribeToChannels, subscribeToForwards, subscribeToPayme
 import { getChannels } from "./getChannels.js";
 import { getForwards } from "./getForwards.js";
 import { getPayments } from "./getPayments.js";
+import { getRangeDays } from "./getRange.js";
 import type { YieldType } from "./YieldType.js";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -32,9 +33,6 @@ const getSortedForwards = async (lnd: AuthenticatedLightningArgs, after: string,
 const getSortedPayments = async (lnd: AuthenticatedLightningArgs, after: string, before: string) =>
     // eslint-disable-next-line @typescript-eslint/naming-convention
     await toSortedArray(getPayments({ ...lnd, created_after: after, created_before: before }));
-
-const getRangeAfter = (after: Date) => ({ after: after.toISOString(), before: new Date(Date.now()).toISOString() });
-const getRangeDays = (days: number) => getRangeAfter(new Date(Date.now() - (days * 24 * 60 * 60 * 1000)));
 
 const nodeInfoEventName = "change";
 
