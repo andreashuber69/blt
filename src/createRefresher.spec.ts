@@ -1,0 +1,58 @@
+import assert from "node:assert";
+import { describe, it } from "node:test";
+import { createRefresher } from "./createRefresher.js";
+import { delay } from "./testHelpers/delay.js";
+
+const refresh = async (data?: string) => await Promise.resolve(`${data ?? ""}X`);
+
+class Subscriber {
+    public get listeners(): ReadonlyArray<() => void> {
+        return this.listenersImpl;
+    }
+
+    public readonly subscribe = (listener: () => void) => this.listenersImpl.push(listener);
+
+    public readonly unsubscribe = () => this.listenersImpl.splice(0, this.listenersImpl.length);
+
+    private readonly listenersImpl = new Array<() => void>();
+}
+
+describe(createRefresher.name, () => {
+    it("should return a working refresher", async () => {
+        const subscriber = new Subscriber();
+        const refresher = await createRefresher("tests", refresh, subscriber.subscribe, subscriber.unsubscribe);
+        assert(refresher.data === "X");
+        assert(subscriber.listeners.length === 0);
+        let eventCount = 0;
+
+        const listener = (eventName: string) => {
+            assert(eventName === "tests");
+            ++eventCount;
+        };
+
+        refresher.on("tests", listener);
+        await delay(100);
+        assert(eventCount === 0);
+        assert(refresher.data as string === "X");
+        assert(subscriber.listeners.length as number === 1);
+        subscriber.listeners[0]?.();
+        await delay(100);
+        assert(eventCount as number === 1);
+        assert(refresher.data as string === "XX");
+        subscriber.listeners[0]?.();
+        await delay(100);
+        assert(eventCount as number === 2);
+        assert(refresher.data as string === "XXX");
+        refresher.on("tests", listener);
+        await delay(100);
+        assert(eventCount as number === 2);
+        assert(refresher.data as string === "XXX");
+        assert(subscriber.listeners.length as number === 1);
+        subscriber.listeners[0]?.();
+        await delay(100);
+        assert(eventCount as number === 4);
+        assert(refresher.data as string === "XXXX");
+        refresher.removeAllListeners();
+        assert(subscriber.listeners.length as number === 0);
+    });
+});
