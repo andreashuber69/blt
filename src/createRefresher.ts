@@ -1,24 +1,28 @@
 import { EventEmitter } from "node:events";
+import { Scheduler } from "./Scheduler.js";
 
 class RefresherImpl<Name extends string, Data> implements Refresher<Name, Data> {
     public constructor(
         name: Name,
         public data: Data,
+        delayMilliseconds: number,
         refresh: (current?: Data) => Promise<Data>,
         private readonly subscribe: (listener: () => void) => void,
         private readonly unsubscribe: () => void,
     ) {
-        this.handle = async () => {
+        const scheduler = new Scheduler(delayMilliseconds);
+
+        this.handle = () => scheduler.call(async () => {
             this.data = await refresh(this.data);
             this.emitter.emit(name, name);
-        };
+        });
     }
 
     public on(eventName: Name, listener: (name: Name) => void) {
         this.emitter.on(eventName, listener);
 
         if (this.emitter.listenerCount(eventName) === 1) {
-            this.subscribe(this.handle as () => void);
+            this.subscribe(this.handle);
         }
 
         return this;
@@ -32,7 +36,7 @@ class RefresherImpl<Name extends string, Data> implements Refresher<Name, Data> 
 
     // eslint-disable-next-line unicorn/prefer-event-target
     private readonly emitter = new EventEmitter();
-    private readonly handle: () => Promise<void>;
+    private readonly handle: () => void;
 }
 
 /**
@@ -58,20 +62,24 @@ export interface Refresher<Name extends string, Data> {
 
 /**
  * Creates a new refresher.
- * @description Calls `refresh` and assigns the awaited result to the {@link Refresher.data} property of the returned
- * object.
+ * @description Calls `refresh` and assigns the awaited result to the {@linkcode Refresher.data} property of the
+ * returned object.
  * @param name The name of the data being refreshed. This name is passed to any listener installed with
- * {@link Refresher.on} when the data has been refreshed.
+ * {@linkcode Refresher.on} when the data has been refreshed.
  * @param refresh Refreshes the data to the current state.
- * @param subscribe Is called when the first listener is installed with a call to {@link Refresher.on}. The passed
- * listener function first calls `refresh`, assigns the awaited result to {@link Refresher.data} and then calls all
- * listeners installed through {@link Refresher.on}.
+ * @param delayMilliseconds The length of time subsequent refreshes should be delayed.
+ * @param subscribe Is called when the first listener is installed with a call to {@linkcode Refresher.on}. The passed
+ * listener function schedules a refresh and notify operation to occur after `delayMilliseconds`, if and only if no
+ * other such operation is currently scheduled or in progress. The refresh and notify operation consists of calling
+ * `refresh`, assigning the awaited result to {@linkcode Refresher.data} and finally calling all listeners installed
+ * through {@linkcode Refresher.on}.
  * @param unsubscribe Is called after each call to {@link Refresher.removeAllListeners}.
  */
 export const createRefresher = async <Name extends string, Data>(
     name: Name,
     refresh: (current?: Data) => Promise<Data>,
+    delayMilliseconds: number,
     subscribe: (listener: () => void) => void,
     unsubscribe: () => void,
 ): Promise<Refresher<Name, Data>> =>
-    new RefresherImpl(name, await refresh(), refresh, subscribe, unsubscribe);
+    new RefresherImpl(name, await refresh(), delayMilliseconds, refresh, subscribe, unsubscribe);

@@ -20,7 +20,7 @@ class Subscriber {
 describe(createRefresher.name, () => {
     it("should return a working refresher", async () => {
         const subscriber = new Subscriber();
-        const refresher = await createRefresher("tests", refresh, subscriber.subscribe, subscriber.unsubscribe);
+        const refresher = await createRefresher("tests", refresh, 50, subscriber.subscribe, subscriber.unsubscribe);
         assert(refresher.data === "X");
         assert(subscriber.listeners.length === 0);
         let eventCount = 0;
@@ -54,5 +54,32 @@ describe(createRefresher.name, () => {
         assert(refresher.data as string === "XXXX");
         refresher.removeAllListeners();
         assert(subscriber.listeners.length as number === 0);
+    });
+
+    it("should delay refresh", async () => {
+        const subscriber = new Subscriber();
+        const refresher = await createRefresher("tests", refresh, 1000, subscriber.subscribe, subscriber.unsubscribe);
+        assert(refresher.data === "X");
+        assert(subscriber.listeners.length === 0);
+        let eventCount = 0;
+
+        const listener = (eventName: string) => {
+            assert(eventName === "tests");
+            ++eventCount;
+        };
+
+        refresher.on("tests", listener);
+        await delay(1100);
+        assert(eventCount === 0);
+        assert(refresher.data as string === "X");
+        assert(subscriber.listeners.length as number === 1);
+        subscriber.listeners[0]?.();
+        await delay(100);
+        assert(eventCount === 0);
+        assert(refresher.data as string === "X");
+        assert(subscriber.listeners.length as number === 1);
+        await delay(1000);
+        assert(eventCount as number === 1);
+        assert(refresher.data as string === "XX");
     });
 });
