@@ -2,7 +2,6 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import { createRequire } from "node:module";
 import { connectLnd } from "./connectLnd.js";
-import type { NodeInfoBase } from "./getNodeInfo.js";
 import { getNodeInfo } from "./getNodeInfo.js";
 
 interface PackageJson {
@@ -18,19 +17,22 @@ try {
     const { name, version } = createRequire(import.meta.url)("../package.json") as PackageJson;
     console.log(`${name} v${version}`);
     const start = Date.now();
+
     const nodeInfo = await getNodeInfo(await connectLnd());
+    const properties = ["channels", "forwards", "payments"] as const;
 
-    const handler = (properties: ReadonlyArray<keyof NodeInfoBase>) => {
-        console.log(properties);
-
-        for (const arrayProperty of ["channels", "forwards", "payments"] as const) {
-            if (properties.includes(arrayProperty)) {
-                console.log(`${arrayProperty}: ${nodeInfo[arrayProperty].length}`);
+    const handler = (changedProperty: string) => {
+        for (const property of properties) {
+            if (changedProperty === property) {
+                console.log(`${property}: ${nodeInfo[property].data.length}`);
             }
         }
     };
 
-    nodeInfo.on("change", handler);
+    nodeInfo.channels.on("channels", handler);
+    nodeInfo.forwards.on("forwards", handler);
+    nodeInfo.payments.on("payments", handler);
+
     console.log(`Entering event loop: ${(Date.now() - start) / 1000}`);
 
     // eslint-disable-next-line no-constant-condition

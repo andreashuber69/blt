@@ -1,14 +1,7 @@
-import EventEmitter from "node:events";
-import type {
-    AuthenticatedLightningArgs,
-    GetIdentityResult,
-    SubscribeToChannelsChannelClosedEvent,
-    SubscribeToChannelsChannelOpenedEvent,
-    SubscribeToForwardsForwardEvent,
-    SubscribeToPastPaymentsPaymentEvent,
-    SubscribeToPaymentsPaymentEvent,
-} from "lightning";
+import type { AuthenticatedLightningArgs, GetIdentityResult, SubscribeToForwardsForwardEvent } from "lightning";
 import { getIdentity, subscribeToChannels, subscribeToForwards, subscribeToPayments } from "lightning";
+import { createRefresher } from "./createRefresher.js";
+import type { Refresher } from "./createRefresher.js";
 import { getChannels } from "./getChannels.js";
 import { getForwards } from "./getForwards.js";
 import { getPayments } from "./getPayments.js";
@@ -34,122 +27,61 @@ const getSortedPayments = async (lnd: AuthenticatedLightningArgs, after: string,
     // eslint-disable-next-line @typescript-eslint/naming-convention
     await toSortedArray(getPayments({ ...lnd, created_after: after, created_before: before }));
 
-const nodeInfoEventName = "change";
+const createChannels = async (args: AuthenticatedLightningArgs) => {
+    const refresh = async (c?: Channel[]) => (c ?? []).splice(0, Number.POSITIVE_INFINITY, ...await getChannels(args));
+    const emitter = subscribeToChannels(args);
 
-type TimeBoundProperty = {
-    // eslint-disable-next-line @typescript-eslint/naming-convention
-    [K in keyof NodeInfoBase]: NodeInfoBase[K] extends ReadonlyArray<{ created_at: string }> ? K : never;
-}[keyof NodeInfoBase];
+    const subscribe = (listener: () => void) => {
+        emitter.on("channel_opened", listener);
+        emitter.on("channel_closed", listener);
+    };
+
+    const unsubscribe = () => emitter.removeAllListeners();
+    return await createRefresher("channels", refresh, 10_000, subscribe, unsubscribe);
+};
+
+// eslint-disable-next-line @typescript-eslint/naming-convention
+const getEarliest = <Element extends { created_at: string }>(existing: Element[], earliestDefault: string) =>
+    new Date(new Date(existing.at(-1)?.created_at ?? earliestDefault).valueOf() + 1).toISOString();
+
+const createForwards = async (args: AuthenticatedLightningArgs, after: string, before: string) => {
+    const refresh = async (f?: Forward[]) => {
+        const result = f ?? [];
+        result.push(...await getSortedForwards(args, getEarliest(result, after), before));
+        result.splice(0, result.findIndex((v) => v.created_at >= after));
+        return result;
+    };
+
+    const emitter = subscribeToForwards(args);
+
+    const subscribe = (listener: () => void) =>
+        emitter.on("forward", (e: SubscribeToForwardsForwardEvent) => e.is_confirmed && listener());
+
+    const unsubscribe = () => emitter.removeAllListeners();
+    return await createRefresher("forwards", refresh, 10_000, subscribe, unsubscribe);
+};
+
+const createPayments = async (args: AuthenticatedLightningArgs, after: string, before: string) => {
+    const refresh = async (p?: Payment[]) => {
+        const result = p ?? [];
+        result.push(...await getSortedPayments(args, getEarliest(result, after), before));
+        result.splice(0, result.findIndex((v) => v.created_at >= after));
+        return result;
+    };
+
+    const emitter = subscribeToPayments(args);
+    const subscribe = (listener: () => void) => emitter.on("payment", listener);
+    const unsubscribe = () => emitter.removeAllListeners();
+    return await createRefresher("payments", refresh, 10_000, subscribe, unsubscribe);
+};
 
 class NodeInfoImpl implements NodeInfo {
     public constructor(
-        private readonly lnd: AuthenticatedLightningArgs,
-        private readonly days: number,
         public readonly identity: GetIdentityResult,
-        public readonly channels: Channel[],
-        public readonly forwards: Forward[],
-        public readonly payments: Payment[],
+        public readonly channels: Refresher<"channels", Channel[]>,
+        public readonly forwards: Refresher<"forwards", Forward[]>,
+        public readonly payments: Refresher<"payments", Payment[]>,
     ) {}
-
-    public on(_eventName: typeof nodeInfoEventName, listener: ChangeListener) {
-        this.changeEmitter.on(nodeInfoEventName, listener);
-
-        if (this.changeEmitter.listenerCount(nodeInfoEventName) === 1) {
-            this.channelEmitter = subscribeToChannels(this.lnd);
-
-            this.channelEmitter.on(
-                "channel_opened",
-                (e: SubscribeToChannelsChannelOpenedEvent) => void this.handleChannelOpen(e),
-            );
-
-            this.channelEmitter.on(
-                "channel_closed",
-                (e: SubscribeToChannelsChannelClosedEvent) => this.handleChannelClose(e),
-            );
-
-            this.forwardEmitter = subscribeToForwards(this.lnd);
-            this.forwardEmitter.on("forward", (e: SubscribeToForwardsForwardEvent) => void this.handleForward(e));
-            this.paymentEmitter = subscribeToPayments(this.lnd);
-            this.paymentEmitter.on("confirmed", (e: SubscribeToPastPaymentsPaymentEvent) => void this.handlePayment(e));
-        }
-
-        return this;
-    }
-
-    public off(_eventName: typeof nodeInfoEventName, listener: ChangeListener) {
-        this.changeEmitter.off(nodeInfoEventName, listener);
-
-        if (this.changeEmitter.listenerCount(nodeInfoEventName) === 0) {
-            this.channelEmitter?.removeAllListeners();
-            this.forwardEmitter?.removeAllListeners();
-            this.paymentEmitter?.removeAllListeners();
-        }
-
-        return this;
-    }
-
-    // eslint-disable-next-line unicorn/prefer-event-target
-    private readonly changeEmitter = new EventEmitter();
-    private channelEmitter?: EventEmitter;
-    private forwardEmitter?: EventEmitter;
-    private paymentEmitter?: EventEmitter;
-
-    private async handleChannelOpen(_event: SubscribeToChannelsChannelOpenedEvent) {
-        this.channels.splice(0, this.channels.length, ...await getChannels(this.lnd));
-        this.emitChange("channels");
-    }
-
-    private handleChannelClose({ id }: SubscribeToChannelsChannelClosedEvent) {
-        const index = this.channels.findIndex((v) => v.id === id);
-
-        if (index >= 0) {
-            this.channels.splice(index, 1);
-            this.emitChange("channels");
-        }
-    }
-
-    private async handleForward(event: SubscribeToForwardsForwardEvent) {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
-        const { is_confirmed, at } = event;
-
-        if (is_confirmed) {
-            this.appendAndEmit(this.forwards, await getSortedForwards(this.lnd, at, at), "forwards", event);
-        }
-    }
-
-    private async handlePayment(event: SubscribeToPaymentsPaymentEvent) {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
-        const { created_at } = event;
-        this.appendAndEmit(this.payments, await getSortedPayments(this.lnd, created_at, created_at), "payments", event);
-    }
-
-    private appendAndEmit<T>(array: T[], newElements: T[], propertyName: TimeBoundProperty, event: unknown) {
-        array.push(...newElements);
-
-        if (newElements.length !== 1) {
-            console.error(`Can't find new ${propertyName} element with event:\n${JSON.stringify(event)}`);
-        }
-
-        this.emitChange(propertyName);
-    }
-
-    private emitChange(propertyName: keyof NodeInfoBase) {
-        const { after } = getRangeDays(this.days);
-
-        const propertyNames = [
-            propertyName,
-            ...this.keepElements("forwards", after),
-            ...this.keepElements("payments", after),
-        ];
-
-        this.changeEmitter.emit(nodeInfoEventName, [...new Set(propertyNames)]);
-    }
-
-    private keepElements(propertyName: TimeBoundProperty, after: string) {
-        const deleteCount = this[propertyName].findIndex((v) => v.created_at >= after);
-        this[propertyName].splice(0, deleteCount);
-        return deleteCount > 0 ? [propertyName] : [];
-    }
 }
 
 export type Identity = Readonly<GetIdentityResult>;
@@ -160,45 +92,23 @@ export type Forward = Readonly<YieldType<ReturnType<typeof getForwards>>>;
 
 export type Payment = Readonly<YieldType<ReturnType<typeof getPayments>>>;
 
-export interface NodeInfoBase {
-    readonly identity: Identity;
-
-    /** The currently open channels. */
-    readonly channels: readonly Channel[];
-
-    /** The forwards routed through the node. */
-    readonly forwards: readonly Forward[];
-
-    /** The payments made from the node. */
-    readonly payments: readonly Payment[];
-}
-
-export type ChangeListener = (properties: ReadonlyArray<keyof NodeInfoBase>) => void;
-
 /**
  * Provides various information about a node.
  * @description All time-bound data (like {@link NodeInfo.forwards}) will be sorted earliest to latest. Apart from
  * being sorted, the data is provided as it came from LND. Further sanitation will be necessary, for example, a forward
  * may refer to a channel that is no longer open and will thus not appear in {@link NodeInfo.channels}.
  */
-export interface NodeInfo extends NodeInfoBase {
-    /**
-     * Adds the `listener` function to the end of the listener array for the event named "change".
-     * @description Behaves exactly like {@link EventEmitter.on} with the exception that only listeners for the event
-     * named `"change"` can be added.
-     * @param _eventName Always ignored, just there for signature compatibility with {@link EventEmitter.on}.
-     * @param listener The listener to add.
-     */
-    readonly on: (_eventName: typeof nodeInfoEventName, listener: ChangeListener) => NodeInfo;
+export interface NodeInfo {
+    readonly identity: Identity;
 
-    /**
-     * Removes the specified `listener` from the listener array for the event named "change".
-     * @description Behaves exactly like {@link EventEmitter.off} with the exception that only listeners for the event
-     * named `"change"` can be removed.
-     * @param _eventName Always ignored, just there for signature compatibility with {@link EventEmitter.off}.
-     * @param listener The listener to remove.
-     */
-    readonly off: (_eventName: typeof nodeInfoEventName, listener: ChangeListener) => NodeInfo;
+    /** The currently open channels. */
+    readonly channels: Refresher<"channels", Channel[]>;
+
+    /** The forwards routed through the node. */
+    readonly forwards: Refresher<"forwards", Forward[]>;
+
+    /** The payments made from the node. */
+    readonly payments: Refresher<"payments", Payment[]>;
 }
 
 export interface NodeInfoArgs {
@@ -216,11 +126,9 @@ export const getNodeInfo = async (args: AuthenticatedLightningArgs<NodeInfoArgs>
     const { after, before } = getRangeDays(days);
 
     return new NodeInfoImpl(
-        lnd,
-        days,
         await getIdentity(lnd),
-        await getChannels(lnd),
-        await getSortedForwards(lnd, after, before),
-        await getSortedPayments(lnd, after, before),
+        await createChannels(lnd),
+        await createForwards(lnd, after, before),
+        await createPayments(lnd, after, before),
     );
 };
