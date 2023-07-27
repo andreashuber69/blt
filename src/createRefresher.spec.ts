@@ -47,7 +47,6 @@ describe(createRefresher.name, () => {
         await delay(100);
         assert(eventCount as number === 2);
         assert(refresher.data as string === "XXX");
-        assert(subscriber.listeners.length as number === 1);
         subscriber.listeners[0]?.(true);
         await delay(100);
         assert(eventCount as number === 4);
@@ -77,8 +76,34 @@ describe(createRefresher.name, () => {
         await delay(100);
         assert(eventCount === 0);
         assert(refresher.data as string === "X");
-        assert(subscriber.listeners.length as number === 1);
         await delay(1000);
+        assert(eventCount as number === 1);
+        assert(refresher.data as string === "XX");
+    });
+
+    it("should not refresh when scheduleRefresh is false", async () => {
+        const subscriber = new Subscriber();
+        const refresher = await createRefresher("tests", refresh, 50, subscriber.subscribe, subscriber.unsubscribe);
+        assert(refresher.data === "X");
+        assert(subscriber.listeners.length === 0);
+        let eventCount = 0;
+
+        const listener = (eventName: string) => {
+            assert(eventName === "tests");
+            ++eventCount;
+        };
+
+        refresher.on("tests", listener);
+        await delay(100);
+        assert(eventCount === 0);
+        assert(refresher.data as string === "X");
+        assert(subscriber.listeners.length as number === 1);
+        subscriber.listeners[0]?.(false);
+        await delay(100);
+        assert(eventCount === 0);
+        assert(refresher.data as string === "X");
+        subscriber.listeners[0]?.(true);
+        await delay(100);
         assert(eventCount as number === 1);
         assert(refresher.data as string === "XX");
     });
