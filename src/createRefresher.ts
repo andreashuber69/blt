@@ -7,22 +7,22 @@ class RefresherImpl<Name extends string, Data> implements Refresher<Name, Data> 
         public data: Data,
         delayMilliseconds: number,
         refresh: (current?: Data) => Promise<Data>,
-        private readonly subscribe: (listener: (scheduleRefresh: boolean) => void) => void,
+        subscribe: (listener: (scheduleRefresh: boolean) => void) => void,
         private readonly unsubscribe: () => void,
     ) {
         const scheduler = new Scheduler(delayMilliseconds);
 
-        this.handle = (scheduleRefresh: boolean) => scheduleRefresh && scheduler.call(async () => {
+        this.subscribe = () => subscribe((scheduleRefresh: boolean) => scheduleRefresh && scheduler.call(async () => {
             this.data = await refresh(this.data);
             this.emitter.emit(name, name);
-        });
+        }));
     }
 
     public on(eventName: Name, listener: (name: Name) => void) {
         this.emitter.on(eventName, listener);
 
         if (this.emitter.listenerCount(eventName) === 1) {
-            this.subscribe(this.handle);
+            this.subscribe();
         }
 
         return this;
@@ -36,7 +36,7 @@ class RefresherImpl<Name extends string, Data> implements Refresher<Name, Data> 
 
     // eslint-disable-next-line unicorn/prefer-event-target
     private readonly emitter = new EventEmitter();
-    private readonly handle: (scheduleRefresh: boolean) => void;
+    private readonly subscribe: () => void;
 }
 
 /**
