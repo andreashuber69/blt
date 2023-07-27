@@ -31,9 +31,9 @@ const createChannels = async (args: AuthenticatedLightningArgs) => {
     const refresh = async (c?: Channel[]) => (c ?? []).splice(0, Number.POSITIVE_INFINITY, ...await getChannels(args));
     const emitter = subscribeToChannels(args);
 
-    const subscribe = (listener: () => void) => {
-        emitter.on("channel_opened", listener);
-        emitter.on("channel_closed", listener);
+    const subscribe = (listener: (scheduleRefresh: boolean) => void) => {
+        emitter.on("channel_opened", () => listener(true));
+        emitter.on("channel_closed", () => listener(true));
     };
 
     const unsubscribe = () => emitter.removeAllListeners();
@@ -54,8 +54,8 @@ const createForwards = async (args: AuthenticatedLightningArgs, after: string, b
 
     const emitter = subscribeToForwards(args);
 
-    const subscribe = (listener: () => void) =>
-        emitter.on("forward", (e: SubscribeToForwardsForwardEvent) => e.is_confirmed && listener());
+    const subscribe = (listener: (scheduleRefresh: boolean) => void) =>
+        emitter.on("forward", (e: SubscribeToForwardsForwardEvent) => listener(e.is_confirmed));
 
     const unsubscribe = () => emitter.removeAllListeners();
     return await createRefresher("forwards", refresh, 10_000, subscribe, unsubscribe);
@@ -70,7 +70,7 @@ const createPayments = async (args: AuthenticatedLightningArgs, after: string, b
     };
 
     const emitter = subscribeToPayments(args);
-    const subscribe = (listener: () => void) => emitter.on("payment", listener);
+    const subscribe = (listener: (scheduleRefresh: boolean) => void) => emitter.on("payment", () => listener(true));
     const unsubscribe = () => emitter.removeAllListeners();
     return await createRefresher("payments", refresh, 10_000, subscribe, unsubscribe);
 };

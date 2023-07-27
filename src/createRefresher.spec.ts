@@ -6,15 +6,15 @@ import { delay } from "./testHelpers/delay.js";
 const refresh = async (data?: string) => await Promise.resolve(`${data ?? ""}X`);
 
 class Subscriber {
-    public get listeners(): ReadonlyArray<() => void> {
+    public get listeners(): ReadonlyArray<(scheduleRefresh: boolean) => void> {
         return this.listenersImpl;
     }
 
-    public readonly subscribe = (listener: () => void) => this.listenersImpl.push(listener);
+    public readonly subscribe = (listener: (scheduleRefresh: boolean) => void) => this.listenersImpl.push(listener);
 
     public readonly unsubscribe = () => this.listenersImpl.splice(0, this.listenersImpl.length);
 
-    private readonly listenersImpl = new Array<() => void>();
+    private readonly listenersImpl = new Array<(scheduleRefresh: boolean) => void>();
 }
 
 describe(createRefresher.name, () => {
@@ -35,11 +35,11 @@ describe(createRefresher.name, () => {
         assert(eventCount === 0);
         assert(refresher.data as string === "X");
         assert(subscriber.listeners.length as number === 1);
-        subscriber.listeners[0]?.();
+        subscriber.listeners[0]?.(true);
         await delay(100);
         assert(eventCount as number === 1);
         assert(refresher.data as string === "XX");
-        subscriber.listeners[0]?.();
+        subscriber.listeners[0]?.(true);
         await delay(100);
         assert(eventCount as number === 2);
         assert(refresher.data as string === "XXX");
@@ -48,7 +48,7 @@ describe(createRefresher.name, () => {
         assert(eventCount as number === 2);
         assert(refresher.data as string === "XXX");
         assert(subscriber.listeners.length as number === 1);
-        subscriber.listeners[0]?.();
+        subscriber.listeners[0]?.(true);
         await delay(100);
         assert(eventCount as number === 4);
         assert(refresher.data as string === "XXXX");
@@ -73,7 +73,7 @@ describe(createRefresher.name, () => {
         assert(eventCount === 0);
         assert(refresher.data as string === "X");
         assert(subscriber.listeners.length as number === 1);
-        subscriber.listeners[0]?.();
+        subscriber.listeners[0]?.(true);
         await delay(100);
         assert(eventCount === 0);
         assert(refresher.data as string === "X");

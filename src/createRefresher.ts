@@ -7,12 +7,12 @@ class RefresherImpl<Name extends string, Data> implements Refresher<Name, Data> 
         public data: Data,
         delayMilliseconds: number,
         refresh: (current?: Data) => Promise<Data>,
-        private readonly subscribe: (listener: () => void) => void,
+        private readonly subscribe: (listener: (scheduleRefresh: boolean) => void) => void,
         private readonly unsubscribe: () => void,
     ) {
         const scheduler = new Scheduler(delayMilliseconds);
 
-        this.handle = () => scheduler.call(async () => {
+        this.handle = (scheduleRefresh: boolean) => scheduleRefresh && scheduler.call(async () => {
             this.data = await refresh(this.data);
             this.emitter.emit(name, name);
         });
@@ -36,7 +36,7 @@ class RefresherImpl<Name extends string, Data> implements Refresher<Name, Data> 
 
     // eslint-disable-next-line unicorn/prefer-event-target
     private readonly emitter = new EventEmitter();
-    private readonly handle: () => void;
+    private readonly handle: (scheduleRefresh: boolean) => void;
 }
 
 /**
@@ -69,17 +69,17 @@ export interface Refresher<Name extends string, Data> {
  * @param refresh Refreshes the data to the current state.
  * @param delayMilliseconds The length of time subsequent refreshes should be delayed.
  * @param subscribe Is called when the first listener is installed with a call to {@linkcode Refresher.on}. The passed
- * listener function schedules a refresh and notify operation to occur after `delayMilliseconds`, if and only if no
- * other such operation is currently scheduled or in progress. The refresh and notify operation consists of calling
- * `refresh`, assigning the awaited result to {@linkcode Refresher.data} and finally calling all listeners installed
- * through {@linkcode Refresher.on}.
+ * listener function schedules a refresh and notify operation to occur after `delayMilliseconds`, if and only if
+ * `scheduleRefresh` is truthy **and** no other such operation is currently scheduled or in progress. The refresh and
+ * notify operation consists of calling `refresh`, assigning the awaited result to {@linkcode Refresher.data} and
+ * finally calling all listeners installed through {@linkcode Refresher.on}.
  * @param unsubscribe Is called after each call to {@link Refresher.removeAllListeners}.
  */
 export const createRefresher = async <Name extends string, Data>(
     name: Name,
     refresh: (current?: Data) => Promise<Data>,
     delayMilliseconds: number,
-    subscribe: (listener: () => void) => void,
+    subscribe: (listener: (scheduleRefresh: boolean) => void) => void,
     unsubscribe: () => void,
 ): Promise<Refresher<Name, Data>> =>
     new RefresherImpl(name, await refresh(), delayMilliseconds, refresh, subscribe, unsubscribe);
