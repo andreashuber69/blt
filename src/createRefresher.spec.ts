@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import { describe, it } from "node:test";
+import type { RefresherArgs } from "./createRefresher.js";
 import { createRefresher } from "./createRefresher.js";
 import { delay } from "./testHelpers/delay.js";
 
@@ -20,7 +21,16 @@ class Subscriber {
 describe(createRefresher.name, () => {
     it("should return a working refresher", async () => {
         const subscriber = new Subscriber();
-        const refresher = await createRefresher("tests", refresh, 50, subscriber.subscribe, subscriber.unsubscribe);
+
+        const args: RefresherArgs<"tests", string> = {
+            name: "tests",
+            refresh,
+            delayMilliseconds: 50,
+            subscribe: subscriber.subscribe,
+            unsubscribe: subscriber.unsubscribe,
+        };
+
+        const refresher = await createRefresher(args);
         assert(refresher.data === "X");
         assert(subscriber.listeners.length === 0);
         let eventCount = 0;
@@ -57,7 +67,16 @@ describe(createRefresher.name, () => {
 
     it("should delay refresh", async () => {
         const subscriber = new Subscriber();
-        const refresher = await createRefresher("tests", refresh, 1000, subscriber.subscribe, subscriber.unsubscribe);
+
+        const args: RefresherArgs<"tests", string> = {
+            name: "tests",
+            refresh,
+            delayMilliseconds: 1000,
+            subscribe: subscriber.subscribe,
+            unsubscribe: subscriber.unsubscribe,
+        };
+
+        const refresher = await createRefresher(args);
         assert(refresher.data === "X");
         assert(subscriber.listeners.length === 0);
         let eventCount = 0;
@@ -83,7 +102,16 @@ describe(createRefresher.name, () => {
 
     it("should not refresh when scheduleRefresh is false", async () => {
         const subscriber = new Subscriber();
-        const refresher = await createRefresher("tests", refresh, 50, subscriber.subscribe, subscriber.unsubscribe);
+
+        const args: RefresherArgs<"tests", string> = {
+            name: "tests",
+            refresh,
+            delayMilliseconds: 50,
+            subscribe: subscriber.subscribe,
+            unsubscribe: subscriber.unsubscribe,
+        };
+
+        const refresher = await createRefresher(args);
         assert(refresher.data === "X");
         assert(subscriber.listeners.length === 0);
         let eventCount = 0;

@@ -1,7 +1,7 @@
 import type { AuthenticatedLightningArgs, GetIdentityResult, SubscribeToForwardsForwardEvent } from "lightning";
 import { getIdentity, subscribeToChannels, subscribeToForwards, subscribeToPayments } from "lightning";
 import { createRefresher } from "./createRefresher.js";
-import type { Refresher } from "./createRefresher.js";
+import type { Refresher, RefresherArgs } from "./createRefresher.js";
 import { getChannels } from "./getChannels.js";
 import { getForwards } from "./getForwards.js";
 import { getPayments } from "./getPayments.js";
@@ -28,16 +28,20 @@ const getSortedPayments = async (lnd: AuthenticatedLightningArgs, after: string,
     await toSortedArray(getPayments({ ...lnd, created_after: after, created_before: before }));
 
 const createChannels = async (args: AuthenticatedLightningArgs) => {
-    const refresh = async (c?: Channel[]) => (c ?? []).splice(0, Number.POSITIVE_INFINITY, ...await getChannels(args));
     const emitter = subscribeToChannels(args);
 
-    const subscribe = (listener: (scheduleRefresh: boolean) => void) => {
-        emitter.on("channel_opened", () => listener(true));
-        emitter.on("channel_closed", () => listener(true));
+    const refresherArgs: RefresherArgs<"channels", Channel[]> = {
+        name: "channels",
+        refresh: async (c?: Channel[]) => (c ?? []).splice(0, Number.POSITIVE_INFINITY, ...await getChannels(args)),
+        delayMilliseconds: 10_000,
+        subscribe: (listener: (scheduleRefresh: boolean) => void) => {
+            emitter.on("channel_opened", () => listener(true));
+            emitter.on("channel_closed", () => listener(true));
+        },
+        unsubscribe: () => emitter.removeAllListeners(),
     };
 
-    const unsubscribe = () => emitter.removeAllListeners();
-    return await createRefresher("channels", refresh, 10_000, subscribe, unsubscribe);
+    return await createRefresher(refresherArgs);
 };
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -45,34 +49,42 @@ const getEarliest = <Element extends { created_at: string }>(existing: Element[]
     new Date(new Date(existing.at(-1)?.created_at ?? earliestDefault).valueOf() + 1).toISOString();
 
 const createForwards = async (args: AuthenticatedLightningArgs, after: string, before: string) => {
-    const refresh = async (f?: Forward[]) => {
-        const result = f ?? [];
-        result.push(...await getSortedForwards(args, getEarliest(result, after), before));
-        result.splice(0, result.findIndex((v) => v.created_at >= after));
-        return result;
-    };
-
     const emitter = subscribeToForwards(args);
 
-    const subscribe = (listener: (scheduleRefresh: boolean) => void) =>
-        emitter.on("forward", (e: SubscribeToForwardsForwardEvent) => listener(e.is_confirmed));
+    const refresherArgs: RefresherArgs<"forwards", Forward[]> = {
+        name: "forwards",
+        refresh: async (f?: Forward[]) => {
+            const result = f ?? [];
+            result.push(...await getSortedForwards(args, getEarliest(result, after), before));
+            result.splice(0, result.findIndex((v) => v.created_at >= after));
+            return result;
+        },
+        delayMilliseconds: 10_000,
+        subscribe: (listener: (scheduleRefresh: boolean) => void) =>
+            emitter.on("forward", (e: SubscribeToForwardsForwardEvent) => listener(e.is_confirmed)),
+        unsubscribe: () => emitter.removeAllListeners(),
+    };
 
-    const unsubscribe = () => emitter.removeAllListeners();
-    return await createRefresher("forwards", refresh, 10_000, subscribe, unsubscribe);
+    return await createRefresher(refresherArgs);
 };
 
 const createPayments = async (args: AuthenticatedLightningArgs, after: string, before: string) => {
-    const refresh = async (p?: Payment[]) => {
-        const result = p ?? [];
-        result.push(...await getSortedPayments(args, getEarliest(result, after), before));
-        result.splice(0, result.findIndex((v) => v.created_at >= after));
-        return result;
+    const emitter = subscribeToPayments(args);
+
+    const refresherArgs: RefresherArgs<"payments", Payment[]> = {
+        name: "payments",
+        refresh: async (p?: Payment[]) => {
+            const result = p ?? [];
+            result.push(...await getSortedPayments(args, getEarliest(result, after), before));
+            result.splice(0, result.findIndex((v) => v.created_at >= after));
+            return result;
+        },
+        delayMilliseconds: 10_000,
+        subscribe: (listener: (scheduleRefresh: boolean) => void) => emitter.on("payment", () => listener(true)),
+        unsubscribe: () => emitter.removeAllListeners(),
     };
 
-    const emitter = subscribeToPayments(args);
-    const subscribe = (listener: (scheduleRefresh: boolean) => void) => emitter.on("payment", () => listener(true));
-    const unsubscribe = () => emitter.removeAllListeners();
-    return await createRefresher("payments", refresh, 10_000, subscribe, unsubscribe);
+    return await createRefresher(refresherArgs);
 };
 
 class NodeInfoImpl implements NodeInfo {
