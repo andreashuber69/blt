@@ -1,118 +1,15 @@
-// eslint-disable-next-line max-classes-per-file
-import type { AuthenticatedLightningArgs, GetIdentityResult, SubscribeToForwardsForwardEvent } from "lightning";
-import { getIdentity, subscribeToChannels, subscribeToForwards, subscribeToPayments } from "lightning";
+// https://github.com/andreashuber69/lightning-node-operator/develop/README.md
+import type { AuthenticatedLightningArgs, GetIdentityResult } from "lightning";
+import { getIdentity } from "lightning";
+import type { Channel } from "./Channel.js";
+import { ChannelsRefresherArgs } from "./ChannelsRefresherArgs.js";
 import { createRefresher } from "./createRefresher.js";
-import type { Refresher, RefresherArgs } from "./createRefresher.js";
-import { getChannels } from "./getChannels.js";
-import { getForwards } from "./getForwards.js";
-import { getPayments } from "./getPayments.js";
-import { getRangeDays } from "./getRange.js";
-import type { TimeBoundElement } from "./TimeBoundElement.js";
-import type { YieldType } from "./YieldType.js";
-
-const toSortedArray = async <Element extends TimeBoundElement>(generator: AsyncGenerator<Element>) => {
-    const result = new Array<Element>();
-
-    for await (const element of generator) {
-        result.push(element);
-    }
-
-    result.sort((a, b) => a.created_at.localeCompare(b.created_at));
-    return result;
-};
-
-const getSortedForwards = async (lnd: AuthenticatedLightningArgs, after: string, before: string) =>
-    await toSortedArray(getForwards({ ...lnd, after, before }));
-
-const getSortedPayments = async (lnd: AuthenticatedLightningArgs, after: string, before: string) =>
-    // eslint-disable-next-line @typescript-eslint/naming-convention
-    await toSortedArray(getPayments({ ...lnd, created_after: after, created_before: before }));
-
-
-abstract class ArrayRefresherArgs<Name extends string, Element> implements RefresherArgs<Name, Element[]> {
-    public abstract readonly name: Name;
-
-    public abstract readonly refresh: (current?: Element[]) => Promise<Element[]>;
-
-    public readonly delayMilliseconds = 10_000;
-
-    public abstract readonly subscribe: (listener: (scheduleRefresh: boolean) => void) => void;
-
-    public abstract readonly unsubscribe: () => void;
-
-    public constructor(protected readonly args: AuthenticatedLightningArgs) {}
-}
-
-abstract class FullRefresherArgs<Name extends string, Element> extends ArrayRefresherArgs<Name, Element> {
-    public readonly refresh = async (current?: Element[]) => {
-        const result = current ?? [];
-        result.splice(0, Number.POSITIVE_INFINITY, ...await this.getAllData());
-        return result;
-    };
-
-    protected abstract readonly getAllData: () => Promise<Element[]>;
-}
-
-// eslint-disable-next-line max-len
-abstract class PartialRefresherArgs<Name extends string, Element extends TimeBoundElement> extends ArrayRefresherArgs<Name, Element> {
-    public constructor(args: AuthenticatedLightningArgs, private readonly days: number) {
-        super(args);
-    }
-
-    public readonly refresh = async (current?: Element[]) => {
-        const result = current ?? [];
-        const { after, before } = getRangeDays(this.days);
-        result.splice(0, result.findIndex((v) => v.created_at >= after)); // Delete old data
-        const getDataAfter = new Date(new Date(result.at(-1)?.created_at ?? after).valueOf() + 1).toISOString();
-        result.push(...await this.getDataRange(getDataAfter, before));
-        return result;
-    };
-
-    protected abstract readonly getDataRange: (after: string, before: string) => Promise<Element[]>;
-}
-
-class ChannelsRefresherArgs extends FullRefresherArgs<"channels", Channel> {
-    public override readonly name = "channels";
-
-    public override readonly subscribe = (listener: (scheduleRefresh: boolean) => void) => {
-        this.emitter.on("channel_opened", () => listener(true));
-        this.emitter.on("channel_closed", () => listener(true));
-    };
-
-    public override readonly unsubscribe = () => this.emitter.removeAllListeners();
-
-    protected override readonly getAllData = async () => await getChannels(this.args);
-
-    private readonly emitter = subscribeToChannels(this.args);
-}
-
-class ForwardsRefresherArgs extends PartialRefresherArgs<"forwards", Forward> {
-    public override readonly name = "forwards";
-
-    public override readonly subscribe = (listener: (scheduleRefresh: boolean) => void) =>
-        this.emitter.on("forward", (e: SubscribeToForwardsForwardEvent) => listener(e.is_confirmed));
-
-    public override unsubscribe = () => this.emitter.removeAllListeners();
-
-    protected override getDataRange = async (after: string, before: string) =>
-        await getSortedForwards(this.args, after, before);
-
-    private readonly emitter = subscribeToForwards(this.args);
-}
-
-class PaymentsRefresherArgs extends PartialRefresherArgs<"payments", Payment> {
-    public override readonly name = "payments";
-
-    public override readonly subscribe = (listener: (scheduleRefresh: boolean) => void) =>
-        this.emitter.on("payment", () => listener(true));
-
-    public override unsubscribe = () => this.emitter.removeAllListeners();
-
-    protected override getDataRange = async (after: string, before: string) =>
-        await getSortedPayments(this.args, after, before);
-
-    private readonly emitter = subscribeToPayments(this.args);
-}
+import type { Refresher } from "./createRefresher.js";
+import type { Forward } from "./Forward.js";
+import { ForwardsRefresherArgs } from "./ForwardsRefresherArgs.js";
+import type { Identity } from "./Identity.js";
+import type { Payment } from "./Payment.js";
+import { PaymentsRefresherArgs } from "./PaymentsRefresherArgs.js";
 
 class NodeInfoImpl implements NodeInfo {
     public constructor(
@@ -122,14 +19,6 @@ class NodeInfoImpl implements NodeInfo {
         public readonly payments: Refresher<"payments", Payment[]>,
     ) {}
 }
-
-export type Identity = Readonly<GetIdentityResult>;
-
-export type Channel = Readonly<Awaited<ReturnType<typeof getChannels>>[number]>;
-
-export type Forward = Readonly<YieldType<ReturnType<typeof getForwards>>>;
-
-export type Payment = Readonly<YieldType<ReturnType<typeof getPayments>>>;
 
 /**
  * Provides various information about a node.
