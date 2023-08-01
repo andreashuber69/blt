@@ -1,5 +1,4 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
-import type { AuthenticatedLightningArgs } from "lightning";
 import type { RefresherArgs } from "./createRefresher.js";
 
 export abstract class ArrayRefresherArgs<Name extends string, Element> implements RefresherArgs<Name, Element[]> {
@@ -12,6 +11,4 @@ export abstract class ArrayRefresherArgs<Name extends string, Element> implement
     public abstract readonly subscribe: (listener: (scheduleRefresh: boolean) => void) => void;
 
     public abstract readonly unsubscribe: () => void;
-
-    public constructor(protected readonly args: AuthenticatedLightningArgs) {}
 }

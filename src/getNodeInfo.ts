@@ -8,6 +8,7 @@ import type { Refresher } from "./createRefresher.js";
 import type { Forward } from "./Forward.js";
 import { ForwardsRefresherArgs } from "./ForwardsRefresherArgs.js";
 import type { Identity } from "./Identity.js";
+import type { TimeBoundArgs } from "./PartialRefresherArgs.js";
 import type { Payment } from "./Payment.js";
 import { PaymentsRefresherArgs } from "./PaymentsRefresherArgs.js";
 
@@ -39,23 +40,18 @@ export interface NodeInfo {
     readonly payments: Refresher<"payments", Payment[]>;
 }
 
-export interface NodeInfoArgs {
-    /** Retrieve time-bound data up to this number of days in the past. */
-    readonly days?: number;
-}
-
 /**
  * Gets information about the node.
  * @param args The authenticated LND API object, optionally combined with a number how far back historical data should
  * be retrieved. The default is 14 days.
  */
-export const getNodeInfo = async (args: AuthenticatedLightningArgs<NodeInfoArgs>): Promise<NodeInfo> => {
-    const { days = 14, ...lnd } = { ...args };
+export const getNodeInfo = async (args: AuthenticatedLightningArgs<Partial<TimeBoundArgs>>): Promise<NodeInfo> => {
+    const sanitized = { days: 14, ...args };
 
     return new NodeInfoImpl(
-        await getIdentity(lnd),
-        await createRefresher(new ChannelsRefresherArgs(lnd)),
-        await createRefresher(new ForwardsRefresherArgs(lnd, days)),
-        await createRefresher(new PaymentsRefresherArgs(lnd, days)),
+        await getIdentity(sanitized),
+        await createRefresher(new ChannelsRefresherArgs(sanitized)),
+        await createRefresher(new ForwardsRefresherArgs(sanitized)),
+        await createRefresher(new PaymentsRefresherArgs(sanitized)),
     );
 };
