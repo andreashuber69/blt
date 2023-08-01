@@ -2,7 +2,6 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import { createRequire } from "node:module";
 import { connectLnd } from "./connectLnd.js";
-import type { NodeInfoBase } from "./getNodeInfo.js";
 import { getNodeInfo } from "./getNodeInfo.js";
 
 interface PackageJson {
@@ -18,19 +17,24 @@ try {
     const { name, version } = createRequire(import.meta.url)("../package.json") as PackageJson;
     console.log(`${name} v${version}`);
     const start = Date.now();
+
     const nodeInfo = await getNodeInfo(await connectLnd());
+    const timeBoundProperties = ["forwards", "payments"] as const;
 
-    const handler = (properties: ReadonlyArray<keyof NodeInfoBase>) => {
-        console.log(properties);
-
-        for (const arrayProperty of ["channels", "forwards", "payments"] as const) {
-            if (properties.includes(arrayProperty)) {
-                console.log(`${arrayProperty}: ${nodeInfo[arrayProperty].length}`);
-            }
-        }
+    const handler = (property: "channels") => {
+        const { [property]: { data } } = nodeInfo;
+        console.log(`Changed ${property}: ${data.length}`);
     };
 
-    nodeInfo.on("change", handler);
+    const timeBoundHandler = (property: (typeof timeBoundProperties)[number]) => {
+        const { [property]: { data } } = nodeInfo;
+        console.log(`Changed ${property}: ${data.at(0)?.created_at} - ${data.at(-1)?.created_at}`);
+    };
+
+    nodeInfo.channels.on("channels", handler);
+    nodeInfo.forwards.on("forwards", timeBoundHandler);
+    nodeInfo.payments.on("payments", timeBoundHandler);
+
     console.log(`Entering event loop: ${(Date.now() - start) / 1000}`);
 
     // eslint-disable-next-line no-constant-condition
