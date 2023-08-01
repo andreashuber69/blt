@@ -3,10 +3,10 @@ import assert from "node:assert";
 import { describe, it } from "node:test";
 import type { AuthenticatedLightningArgs, PaginationArgs } from "lightning";
 import { connectLnd } from "../connectLnd.js";
+import type { TimeBoundElement } from "../TimeBoundElement.js";
 
 export const testPaginatedArrayResultFunction = <
-    // eslint-disable-next-line @typescript-eslint/naming-convention
-    Element extends { created_at: string },
+    Element extends TimeBoundElement,
     After extends string,
     Before extends string,
 >(
