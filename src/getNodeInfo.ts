@@ -48,6 +48,10 @@ export interface NodeInfo {
 export const getNodeInfo = async (args: AuthenticatedLightningArgs<Partial<TimeBoundArgs>>): Promise<NodeInfo> => {
     const sanitized = { days: 14, ...args };
 
+    if (typeof sanitized.days !== "number" || sanitized.days <= 0) {
+        throw new Error(`args.days is invalid: ${args.days}.`);
+    }
+
     return new NodeInfoImpl(
         await getIdentity(sanitized),
         await createRefresher(new ChannelsRefresherArgs(sanitized)),
