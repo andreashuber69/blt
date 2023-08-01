@@ -19,19 +19,21 @@ try {
     const start = Date.now();
 
     const nodeInfo = await getNodeInfo(await connectLnd());
-    const properties = ["channels", "forwards", "payments"] as const;
+    const timeBoundProperties = ["forwards", "payments"] as const;
 
-    const handler = (changedProperty: string) => {
-        for (const property of properties) {
-            if (changedProperty === property) {
-                console.log(`${property}: ${nodeInfo[property].data.length}`);
-            }
-        }
+    const handler = (property: "channels") => {
+        const { [property]: { data } } = nodeInfo;
+        console.log(`Changed ${property}: ${data.length}`);
+    };
+
+    const timeBoundHandler = (property: (typeof timeBoundProperties)[number]) => {
+        const { [property]: { data } } = nodeInfo;
+        console.log(`Changed ${property}: ${data.at(0)?.created_at} - ${data.at(-1)?.created_at}`);
     };
 
     nodeInfo.channels.on("channels", handler);
-    nodeInfo.forwards.on("forwards", handler);
-    nodeInfo.payments.on("payments", handler);
+    nodeInfo.forwards.on("forwards", timeBoundHandler);
+    nodeInfo.payments.on("payments", timeBoundHandler);
 
     console.log(`Entering event loop: ${(Date.now() - start) / 1000}`);
 
