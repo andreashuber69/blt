@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import { createRequire } from "node:module";
+import { deletePayment } from "lightning";
+
 import { connectLnd } from "./connectLnd.js";
+import { getFailedPayments } from "./getFailedPayments.js";
 import { getNodeInfo } from "./getNodeInfo.js";
 
 interface PackageJson {
@@ -17,23 +20,42 @@ try {
     const { name, version } = createRequire(import.meta.url)("../package.json") as PackageJson;
     console.log(`${name} v${version}`);
     const start = Date.now();
+    console.log("Connecting...");
+    const authenticatedLnd = await connectLnd();
 
-    const nodeInfo = await getNodeInfo(await connectLnd());
-    const timeBoundProperties = ["forwards", "payments"] as const;
+    console.log("Deleting old failed payments...");
 
-    const handler = (property: "channels") => {
-        const { [property]: { data } } = nodeInfo;
-        console.log(`Changed ${property}: ${data.length}`);
+    const getFailedPaymentArgs = {
+        ...authenticatedLnd,
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        created_after: new Date(2018, 0).toISOString(),
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        created_before: new Date(Date.now() - (14 * 24 * 60 * 60 * 1000)).toISOString(),
     };
 
-    const timeBoundHandler = (property: (typeof timeBoundProperties)[number]) => {
+    for await (const { id } of getFailedPayments(getFailedPaymentArgs)) {
+        await deletePayment({ ...authenticatedLnd, id });
+    }
+
+    console.log("Getting node info...");
+    const nodeInfo = await getNodeInfo(authenticatedLnd);
+
+    const handler = (property: "channels") => console.log(`${property}: ${nodeInfo[property].data.length}`);
+
+    const timeBoundHandler = (property: "forwards" | "payments") => {
         const { [property]: { data } } = nodeInfo;
-        console.log(`Changed ${property}: ${data.at(0)?.created_at} - ${data.at(-1)?.created_at}`);
+        console.log(`${property}: ${data.at(0)?.created_at} - ${data.at(-1)?.created_at}`);
     };
 
-    nodeInfo.channels.on("channels", handler);
-    nodeInfo.forwards.on("forwards", timeBoundHandler);
-    nodeInfo.payments.on("payments", timeBoundHandler);
+    const channels = "channels";
+    handler(channels);
+    nodeInfo.channels.on(channels, handler);
+    const forwards = "forwards";
+    timeBoundHandler(forwards);
+    nodeInfo.forwards.on(forwards, timeBoundHandler);
+    const payments = "payments";
+    timeBoundHandler(payments);
+    nodeInfo.payments.on(payments, timeBoundHandler);
 
     console.log(`Entering event loop: ${(Date.now() - start) / 1000}`);
 

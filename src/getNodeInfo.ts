@@ -1,5 +1,5 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
-import type { AuthenticatedLightningArgs, GetIdentityResult } from "lightning";
+import type { AuthenticatedLightningArgs } from "lightning";
 import { getIdentity } from "lightning";
 import type { Channel } from "./Channel.js";
 import { ChannelsRefresherArgs } from "./ChannelsRefresherArgs.js";
@@ -14,12 +14,16 @@ import { PaymentsRefresherArgs } from "./PaymentsRefresherArgs.js";
 
 class NodeInfoImpl implements NodeInfo {
     public constructor(
-        public readonly identity: GetIdentityResult,
+        public readonly identity: Identity,
         public readonly channels: Refresher<"channels", Channel[]>,
         public readonly forwards: Refresher<"forwards", Forward[]>,
         public readonly payments: Refresher<"payments", Payment[]>,
     ) {}
 }
+
+type RefresherProperty<Name extends string, Data> = {
+    readonly [name in Name]: Refresher<Name, Data>;
+};
 
 /**
  * Provides various information about a node.
@@ -27,17 +31,11 @@ class NodeInfoImpl implements NodeInfo {
  * being sorted, the data is provided as it came from LND. Further sanitation will be necessary, for example, a forward
  * may refer to a channel that is no longer open and will thus not appear in {@link NodeInfo.channels}.
  */
-export interface NodeInfo {
+export interface NodeInfo extends
+    RefresherProperty<"channels", Channel[]>,
+    RefresherProperty<"forwards", Forward[]>,
+    RefresherProperty<"payments", Payment[]> {
     readonly identity: Identity;
-
-    /** The currently open channels. */
-    readonly channels: Refresher<"channels", Channel[]>;
-
-    /** The forwards routed through the node. */
-    readonly forwards: Refresher<"forwards", Forward[]>;
-
-    /** The payments made from the node. */
-    readonly payments: Refresher<"payments", Payment[]>;
 }
 
 /**
