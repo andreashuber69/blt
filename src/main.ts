@@ -44,7 +44,7 @@ try {
 
     const timeBoundHandler = (property: "forwards" | "payments") => {
         const { [property]: { data } } = nodeInfo;
-        console.log(`${property}: ${data.at(0)?.created_at} - ${data.at(-1)?.created_at}`);
+        console.log(`${property}: ${data.length} ${data.at(0)?.created_at} - ${data.at(-1)?.created_at}`);
     };
 
     const channels = "channels";
