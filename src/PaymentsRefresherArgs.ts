@@ -9,7 +9,7 @@ export class PaymentsRefresherArgs extends PartialRefresherArgs<"payments", Paym
     public override readonly name = "payments";
 
     public override readonly subscribe = (listener: (scheduleRefresh: boolean) => void) =>
-        this.emitter.on("payment", () => listener(true));
+        this.emitter.on("confirmed", () => listener(true));
 
     public override readonly unsubscribe = () => this.emitter.removeAllListeners();
 
