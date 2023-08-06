@@ -17,5 +17,11 @@ export class ForwardsRefresherArgs extends PartialRefresherArgs<"forwards", Forw
     protected override readonly getDataRange = async (after: string, before: string) =>
         await toSortedArray(getForwards({ ...this.args, after, before }));
 
+    // eslint-disable-next-line @typescript-eslint/class-methods-use-this
+    protected override readonly equals = (a: Forward, b: Forward) =>
+        a.created_at === b.created_at && a.fee === b.fee && a.fee_mtokens === b.fee_mtokens && a.tokens === b.tokens &&
+        a.mtokens === b.mtokens && a.incoming_channel === b.incoming_channel &&
+        a.outgoing_channel === b.outgoing_channel;
+
     private readonly emitter = subscribeToForwards(this.args);
 }

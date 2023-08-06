@@ -17,5 +17,8 @@ export class PaymentsRefresherArgs extends PartialRefresherArgs<"payments", Paym
         // eslint-disable-next-line @typescript-eslint/naming-convention
         await toSortedArray(getPayments({ ...this.args, created_after: after, created_before: before }));
 
+    // eslint-disable-next-line @typescript-eslint/class-methods-use-this
+    protected override readonly equals = (a: Payment, b: Payment) => a.id === b.id;
+
     private readonly emitter = subscribeToPayments(this.args);
 }
