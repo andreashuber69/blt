@@ -1,6 +1,6 @@
 {
   "name": "lightning-node-operator",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Automates various aspects of the operation of an LND lightning node.",
   "keywords": [
     "bitcoin",
@@ -43,7 +43,7 @@
     "build-code-doc": "typedoc 'src/**/*.ts' --excludePrivate --out 'code-doc'",
     "show-code-doc": "vite 'code-doc' --logLevel error --open",
     "test-no-coverage": "node --loader tsx --test src/*.spec.ts",
-    "test": "c8 --exclude 'src/*.spec.ts' --exclude 'src/test/*' --reporter=text --reporter=lcov npm run test-no-coverage",
+    "test": "c8 --exclude 'src/*.spec.ts' --exclude 'src/testHelpers/*' --reporter=text --reporter=lcov npm run test-no-coverage",
     "show-coverage": "vite 'coverage/lcov-report' --logLevel error --open",
     "ci": "npm run build"
   },
