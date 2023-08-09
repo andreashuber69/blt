@@ -4,8 +4,10 @@ import { createRequire } from "node:module";
 import { deletePayment } from "lightning";
 
 import { connectLnd } from "./connectLnd.js";
+import type { Forward } from "./Forward.js";
 import { getFailedPayments } from "./getFailedPayments.js";
 import { getNodeInfo } from "./getNodeInfo.js";
+import type { Payment } from "./Payment.js";
 
 interface PackageJson {
     readonly name: string;
@@ -44,7 +46,8 @@ try {
 
     const timeBoundHandler = (property: "forwards" | "payments") => {
         const { [property]: { data } } = nodeInfo;
-        console.log(`${property}: ${data.length} ${data.at(0)?.created_at} - ${data.at(-1)?.created_at}`);
+        const aux = data.at(-1)?.tokens;
+        console.log(`${property}: ${data.length} ${data.at(0)?.created_at} - ${data.at(-1)?.created_at} ${aux}`);
     };
 
     const channels = "channels";
