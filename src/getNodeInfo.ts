@@ -1,6 +1,8 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
+import EventEmitter from "node:events";
 import type { AuthenticatedLightningArgs } from "lightning";
 import { getIdentity } from "lightning";
+
 import type { Channel } from "./Channel.js";
 import { ChannelsRefresherArgs } from "./ChannelsRefresherArgs.js";
 import { createRefresher } from "./createRefresher.js";
@@ -12,13 +14,54 @@ import type { TimeBoundArgs } from "./PartialRefresherArgs.js";
 import type { Payment } from "./Payment.js";
 import { PaymentsRefresherArgs } from "./PaymentsRefresherArgs.js";
 
+const connectionLost = "connectionLost";
+
 class NodeInfoImpl implements NodeInfo {
     public constructor(
+        private readonly args: AuthenticatedLightningArgs<TimeBoundArgs>,
         public readonly identity: Identity,
         public readonly channels: Refresher<"channels", Channel[]>,
         public readonly forwards: Refresher<"forwards", Forward[]>,
         public readonly payments: Refresher<"payments", Payment[]>,
     ) {}
+
+    public on(eventName: typeof connectionLost, listener: () => void) {
+        this.emitter.on(eventName, listener);
+
+        if (this.emitter.listenerCount(connectionLost) === 1) {
+            void this.aliveLoop();
+        }
+
+        return this;
+    }
+
+    public removeAllListeners(eventName?: typeof connectionLost | undefined) {
+        this.emitter.removeAllListeners(eventName);
+        return this;
+    }
+
+    // eslint-disable-next-line unicorn/prefer-event-target
+    private readonly emitter = new EventEmitter();
+
+    private async aliveLoop() {
+        while (this.emitter.listenerCount(connectionLost) > 0) {
+            try {
+                // eslint-disable-next-line no-await-in-loop
+                await getIdentity(this.args);
+                // eslint-disable-next-line no-await-in-loop
+                await new Promise((resolve) => setTimeout(resolve, 10_000));
+            } catch {
+                try {
+                    this.emitter.emit(connectionLost);
+                } finally {
+                    this.channels.removeAllListeners();
+                    this.forwards.removeAllListeners();
+                    this.payments.removeAllListeners();
+                    this.removeAllListeners();
+                }
+            }
+        }
+    }
 }
 
 type RefresherProperty<Name extends string, Data> = {
@@ -36,6 +79,22 @@ export interface NodeInfo extends
     RefresherProperty<"forwards", Forward[]>,
     RefresherProperty<"payments", Payment[]> {
     readonly identity: Identity;
+
+    /**
+     * Adds the `listener` function to the end of the listeners array for the event named `eventName`.
+     * @description Behaves exactly like {@linkcode EventEmitter.on}. The registered listener is called whenever
+     * the connection to the node has been lost permanently. All listeners added to {@linkcode NodeInfo.channels},
+     * {@linkcode NodeInfo.forwards}, {@linkcode NodeInfo.payments} and {@linkcode NodeInfo.on} will be removed
+     * automatically. Client code dependent on being notified about changes should discard this object and create a new
+     * one via {@linkcode getNodeInfo}.
+     */
+    readonly on: (eventName: typeof connectionLost, listener: () => void) => this;
+
+    /**
+     * Removes all listeners, or those of the specified `eventName`.
+     * @description Behaves exactly like {@link EventEmitter.removeAllListeners}.
+     */
+    readonly removeAllListeners: (eventName?: typeof connectionLost) => this;
 }
 
 /**
@@ -51,6 +110,7 @@ export const getNodeInfo = async (args: AuthenticatedLightningArgs<Partial<TimeB
     }
 
     return new NodeInfoImpl(
+        sanitized,
         await getIdentity(sanitized),
         await createRefresher(new ChannelsRefresherArgs(sanitized)),
         await createRefresher(new ForwardsRefresherArgs(sanitized)),
