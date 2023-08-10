@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import { createRequire } from "node:module";
+import type { AuthenticatedLightningArgs } from "lightning";
 import { deletePayment } from "lightning";
 
 import { connectLnd } from "./connectLnd.js";
@@ -12,17 +13,7 @@ interface PackageJson {
     readonly version: string;
 }
 
-try {
-    // Simple typescript alternatives to calling require below lead to the outDir containing the file package.json and
-    // the directory src with all the code. This is due to how the ts compiler automatically determines the rootDir from
-    // imports. There are alternatives to calling require, but these seem overly complicated:
-    // https://stackoverflow.com/questions/58172911/typescript-compiler-options-trying-to-get-flat-output-to-outdir
-    const { name, version } = createRequire(import.meta.url)("../package.json") as PackageJson;
-    console.log(`${name} v${version}`);
-    const start = Date.now();
-    console.log("Connecting...");
-    const authenticatedLnd = await connectLnd();
-
+const deleteOldFailedPayments = async (authenticatedLnd: AuthenticatedLightningArgs) => {
     console.log("Deleting old failed payments...");
 
     const getFailedPaymentArgs = {
@@ -33,10 +24,17 @@ try {
         created_before: new Date(Date.now() - (14 * 24 * 60 * 60 * 1000)).toISOString(),
     };
 
+    let count = 0;
+
     for await (const { id } of getFailedPayments(getFailedPaymentArgs)) {
         await deletePayment({ ...authenticatedLnd, id });
+        ++count;
     }
 
+    console.log(`Deleted ${count} old failed payments.`);
+};
+
+const getInfo = async (authenticatedLnd: AuthenticatedLightningArgs) => {
     console.log("Getting node info...");
     const nodeInfo = await getNodeInfo(authenticatedLnd);
 
@@ -57,6 +55,21 @@ try {
     const payments = "payments";
     timeBoundHandler(payments);
     nodeInfo.payments.on(payments, timeBoundHandler);
+};
+
+try {
+    // Simple typescript alternatives to calling require below lead to the outDir containing the file package.json and
+    // the directory src with all the code. This is due to how the ts compiler automatically determines the rootDir from
+    // imports. There are alternatives to calling require, but these seem overly complicated:
+    // https://stackoverflow.com/questions/58172911/typescript-compiler-options-trying-to-get-flat-output-to-outdir
+    const { name, version } = createRequire(import.meta.url)("../package.json") as PackageJson;
+    console.log(`${name} v${version}`);
+    const start = Date.now();
+    console.log("Connecting...");
+    const authenticatedLnd = await connectLnd();
+
+    await deleteOldFailedPayments(authenticatedLnd);
+    await getInfo(authenticatedLnd);
 
     console.log(`Entering event loop: ${(Date.now() - start) / 1000}`);
 
