@@ -3,7 +3,6 @@ import { subscribeToPayments } from "lightning";
 import { getPayments } from "./getPayments.js";
 import { PartialRefresherArgs } from "./PartialRefresherArgs.js";
 import type { Payment } from "./Payment.js";
-import { toSortedArray } from "./toSortedArray.js";
 
 export class PaymentsRefresherArgs extends PartialRefresherArgs<"payments", Payment> {
     public override readonly name = "payments";
@@ -13,9 +12,9 @@ export class PaymentsRefresherArgs extends PartialRefresherArgs<"payments", Paym
 
     public override readonly unsubscribe = () => this.emitter.removeAllListeners();
 
-    protected override readonly getDataRange = async (after: string, before: string) =>
+    protected override readonly getDataRange =
         // eslint-disable-next-line @typescript-eslint/naming-convention
-        await toSortedArray(getPayments({ ...this.args, created_after: after, created_before: before }));
+        (after: string, before: string) => getPayments({ ...this.args, created_after: after, created_before: before });
 
     // eslint-disable-next-line @typescript-eslint/class-methods-use-this
     protected override readonly equals = (a: Payment, b: Payment) => a.id === b.id;

@@ -4,7 +4,6 @@ import { subscribeToForwards } from "lightning";
 import type { Forward } from "./Forward.js";
 import { getForwards } from "./getForwards.js";
 import { PartialRefresherArgs } from "./PartialRefresherArgs.js";
-import { toSortedArray } from "./toSortedArray.js";
 
 export class ForwardsRefresherArgs extends PartialRefresherArgs<"forwards", Forward> {
     public override readonly name = "forwards";
@@ -14,8 +13,8 @@ export class ForwardsRefresherArgs extends PartialRefresherArgs<"forwards", Forw
 
     public override readonly unsubscribe = () => this.emitter.removeAllListeners();
 
-    protected override readonly getDataRange = async (after: string, before: string) =>
-        await toSortedArray(getForwards({ ...this.args, after, before }));
+    protected override readonly getDataRange =
+        (after: string, before: string) => getForwards({ ...this.args, after, before });
 
     // eslint-disable-next-line @typescript-eslint/class-methods-use-this
     protected override readonly equals = (a: Forward, b: Forward) =>
