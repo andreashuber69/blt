@@ -4,10 +4,8 @@ import { createRequire } from "node:module";
 import { deletePayment } from "lightning";
 
 import { connectLnd } from "./connectLnd.js";
-import type { Forward } from "./Forward.js";
 import { getFailedPayments } from "./getFailedPayments.js";
 import { getNodeInfo } from "./getNodeInfo.js";
-import type { Payment } from "./Payment.js";
 
 interface PackageJson {
     readonly name: string;
