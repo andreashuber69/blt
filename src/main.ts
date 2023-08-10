@@ -55,6 +55,7 @@ const getInfo = async (authenticatedLnd: AuthenticatedLightningArgs) => {
     const payments = "payments";
     timeBoundHandler(payments);
     nodeInfo.payments.on(payments, timeBoundHandler);
+    return nodeInfo;
 };
 
 try {
@@ -64,23 +65,32 @@ try {
     // https://stackoverflow.com/questions/58172911/typescript-compiler-options-trying-to-get-flat-output-to-outdir
     const { name, version } = createRequire(import.meta.url)("../package.json") as PackageJson;
     console.log(`${name} v${version}`);
-    const start = Date.now();
-    console.log("Connecting...");
-    const authenticatedLnd = await connectLnd();
-
-    await deleteOldFailedPayments(authenticatedLnd);
-    await getInfo(authenticatedLnd);
-
-    console.log(`Entering event loop: ${(Date.now() - start) / 1000}`);
-
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
-        // eslint-disable-next-line no-await-in-loop
-        await new Promise((resolve) => setTimeout(resolve, 10_000));
-    }
 } catch (error: unknown) {
     console.error(error);
     process.exit(1);
 } finally {
     console.log("\r\n");
+}
+
+console.log("Connecting...");
+
+// eslint-disable-next-line no-constant-condition
+while (true) {
+    try {
+        const start = Date.now();
+        /* eslint-disable no-await-in-loop */
+        const lnd = await connectLnd();
+        await deleteOldFailedPayments(lnd);
+        const info = await getInfo(lnd);
+        console.log(`Connected successfully: ${(Date.now() - start) / 1000}`);
+        await new Promise<void>((resolve) => info.on("connectionLost", resolve));
+        console.log("\r\nConnection lost!");
+    } catch (error: unknown) {
+        console.log("\r\n\r\nEncountered error:");
+        console.error(error);
+    }
+
+    console.log("\r\n\r\nAttempting to reconnect...");
+    await new Promise((resolve) => setTimeout(resolve, 10_000));
+    /* eslint-enable no-await-in-loop */
 }
