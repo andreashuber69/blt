@@ -2,7 +2,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import type { Interface } from "node:readline/promises";
 import { createInterface } from "node:readline/promises";
-import { authenticatedLndGrpc } from "lightning";
+import { authenticatedLndGrpc, getIdentity } from "lightning";
 
 const getContents = async (name: string, readLineInterface: Interface) => {
     try {
@@ -33,4 +33,8 @@ const getAuthData = async () => {
     }
 };
 
-export const connectLnd = async () => authenticatedLndGrpc(await getAuthData());
+export const connectLnd = async () => {
+    const result = authenticatedLndGrpc(await getAuthData());
+    await getIdentity(result);
+    return result;
+};
