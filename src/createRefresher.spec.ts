@@ -11,9 +11,9 @@ class Subscriber {
         return this.listenersImpl;
     }
 
-    public readonly subscribe = (listener: (scheduleRefresh: boolean) => void) => this.listenersImpl.push(listener);
+    public readonly on = (listener: (scheduleRefresh: boolean) => void) => this.listenersImpl.push(listener);
 
-    public readonly unsubscribe = () => this.listenersImpl.splice(0, this.listenersImpl.length);
+    public readonly removeAllListeners = () => this.listenersImpl.splice(0, this.listenersImpl.length);
 
     private readonly listenersImpl = new Array<(scheduleRefresh: boolean) => void>();
 }
@@ -26,8 +26,8 @@ describe(createRefresher.name, () => {
             name: "tests",
             refresh,
             delayMilliseconds: 50,
-            subscribe: subscriber.subscribe,
-            unsubscribe: subscriber.unsubscribe,
+            on: subscriber.on,
+            removeAllListeners: subscriber.removeAllListeners,
         };
 
         const refresher = await createRefresher(args);
@@ -72,8 +72,8 @@ describe(createRefresher.name, () => {
             name: "tests",
             refresh,
             delayMilliseconds: 1000,
-            subscribe: subscriber.subscribe,
-            unsubscribe: subscriber.unsubscribe,
+            on: subscriber.on,
+            removeAllListeners: subscriber.removeAllListeners,
         };
 
         const refresher = await createRefresher(args);
@@ -107,8 +107,8 @@ describe(createRefresher.name, () => {
             name: "tests",
             refresh,
             delayMilliseconds: 50,
-            subscribe: subscriber.subscribe,
-            unsubscribe: subscriber.unsubscribe,
+            on: subscriber.on,
+            removeAllListeners: subscriber.removeAllListeners,
         };
 
         const refresher = await createRefresher(args);

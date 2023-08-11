@@ -7,12 +7,12 @@ import { getChannels } from "./getChannels.js";
 export class ChannelsRefresherArgs extends FullRefresherArgs<"channels", Channel> {
     public override readonly name = "channels";
 
-    public override subscribe(listener: (scheduleRefresh: boolean) => void) {
+    public override on(listener: (scheduleRefresh: boolean) => void) {
         this.emitter.on("channel_opened", () => listener(true));
         this.emitter.on("channel_closed", () => listener(true));
     }
 
-    public override unsubscribe() {
+    public override removeAllListeners() {
         this.emitter.removeAllListeners();
     }
 

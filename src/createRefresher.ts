@@ -3,11 +3,11 @@ import { Scheduler } from "./Scheduler.js";
 
 class RefresherImpl<Name extends string, Data> implements Refresher<Name, Data> {
     public constructor(args: RefresherArgs<Name, Data>, public data: Data) {
-        const { name, refresh, delayMilliseconds, subscribe, unsubscribe } = args;
-        this.unsubscribe = unsubscribe;
+        const { name, refresh, delayMilliseconds, on, removeAllListeners } = args;
+        this.removeAllListenersImpl = removeAllListeners;
         const scheduler = new Scheduler(delayMilliseconds);
 
-        this.subscribe = () => subscribe((scheduleRefresh: boolean) => scheduleRefresh && scheduler.call(async () => {
+        this.onChanged = () => on((scheduleRefresh: boolean) => scheduleRefresh && scheduler.call(async () => {
             this.data = await refresh(this.data);
             this.emitter.emit(name, name);
         }));
@@ -17,7 +17,7 @@ class RefresherImpl<Name extends string, Data> implements Refresher<Name, Data> 
         this.emitter.on(eventName, listener);
 
         if (this.emitter.listenerCount(eventName) === 1) {
-            this.subscribe();
+            this.onChanged();
         }
 
         return this;
@@ -25,14 +25,14 @@ class RefresherImpl<Name extends string, Data> implements Refresher<Name, Data> 
 
     public removeAllListeners(eventName?: Name) {
         this.emitter.removeAllListeners(eventName);
-        this.unsubscribe();
+        this.removeAllListenersImpl();
         return this;
     }
 
     // eslint-disable-next-line unicorn/prefer-event-target
     private readonly emitter = new EventEmitter();
-    private readonly subscribe: () => void;
-    private readonly unsubscribe: () => void;
+    private readonly onChanged: () => void;
+    private readonly removeAllListenersImpl: () => void;
 }
 
 export interface RefresherArgs<Name extends string, Data> {
@@ -56,10 +56,10 @@ export interface RefresherArgs<Name extends string, Data> {
      * assigning the awaited result to {@linkcode Refresher.data} and finally calling all listeners installed through
      * {@linkcode Refresher.on}.
      */
-    readonly subscribe: (listener: (scheduleRefresh: boolean) => void) => void;
+    readonly on: (listener: (scheduleRefresh: boolean) => void) => void;
 
     /** Is called after each call to {@linkcode Refresher.removeAllListeners}. */
-    readonly unsubscribe: () => void;
+    readonly removeAllListeners: () => void;
 }
 
 /**

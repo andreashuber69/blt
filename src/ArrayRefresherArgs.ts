@@ -12,7 +12,7 @@ export abstract class ArrayRefresherArgs<Name extends string, Element> implement
 
     public readonly delayMilliseconds = 10_000;
 
-    public abstract subscribe(listener: (scheduleRefresh: boolean) => void): void;
+    public abstract on(listener: (scheduleRefresh: boolean) => void): void;
 
-    public abstract unsubscribe(): void;
+    public abstract removeAllListeners(): void;
 }
