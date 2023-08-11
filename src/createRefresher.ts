@@ -23,8 +23,8 @@ class RefresherImpl<Name extends string, Data> implements Refresher<Name, Data> 
         return this;
     }
 
-    public removeAllListeners(eventName?: Name) {
-        this.emitter.removeAllListeners(eventName);
+    public removeAllListeners() {
+        this.emitter.removeAllListeners();
         this.removeAllListenersImpl();
         return this;
     }
@@ -77,10 +77,11 @@ export interface Refresher<Name extends string, Data> {
     readonly on: (eventName: Name, listener: (name: Name) => void) => this;
 
     /**
-     * Removes all listeners, or those of the specified `eventName`.
-     * @description Behaves exactly like {@linkcode EventEmitter.removeAllListeners}.
+     * Removes all listeners.
+     * @description Behaves like {@linkcode EventEmitter.removeAllListeners}, without the option to only remove the
+     * listeners for a given event.
      */
-    readonly removeAllListeners: (eventName?: Name) => this;
+    readonly removeAllListeners: () => this;
 }
 
 /**
