@@ -8,19 +8,24 @@ import { PartialRefresherArgs } from "./PartialRefresherArgs.js";
 export class ForwardsRefresherArgs extends PartialRefresherArgs<"forwards", Forward> {
     public override readonly name = "forwards";
 
-    public override readonly subscribe = (listener: (scheduleRefresh: boolean) => void) =>
+    public override subscribe(listener: (scheduleRefresh: boolean) => void) {
         this.emitter.on("forward", (e: SubscribeToForwardsForwardEvent) => listener(e.is_confirmed));
+    }
 
-    public override readonly unsubscribe = () => this.emitter.removeAllListeners();
+    public override unsubscribe() {
+        this.emitter.removeAllListeners();
+    }
 
-    protected override readonly getDataRange =
-        (after: string, before: string) => getForwards({ ...this.args, after, before });
+    protected override getDataRange(after: string, before: string) {
+        return getForwards({ ...this.args, after, before });
+    }
 
     // eslint-disable-next-line @typescript-eslint/class-methods-use-this
-    protected override readonly equals = (a: Forward, b: Forward) =>
-        a.created_at === b.created_at && a.fee === b.fee && a.fee_mtokens === b.fee_mtokens && a.tokens === b.tokens &&
-        a.mtokens === b.mtokens && a.incoming_channel === b.incoming_channel &&
+    protected override equals(a: Forward, b: Forward) {
+        return a.created_at === b.created_at && a.fee === b.fee && a.fee_mtokens === b.fee_mtokens &&
+        a.tokens === b.tokens && a.mtokens === b.mtokens && a.incoming_channel === b.incoming_channel &&
         a.outgoing_channel === b.outgoing_channel;
+    }
 
     private readonly emitter = subscribeToForwards(this.args);
 }

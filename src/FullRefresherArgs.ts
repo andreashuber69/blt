@@ -13,12 +13,12 @@ export abstract class FullRefresherArgs<Name extends string, Element> extends Ar
         super();
     }
 
-    public override readonly refresh = async (current?: Element[]) => {
+    public override async refresh(current?: Element[]) {
         const result = current ?? [];
         result.splice(0, Number.POSITIVE_INFINITY, ...await this.getAllData());
         return result;
-    };
+    }
 
     /** Gets all data. */
-    protected abstract readonly getAllData: () => Promise<Element[]>;
+    protected abstract getAllData(): Promise<Element[]>;
 }

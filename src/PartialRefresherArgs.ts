@@ -22,7 +22,7 @@ export abstract class PartialRefresherArgs<Name extends string, Element extends 
         super();
     }
 
-    public override readonly refresh = async (current?: Element[]) => {
+    public override async refresh(current?: Element[]) {
         const result = current ?? [];
         const { after, before } = getRangeDays(this.args.days);
         result.splice(0, result.findIndex((v) => v.created_at >= after)); // Delete old data
@@ -35,18 +35,15 @@ export abstract class PartialRefresherArgs<Name extends string, Element extends 
         const newElements = await toSortedArray(this.getDataRange(lastElementCreatedAt, before));
         result.push(...this.eliminateDuplicates(result, newElements));
         return result;
-    };
+    }
 
     /** Gets data in the time period defined by `after` and `before`, both inclusive. */
-    protected abstract readonly getDataRange: (after: string, before: string) => AsyncGenerator<Element>;
+    protected abstract getDataRange(after: string, before: string): AsyncGenerator<Element>;
 
     /** Returns `true` when both elements are equal, otherwise `false`. */
-    protected abstract readonly equals: (a: Element, b: Element) => boolean;
+    protected abstract equals(a: Element, b: Element): boolean;
 
-    private readonly eliminateDuplicates = (
-        currentElements: readonly Element[],
-        possiblyNewElements: readonly Element[],
-    ) => {
+    private eliminateDuplicates(currentElements: readonly Element[], possiblyNewElements: readonly Element[]) {
         const result = new Array<Element>();
 
         // Since the CPU time needed to execute this method is linear with the product of possiblyNewElements.length and
@@ -67,11 +64,11 @@ export abstract class PartialRefresherArgs<Name extends string, Element extends 
         }
 
         return result;
-    };
+    }
 
     // We need to reference class type parameters which is not possible for static methods.
     // eslint-disable-next-line @typescript-eslint/class-methods-use-this
-    private readonly getLastElementsCreatedAtSameTime = (currentElements: readonly Element[]) => {
+    private getLastElementsCreatedAtSameTime(currentElements: readonly Element[]) {
         let index = currentElements.length - 1;
 
         for (; (index >= 0) && (currentElements[index]?.created_at === currentElements.at(-1)?.created_at); --index) {
@@ -79,5 +76,5 @@ export abstract class PartialRefresherArgs<Name extends string, Element extends 
         }
 
         return currentElements.slice(index + 1);
-    };
+    }
 }
