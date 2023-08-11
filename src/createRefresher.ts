@@ -3,12 +3,12 @@ import { Scheduler } from "./Scheduler.js";
 
 class RefresherImpl<Name extends string, Data> implements Refresher<Name, Data> {
     public constructor(args: RefresherArgs<Name, Data>, public data: Data) {
-        const { name, refresh, delayMilliseconds, on, removeAllListeners } = args;
-        this.removeAllListenersImpl = removeAllListeners;
+        const { name, delayMilliseconds } = args;
+        this.removeAllListenersImpl = () => args.removeAllListeners();
         const scheduler = new Scheduler(delayMilliseconds);
 
-        this.onChanged = () => on((scheduleRefresh: boolean) => scheduleRefresh && scheduler.call(async () => {
-            this.data = await refresh(this.data);
+        this.onChanged = () => args.on((scheduleRefresh: boolean) => scheduleRefresh && scheduler.call(async () => {
+            this.data = await args.refresh(this.data);
             this.emitter.emit(name, name);
         }));
     }
