@@ -71,14 +71,14 @@ export interface Refresher<Name extends string, Data> {
 
     /**
      * Adds the `listener` function to the end of the listeners array for the event named `eventName`.
-     * @description Behaves exactly like {@link EventEmitter.on}. The registered listener is called whenever
-     * {@link Refresher.data} has changed.
+     * @description Behaves exactly like {@linkcode EventEmitter.on}. The registered listener is called whenever
+     * {@linkcode Refresher.data} has changed.
      */
     readonly on: (eventName: Name, listener: (name: Name) => void) => this;
 
     /**
      * Removes all listeners, or those of the specified `eventName`.
-     * @description Behaves exactly like {@link EventEmitter.removeAllListeners}.
+     * @description Behaves exactly like {@linkcode EventEmitter.removeAllListeners}.
      */
     readonly removeAllListeners: (eventName?: Name) => this;
 }
