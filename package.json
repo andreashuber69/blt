@@ -48,20 +48,20 @@
     "ci": "npm run build"
   },
   "dependencies": {
-    "lightning": "^9.9.1",
+    "lightning": "^9.11.1",
     "tslib": "^2.6.1"
   },
   "devDependencies": {
-    "@andreashuber69/eslint-config": "^1.1.40",
+    "@andreashuber69/eslint-config": "^1.1.44",
     "@tsconfig/node-lts-strictest-esm": "^18.12.1",
-    "@types/node": "^18.17.1",
+    "@types/node": "^18.17.4",
     "c8": "^8.0.1",
     "coveralls": "^3.1.1",
-    "cspell": "^6.31.2",
+    "cspell": "^7.0.0",
     "markdownlint-cli": "^0.35.0",
     "tsx": "^3.12.7",
     "typedoc": "^0.24.8",
     "typescript": "^5.1.6",
-    "vite": "^4.4.7"
+    "vite": "^4.4.9"
   }
 }

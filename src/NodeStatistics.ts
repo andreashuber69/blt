@@ -5,21 +5,6 @@ import type { YieldType } from "./YieldType.js";
 export type Forward = YieldType<ReturnType<typeof getForwards>>;
 
 export class NodeStatistics {
-    /**
-     * Adds to {@linkcode NodeStatistics#incomingForwards} and
-     * {@linkcode NodeStatistics#outgoingForwards}.
-     * @param forwards The forwards to add.
-     */
-    public addForwards(...forwards: Forward[]): void {
-        this.incomingSorted = false;
-        this.outgoingSorted = false;
-
-        for (const forward of forwards) {
-            NodeStatistics.addForward(this.incomingForwardsField, forward.incoming_channel, forward);
-            NodeStatistics.addForward(this.outgoingForwardsField, forward.outgoing_channel, forward);
-        }
-    }
-
     /** Gets a collection of channel ids mapped to their incoming forwards, sorted from oldest to newest. */
     public get incomingForwards(): ReadonlyMap<string, readonly Forward[]> {
         if (!this.incomingSorted) {
@@ -38,6 +23,21 @@ export class NodeStatistics {
         }
 
         return this.outgoingForwardsField;
+    }
+
+    /**
+     * Adds to {@linkcode NodeStatistics#incomingForwards} and
+     * {@linkcode NodeStatistics#outgoingForwards}.
+     * @param forwards The forwards to add.
+     */
+    public addForwards(...forwards: Forward[]): void {
+        this.incomingSorted = false;
+        this.outgoingSorted = false;
+
+        for (const forward of forwards) {
+            NodeStatistics.addForward(this.incomingForwardsField, forward.incoming_channel, forward);
+            NodeStatistics.addForward(this.outgoingForwardsField, forward.outgoing_channel, forward);
+        }
     }
 
     private static addForward(map: Map<string, Forward[]>, key: string, forward: Forward) {
