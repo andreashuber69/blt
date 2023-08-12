@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import { createRequire } from "node:module";
+import type { AuthenticatedLightningArgs } from "lightning";
 import { deletePayment } from "lightning";
 
 import { connectLnd } from "./connectLnd.js";
@@ -12,17 +13,7 @@ interface PackageJson {
     readonly version: string;
 }
 
-try {
-    // Simple typescript alternatives to calling require below lead to the outDir containing the file package.json and
-    // the directory src with all the code. This is due to how the ts compiler automatically determines the rootDir from
-    // imports. There are alternatives to calling require, but these seem overly complicated:
-    // https://stackoverflow.com/questions/58172911/typescript-compiler-options-trying-to-get-flat-output-to-outdir
-    const { name, version } = createRequire(import.meta.url)("../package.json") as PackageJson;
-    console.log(`${name} v${version}`);
-    const start = Date.now();
-    console.log("Connecting...");
-    const authenticatedLnd = await connectLnd();
-
+const deleteOldFailedPayments = async (authenticatedLnd: AuthenticatedLightningArgs) => {
     console.log("Deleting old failed payments...");
 
     const getFailedPaymentArgs = {
@@ -33,10 +24,17 @@ try {
         created_before: new Date(Date.now() - (14 * 24 * 60 * 60 * 1000)).toISOString(),
     };
 
+    let count = 0;
+
     for await (const { id } of getFailedPayments(getFailedPaymentArgs)) {
         await deletePayment({ ...authenticatedLnd, id });
+        ++count;
     }
 
+    console.log(`Deleted ${count} old failed payments.`);
+};
+
+const getInfo = async (authenticatedLnd: AuthenticatedLightningArgs) => {
     console.log("Getting node info...");
     const nodeInfo = await getNodeInfo(authenticatedLnd);
 
@@ -44,29 +42,52 @@ try {
 
     const timeBoundHandler = (property: "forwards" | "payments") => {
         const { [property]: { data } } = nodeInfo;
-        console.log(`${property}: ${data.length} ${data.at(0)?.created_at} - ${data.at(-1)?.created_at}`);
+        const aux = data.at(-1)?.tokens;
+        console.log(`${property}: ${data.length} ${data.at(0)?.created_at} - ${data.at(-1)?.created_at} ${aux}`);
     };
 
-    const channels = "channels";
-    handler(channels);
-    nodeInfo.channels.on(channels, handler);
-    const forwards = "forwards";
-    timeBoundHandler(forwards);
-    nodeInfo.forwards.on(forwards, timeBoundHandler);
-    const payments = "payments";
-    timeBoundHandler(payments);
-    nodeInfo.payments.on(payments, timeBoundHandler);
+    handler("channels");
+    nodeInfo.channels.onChanged(handler);
+    timeBoundHandler("forwards");
+    nodeInfo.forwards.onChanged(timeBoundHandler);
+    timeBoundHandler("payments");
+    nodeInfo.payments.onChanged(timeBoundHandler);
+    return nodeInfo;
+};
 
-    console.log(`Entering event loop: ${(Date.now() - start) / 1000}`);
-
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
-        // eslint-disable-next-line no-await-in-loop
-        await new Promise((resolve) => setTimeout(resolve, 10_000));
-    }
+try {
+    // Simple typescript alternatives to calling require below lead to the outDir containing the file package.json and
+    // the directory src with all the code. This is due to how the ts compiler automatically determines the rootDir from
+    // imports. There are alternatives to calling require, but these seem overly complicated:
+    // https://stackoverflow.com/questions/58172911/typescript-compiler-options-trying-to-get-flat-output-to-outdir
+    const { name, version } = createRequire(import.meta.url)("../package.json") as PackageJson;
+    console.log(`${name} v${version}`);
 } catch (error: unknown) {
     console.error(error);
     process.exit(1);
 } finally {
     console.log("\r\n");
+}
+
+console.log("Connecting...");
+
+// eslint-disable-next-line no-constant-condition
+while (true) {
+    try {
+        const start = Date.now();
+        /* eslint-disable no-await-in-loop */
+        const lnd = await connectLnd();
+        await deleteOldFailedPayments(lnd);
+        const info = await getInfo(lnd);
+        console.log(`Connected successfully: ${(Date.now() - start) / 1000}`);
+        console.error(await new Promise((resolve) => info.onError(resolve)));
+        console.log("\r\nConnection lost!");
+    } catch (error: unknown) {
+        console.log("\r\n\r\nEncountered error:");
+        console.error(error);
+    }
+
+    console.log("\r\n\r\nAttempting to reconnect...");
+    await new Promise((resolve) => setTimeout(resolve, 10_000));
+    /* eslint-enable no-await-in-loop */
 }

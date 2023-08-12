@@ -5,9 +5,9 @@ export class Scheduler {
      * If idle, schedules a call to the passed function.
      * @description Right after construction, an object of this class is in the idle state. When called in this state,
      * the state changes to busy, a call to the passed function is scheduled to occur after
-     * {@link Scheduler.delayMilliseconds} and {@link Scheduler.call} then returns immediately. The state only
+     * {@linkcode Scheduler.delayMilliseconds} and {@linkcode Scheduler.call} then returns immediately. The state only
      * changes back to idle after the `func` has been called and the result awaited. When called in the busy state,
-     * {@link Scheduler.call} returns right away without doing anything.
+     * {@linkcode Scheduler.call} returns right away without doing anything.
      * @param func The function to call.
      */
     public call(func: () => unknown) {

@@ -1,6 +1,7 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import type { AuthenticatedLightningArgs } from "lightning";
 import { getIdentity } from "lightning";
+
 import type { Channel } from "./Channel.js";
 import { ChannelsRefresherArgs } from "./ChannelsRefresherArgs.js";
 import { createRefresher } from "./createRefresher.js";
@@ -12,6 +13,10 @@ import type { TimeBoundArgs } from "./PartialRefresherArgs.js";
 import type { Payment } from "./Payment.js";
 import { PaymentsRefresherArgs } from "./PaymentsRefresherArgs.js";
 
+const refresherNames = ["channels", "forwards", "payments"] as const;
+
+type RefresherName = (typeof refresherNames)[number];
+
 class NodeInfoImpl implements NodeInfo {
     public constructor(
         public readonly identity: Identity,
@@ -19,23 +24,60 @@ class NodeInfoImpl implements NodeInfo {
         public readonly forwards: Refresher<"forwards", Forward[]>,
         public readonly payments: Refresher<"payments", Payment[]>,
     ) {}
+
+    public onChanged(listener: (name: RefresherName) => void) {
+        return this.forEachRefresher((refresher) => refresher.onChanged(listener));
+    }
+
+    public onError(listener: (error: unknown) => void) {
+        return this.forEachRefresher((refresher) => refresher.onError(listener));
+    }
+
+    public removeAllListeners() {
+        return this.forEachRefresher((refresher) => refresher.removeAllListeners());
+    }
+
+    private forEachRefresher(callback: (refresher: NodeInfo[RefresherName]) => void) {
+        for (const refresherName of refresherNames) {
+            callback(this[refresherName]);
+        }
+
+        return this;
+    }
 }
 
-type RefresherProperty<Name extends string, Data> = {
+type RefresherProperty<Name extends RefresherName, Data> = {
     readonly [name in Name]: Refresher<Name, Data>;
 };
 
 /**
  * Provides various information about a node.
- * @description All time-bound data (like {@link NodeInfo.forwards}) will be sorted earliest to latest. Apart from
+ * @description All time-bound data (like {@linkcode NodeInfo.forwards}) will be sorted earliest to latest. Apart from
  * being sorted, the data is provided as it came from LND. Further sanitation will be necessary, for example, a forward
- * may refer to a channel that is no longer open and will thus not appear in {@link NodeInfo.channels}.
+ * may refer to a channel that is no longer open and will thus not appear in {@linkcode NodeInfo.channels}.
  */
 export interface NodeInfo extends
     RefresherProperty<"channels", Channel[]>,
     RefresherProperty<"forwards", Forward[]>,
     RefresherProperty<"payments", Payment[]> {
     readonly identity: Identity;
+
+    /**
+     * Calls {@linkcode Refresher.onChanged} for all {@linkcode Refresher} typed properties, forwarding `listener`.
+     * @description When `listener` is called, {@linkcode Refresher.data} of the {@linkcode Refresher} named `name` has
+     * changed.
+     */
+    readonly onChanged: (listener: (name: RefresherName) => void) => this;
+
+    /**
+     * Calls {@linkcode Refresher.onError} for all {@linkcode Refresher} typed properties, forwarding `listener`.
+     * @description When `listener` is called, client code dependent on being notified about changes should discard this
+     * object and create a new one via {@linkcode getNodeInfo}.
+     */
+    readonly onError: (listener: (error: unknown) => void) => this;
+
+    /** Calls {@linkcode Refresher.removeAllListeners} for all {@linkcode Refresher} typed properties. */
+    readonly removeAllListeners: () => this;
 }
 
 /**

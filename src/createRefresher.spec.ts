@@ -7,32 +7,48 @@ import { delay } from "./testHelpers/delay.js";
 const refresh = async (data?: string) => await Promise.resolve(`${data ?? ""}X`);
 
 class Subscriber {
-    public get listeners(): ReadonlyArray<(scheduleRefresh: boolean) => void> {
-        return this.listenersImpl;
+    public get changedListeners(): ReadonlyArray<(scheduleRefresh: boolean) => void> {
+        return this.changedListenersImpl;
     }
 
-    public readonly subscribe = (listener: (scheduleRefresh: boolean) => void) => this.listenersImpl.push(listener);
+    public get errorListeners(): ReadonlyArray<(error: unknown) => void> {
+        return this.errorListenersImpl;
+    }
 
-    public readonly unsubscribe = () => this.listenersImpl.splice(0, this.listenersImpl.length);
+    public readonly onChanged = (listener: (scheduleRefresh: boolean) => void) => {
+        this.changedListenersImpl.push(listener);
+    };
 
-    private readonly listenersImpl = new Array<(scheduleRefresh: boolean) => void>();
+    public readonly onError = (listener: (error: unknown) => void) => {
+        this.errorListenersImpl.push(listener);
+    };
+
+    public readonly removeAllListeners = () => {
+        this.changedListenersImpl.splice(0);
+        this.errorListenersImpl.splice(0);
+    };
+
+    private readonly changedListenersImpl = new Array<(scheduleRefresh: boolean) => void>();
+    private readonly errorListenersImpl = new Array<(error: unknown) => void>();
 }
 
 describe(createRefresher.name, () => {
     it("should return a working refresher", async () => {
         const subscriber = new Subscriber();
+        const { changedListeners, onChanged, onError, removeAllListeners } = subscriber;
 
         const args: RefresherArgs<"tests", string> = {
             name: "tests",
             refresh,
             delayMilliseconds: 50,
-            subscribe: subscriber.subscribe,
-            unsubscribe: subscriber.unsubscribe,
+            onChanged,
+            onError,
+            removeAllListeners,
         };
 
         const refresher = await createRefresher(args);
         assert(refresher.data === "X");
-        assert(subscriber.listeners.length === 0);
+        assert(changedListeners.length === 0);
         let eventCount = 0;
 
         const listener = (eventName: string) => {
@@ -40,45 +56,47 @@ describe(createRefresher.name, () => {
             ++eventCount;
         };
 
-        refresher.on("tests", listener);
+        refresher.onChanged(listener);
         await delay(100);
         assert(eventCount === 0);
         assert(refresher.data as string === "X");
-        assert(subscriber.listeners.length as number === 1);
-        subscriber.listeners[0]?.(true);
+        assert(changedListeners.length as number === 1);
+        changedListeners[0]?.(true);
         await delay(100);
         assert(eventCount as number === 1);
         assert(refresher.data as string === "XX");
-        subscriber.listeners[0]?.(true);
+        changedListeners[0]?.(true);
         await delay(100);
         assert(eventCount as number === 2);
         assert(refresher.data as string === "XXX");
-        refresher.on("tests", listener);
+        refresher.onChanged(listener);
         await delay(100);
         assert(eventCount as number === 2);
         assert(refresher.data as string === "XXX");
-        subscriber.listeners[0]?.(true);
+        changedListeners[0]?.(true);
         await delay(100);
         assert(eventCount as number === 4);
         assert(refresher.data as string === "XXXX");
         refresher.removeAllListeners();
-        assert(subscriber.listeners.length as number === 0);
+        assert(changedListeners.length as number === 0);
     });
 
     it("should delay refresh", async () => {
         const subscriber = new Subscriber();
+        const { changedListeners: listeners, onChanged, onError, removeAllListeners } = subscriber;
 
         const args: RefresherArgs<"tests", string> = {
             name: "tests",
             refresh,
             delayMilliseconds: 1000,
-            subscribe: subscriber.subscribe,
-            unsubscribe: subscriber.unsubscribe,
+            onChanged,
+            onError,
+            removeAllListeners,
         };
 
         const refresher = await createRefresher(args);
         assert(refresher.data === "X");
-        assert(subscriber.listeners.length === 0);
+        assert(listeners.length === 0);
         let eventCount = 0;
 
         const listener = (eventName: string) => {
@@ -86,12 +104,12 @@ describe(createRefresher.name, () => {
             ++eventCount;
         };
 
-        refresher.on("tests", listener);
+        refresher.onChanged(listener);
         await delay(1100);
         assert(eventCount === 0);
         assert(refresher.data as string === "X");
-        assert(subscriber.listeners.length as number === 1);
-        subscriber.listeners[0]?.(true);
+        assert(listeners.length as number === 1);
+        listeners[0]?.(true);
         await delay(100);
         assert(eventCount === 0);
         assert(refresher.data as string === "X");
@@ -102,18 +120,20 @@ describe(createRefresher.name, () => {
 
     it("should not refresh when scheduleRefresh is false", async () => {
         const subscriber = new Subscriber();
+        const { changedListeners: listeners, onChanged, onError, removeAllListeners } = subscriber;
 
         const args: RefresherArgs<"tests", string> = {
             name: "tests",
             refresh,
             delayMilliseconds: 50,
-            subscribe: subscriber.subscribe,
-            unsubscribe: subscriber.unsubscribe,
+            onChanged,
+            onError,
+            removeAllListeners,
         };
 
         const refresher = await createRefresher(args);
         assert(refresher.data === "X");
-        assert(subscriber.listeners.length === 0);
+        assert(listeners.length === 0);
         let eventCount = 0;
 
         const listener = (eventName: string) => {
@@ -121,16 +141,16 @@ describe(createRefresher.name, () => {
             ++eventCount;
         };
 
-        refresher.on("tests", listener);
+        refresher.onChanged(listener);
         await delay(100);
         assert(eventCount === 0);
         assert(refresher.data as string === "X");
-        assert(subscriber.listeners.length as number === 1);
-        subscriber.listeners[0]?.(false);
+        assert(listeners.length as number === 1);
+        listeners[0]?.(false);
         await delay(100);
         assert(eventCount === 0);
         assert(refresher.data as string === "X");
-        subscriber.listeners[0]?.(true);
+        listeners[0]?.(true);
         await delay(100);
         assert(eventCount as number === 1);
         assert(refresher.data as string === "XX");

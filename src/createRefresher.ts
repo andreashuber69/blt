@@ -2,43 +2,42 @@ import { EventEmitter } from "node:events";
 import { Scheduler } from "./Scheduler.js";
 
 class RefresherImpl<Name extends string, Data> implements Refresher<Name, Data> {
-    public constructor(args: RefresherArgs<Name, Data>, public data: Data) {
-        const { name, refresh, delayMilliseconds, subscribe, unsubscribe } = args;
-        this.unsubscribe = unsubscribe;
-        const scheduler = new Scheduler(delayMilliseconds);
+    public constructor(private readonly args: RefresherArgs<Name, Data>, public data: Data) {}
 
-        this.subscribe = () => subscribe((scheduleRefresh: boolean) => scheduleRefresh && scheduler.call(async () => {
-            this.data = await refresh(this.data);
-            this.emitter.emit(name, name);
-        }));
-    }
+    public onChanged(listener: (name: Name) => void) {
+        this.emitter.on(this.args.name, listener);
 
-    public on(eventName: Name, listener: (name: Name) => void) {
-        this.emitter.on(eventName, listener);
+        if (this.emitter.listenerCount(this.args.name) === 1) {
+            const scheduler = new Scheduler(this.args.delayMilliseconds);
 
-        if (this.emitter.listenerCount(eventName) === 1) {
-            this.subscribe();
+            this.args.onChanged((scheduleRefresh: boolean) => scheduleRefresh && scheduler.call(async () => {
+                this.data = await this.args.refresh(this.data);
+                this.emitter.emit(this.args.name, this.args.name);
+            }));
         }
 
         return this;
     }
 
-    public removeAllListeners(eventName?: Name) {
-        this.emitter.removeAllListeners(eventName);
-        this.unsubscribe();
+    public onError(listener: (error: unknown) => void) {
+        this.args.onError(listener);
+        return this;
+    }
+
+    public removeAllListeners() {
+        this.emitter.removeAllListeners();
+        this.args.removeAllListeners();
         return this;
     }
 
     // eslint-disable-next-line unicorn/prefer-event-target
     private readonly emitter = new EventEmitter();
-    private readonly subscribe: () => void;
-    private readonly unsubscribe: () => void;
 }
 
 export interface RefresherArgs<Name extends string, Data> {
     /**
      * The name of the data being refreshed. This name is passed to any listener installed with
-     * {@linkcode Refresher.on} when the data has been refreshed.
+     * {@linkcode Refresher.onChanged} when the data has been refreshed.
      */
     readonly name: Name;
 
@@ -49,17 +48,25 @@ export interface RefresherArgs<Name extends string, Data> {
     readonly delayMilliseconds: number;
 
     /**
-     * Is called when the first listener is installed with a call to {@linkcode Refresher.on}. The passed
-     * listener function schedules a refresh and notify operation to occur after
+     * Subscribes the passed listener to all events that indicate a change to the data.
+     * @description Is called when the first listener is installed with a call to {@linkcode Refresher.onChanged}.
+     * @param listener Schedules a refresh and notify operation to occur after
      * {@linkcode RefresherArgs.delayMilliseconds}, if and only if `scheduleRefresh` is truthy **and** no other such
-     * operation is currently scheduled or in progress. The refresh and notify operation consists of calling `refresh`,
-     * assigning the awaited result to {@linkcode Refresher.data} and finally calling all listeners installed through
-     * {@linkcode Refresher.on}.
+     * operation is currently scheduled or in progress. So, `scheduleRefresh` must be truthy whenever the data might
+     * have changed. It should be falsy if a change can be ruled out. The refresh and notify operation consists of
+     * calling {@linkcode RefresherArgs.refresh}, assigning the awaited result to {@linkcode Refresher.data} and
+     * finally calling all listeners installed through {@linkcode Refresher.onChanged}.
      */
-    readonly subscribe: (listener: (scheduleRefresh: boolean) => void) => void;
+    readonly onChanged: (listener: (scheduleRefresh: boolean) => void) => void;
+
+    /**
+     * Subscribes the passed listener to all events that indicate an error preventing further update of
+     * {@linkcode Refresher.data}.
+     */
+    readonly onError: (listener: (error: unknown) => void) => void;
 
     /** Is called after each call to {@linkcode Refresher.removeAllListeners}. */
-    readonly unsubscribe: () => void;
+    readonly removeAllListeners: () => void;
 }
 
 /**
@@ -70,17 +77,23 @@ export interface Refresher<Name extends string, Data> {
     readonly data: Readonly<Data>;
 
     /**
-     * Adds the `listener` function to the end of the listeners array for the event named `eventName`.
-     * @description Behaves exactly like {@link EventEmitter.on}. The registered listener is called whenever
-     * {@link Refresher.data} has changed.
+     * Adds the `listener` function to the end of the listeners array for any event that indicates that
+     * {@linkcode Refresher.data} might have changed.
      */
-    readonly on: (eventName: Name, listener: (name: Name) => void) => this;
+    readonly onChanged: (listener: (name: Name) => void) => this;
 
     /**
-     * Removes all listeners, or those of the specified `eventName`.
-     * @description Behaves exactly like {@link EventEmitter.removeAllListeners}.
+     * Adds the `listener` function to the end of the listeners array for any event that indicates an error preventing
+     * further update of {@linkcode Refresher.data}.
      */
-    readonly removeAllListeners: (eventName?: Name) => this;
+    readonly onError: (listener: (error: unknown) => void) => this;
+
+    /**
+     * Removes all listeners.
+     * @description Behaves like {@linkcode EventEmitter.removeAllListeners}, without the option to only remove the
+     * listeners for a given event.
+     */
+    readonly removeAllListeners: () => this;
 }
 
 /**

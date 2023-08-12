@@ -8,11 +8,10 @@ import type { Refresher, RefresherArgs } from "./createRefresher.js";
 export abstract class ArrayRefresherArgs<Name extends string, Element> implements RefresherArgs<Name, Element[]> {
     public abstract readonly name: Name;
 
-    public abstract readonly refresh: (current?: Element[]) => Promise<Element[]>;
-
+    public abstract refresh(current?: Element[]): Promise<Element[]>;
     public readonly delayMilliseconds = 10_000;
 
-    public abstract readonly subscribe: (listener: (scheduleRefresh: boolean) => void) => void;
-
-    public abstract readonly unsubscribe: () => void;
+    public abstract onChanged(listener: (scheduleRefresh: boolean) => void): void;
+    public abstract onError(listener: (error: unknown) => void): void;
+    public abstract removeAllListeners(): void;
 }

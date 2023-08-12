@@ -4,6 +4,7 @@ import { ArrayRefresherArgs } from "./ArrayRefresherArgs.js";
 import type { Refresher } from "./createRefresher.js";
 import { getRangeDays } from "./getRange.js";
 import type { TimeBoundElement } from "./TimeBoundElement.js";
+import { toSortedArray } from "./toSortedArray.js";
 
 export interface TimeBoundArgs {
     /** Retrieve time-bound data up to this number of days in the past. */
@@ -21,7 +22,7 @@ export abstract class PartialRefresherArgs<Name extends string, Element extends 
         super();
     }
 
-    public override readonly refresh = async (current?: Element[]) => {
+    public override async refresh(current?: Element[]) {
         const result = current ?? [];
         const { after, before } = getRangeDays(this.args.days);
         result.splice(0, result.findIndex((v) => v.created_at >= after)); // Delete old data
@@ -31,23 +32,18 @@ export abstract class PartialRefresherArgs<Name extends string, Element extends 
         // would get all of them in one go. This is why we must get newly added data at and after the time of the last
         // element and eliminate duplicates ourselves. The matter is complicated by the fact that e.g. forwards do not
         // contain a unique id, so we have to eliminate duplicates by comparing for equality of properties.
-        result.push(...this.eliminateDuplicates(result, await this.getDataRange(lastElementCreatedAt, before)));
+        const newElements = await toSortedArray(this.getDataRange(lastElementCreatedAt, before));
+        result.push(...this.eliminateDuplicates(result, newElements));
         return result;
-    };
+    }
 
-    /**
-     * Gets data in the time period defined by `after` and `before`, both inclusive. The data must be sorted from
-     * earliest to latest.
-     */
-    protected abstract readonly getDataRange: (after: string, before: string) => Promise<Element[]>;
+    /** Gets data in the time period defined by `after` and `before`, both inclusive. */
+    protected abstract getDataRange(after: string, before: string): AsyncGenerator<Element>;
 
     /** Returns `true` when both elements are equal, otherwise `false`. */
-    protected abstract readonly equals: (a: Element, b: Element) => boolean;
+    protected abstract equals(a: Element, b: Element): boolean;
 
-    private readonly eliminateDuplicates = (
-        currentElements: readonly Element[],
-        possiblyNewElements: readonly Element[],
-    ) => {
+    private eliminateDuplicates(currentElements: readonly Element[], possiblyNewElements: readonly Element[]) {
         const result = new Array<Element>();
 
         // Since the CPU time needed to execute this method is linear with the product of possiblyNewElements.length and
@@ -68,11 +64,11 @@ export abstract class PartialRefresherArgs<Name extends string, Element extends 
         }
 
         return result;
-    };
+    }
 
     // We need to reference class type parameters which is not possible for static methods.
     // eslint-disable-next-line @typescript-eslint/class-methods-use-this
-    private readonly getLastElementsCreatedAtSameTime = (currentElements: readonly Element[]) => {
+    private getLastElementsCreatedAtSameTime(currentElements: readonly Element[]) {
         let index = currentElements.length - 1;
 
         for (; (index >= 0) && (currentElements[index]?.created_at === currentElements.at(-1)?.created_at); --index) {
@@ -80,5 +76,5 @@ export abstract class PartialRefresherArgs<Name extends string, Element extends 
         }
 
         return currentElements.slice(index + 1);
-    };
+    }
 }
