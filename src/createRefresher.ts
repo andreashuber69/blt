@@ -2,22 +2,18 @@ import { EventEmitter } from "node:events";
 import { Scheduler } from "./Scheduler.js";
 
 class RefresherImpl<Name extends string, Data> implements Refresher<Name, Data> {
-    public constructor(args: RefresherArgs<Name, Data>, public data: Data) {
-        const { name, delayMilliseconds } = args;
-        this.removeAllListenersImpl = () => args.removeAllListeners();
-        const scheduler = new Scheduler(delayMilliseconds);
-
-        this.onChanged = () => args.on((scheduleRefresh: boolean) => scheduleRefresh && scheduler.call(async () => {
-            this.data = await args.refresh(this.data);
-            this.emitter.emit(name, name);
-        }));
-    }
+    public constructor(private readonly args: RefresherArgs<Name, Data>, public data: Data) {}
 
     public on(eventName: Name, listener: (name: Name) => void) {
         this.emitter.on(eventName, listener);
 
         if (this.emitter.listenerCount(eventName) === 1) {
-            this.onChanged();
+            const scheduler = new Scheduler(this.args.delayMilliseconds);
+
+            this.args.on((scheduleRefresh: boolean) => scheduleRefresh && scheduler.call(async () => {
+                this.data = await this.args.refresh(this.data);
+                this.emitter.emit(this.args.name, this.args.name);
+            }));
         }
 
         return this;
@@ -25,14 +21,12 @@ class RefresherImpl<Name extends string, Data> implements Refresher<Name, Data> 
 
     public removeAllListeners() {
         this.emitter.removeAllListeners();
-        this.removeAllListenersImpl();
+        this.args.removeAllListeners();
         return this;
     }
 
     // eslint-disable-next-line unicorn/prefer-event-target
     private readonly emitter = new EventEmitter();
-    private readonly onChanged: () => void;
-    private readonly removeAllListenersImpl: () => void;
 }
 
 export interface RefresherArgs<Name extends string, Data> {
