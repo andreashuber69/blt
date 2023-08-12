@@ -10,7 +10,7 @@ class RefresherImpl<Name extends string, Data> implements Refresher<Name, Data> 
         if (this.emitter.listenerCount(eventName) === 1) {
             const scheduler = new Scheduler(this.args.delayMilliseconds);
 
-            this.args.on((scheduleRefresh: boolean) => scheduleRefresh && scheduler.call(async () => {
+            this.args.onChanged((scheduleRefresh: boolean) => scheduleRefresh && scheduler.call(async () => {
                 this.data = await this.args.refresh(this.data);
                 this.emitter.emit(this.args.name, this.args.name);
             }));
@@ -43,6 +43,8 @@ export interface RefresherArgs<Name extends string, Data> {
     readonly delayMilliseconds: number;
 
     /**
+     * Subscribes the passed listener to all events that indicate a change to the data. `scheduleRefresh` must be truthy
+     * whenever the data might have changed. It should not be truthy if a change can be ruled out.
      * Is called when the first listener is installed with a call to {@linkcode Refresher.on}. The passed
      * listener function schedules a refresh and notify operation to occur after
      * {@linkcode RefresherArgs.delayMilliseconds}, if and only if `scheduleRefresh` is truthy **and** no other such
@@ -50,7 +52,7 @@ export interface RefresherArgs<Name extends string, Data> {
      * assigning the awaited result to {@linkcode Refresher.data} and finally calling all listeners installed through
      * {@linkcode Refresher.on}.
      */
-    readonly on: (listener: (scheduleRefresh: boolean) => void) => void;
+    readonly onChanged: (listener: (scheduleRefresh: boolean) => void) => void;
 
     /** Is called after each call to {@linkcode Refresher.removeAllListeners}. */
     readonly removeAllListeners: () => void;

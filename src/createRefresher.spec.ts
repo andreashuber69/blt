@@ -11,7 +11,7 @@ class Subscriber {
         return this.listenersImpl;
     }
 
-    public readonly on = (listener: (scheduleRefresh: boolean) => void) => this.listenersImpl.push(listener);
+    public readonly onChanged = (listener: (scheduleRefresh: boolean) => void) => this.listenersImpl.push(listener);
 
     public readonly removeAllListeners = () => this.listenersImpl.splice(0, this.listenersImpl.length);
 
@@ -26,7 +26,7 @@ describe(createRefresher.name, () => {
             name: "tests",
             refresh,
             delayMilliseconds: 50,
-            on: subscriber.on,
+            onChanged: subscriber.onChanged,
             removeAllListeners: subscriber.removeAllListeners,
         };
 
@@ -72,7 +72,7 @@ describe(createRefresher.name, () => {
             name: "tests",
             refresh,
             delayMilliseconds: 1000,
-            on: subscriber.on,
+            onChanged: subscriber.onChanged,
             removeAllListeners: subscriber.removeAllListeners,
         };
 
@@ -107,7 +107,7 @@ describe(createRefresher.name, () => {
             name: "tests",
             refresh,
             delayMilliseconds: 50,
-            on: subscriber.on,
+            onChanged: subscriber.onChanged,
             removeAllListeners: subscriber.removeAllListeners,
         };
 
