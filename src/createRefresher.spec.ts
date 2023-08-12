@@ -40,7 +40,7 @@ describe(createRefresher.name, () => {
             ++eventCount;
         };
 
-        refresher.on("tests", listener);
+        refresher.onChanged(listener);
         await delay(100);
         assert(eventCount === 0);
         assert(refresher.data as string === "X");
@@ -53,7 +53,7 @@ describe(createRefresher.name, () => {
         await delay(100);
         assert(eventCount as number === 2);
         assert(refresher.data as string === "XXX");
-        refresher.on("tests", listener);
+        refresher.onChanged(listener);
         await delay(100);
         assert(eventCount as number === 2);
         assert(refresher.data as string === "XXX");
@@ -86,7 +86,7 @@ describe(createRefresher.name, () => {
             ++eventCount;
         };
 
-        refresher.on("tests", listener);
+        refresher.onChanged(listener);
         await delay(1100);
         assert(eventCount === 0);
         assert(refresher.data as string === "X");
@@ -121,7 +121,7 @@ describe(createRefresher.name, () => {
             ++eventCount;
         };
 
-        refresher.on("tests", listener);
+        refresher.onChanged(listener);
         await delay(100);
         assert(eventCount === 0);
         assert(refresher.data as string === "X");

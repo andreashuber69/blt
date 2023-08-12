@@ -46,15 +46,12 @@ const getInfo = async (authenticatedLnd: AuthenticatedLightningArgs) => {
         console.log(`${property}: ${data.length} ${data.at(0)?.created_at} - ${data.at(-1)?.created_at} ${aux}`);
     };
 
-    const channels = "channels";
-    handler(channels);
-    nodeInfo.channels.on(channels, handler);
-    const forwards = "forwards";
-    timeBoundHandler(forwards);
-    nodeInfo.forwards.on(forwards, timeBoundHandler);
-    const payments = "payments";
-    timeBoundHandler(payments);
-    nodeInfo.payments.on(payments, timeBoundHandler);
+    handler("channels");
+    nodeInfo.channels.onChanged(handler);
+    timeBoundHandler("forwards");
+    nodeInfo.forwards.onChanged(timeBoundHandler);
+    timeBoundHandler("payments");
+    nodeInfo.payments.onChanged(timeBoundHandler);
     return nodeInfo;
 };
 

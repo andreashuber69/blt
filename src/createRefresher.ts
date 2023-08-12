@@ -4,10 +4,10 @@ import { Scheduler } from "./Scheduler.js";
 class RefresherImpl<Name extends string, Data> implements Refresher<Name, Data> {
     public constructor(private readonly args: RefresherArgs<Name, Data>, public data: Data) {}
 
-    public on(eventName: Name, listener: (name: Name) => void) {
-        this.emitter.on(eventName, listener);
+    public onChanged(listener: (name: Name) => void) {
+        this.emitter.on(this.args.name, listener);
 
-        if (this.emitter.listenerCount(eventName) === 1) {
+        if (this.emitter.listenerCount(this.args.name) === 1) {
             const scheduler = new Scheduler(this.args.delayMilliseconds);
 
             this.args.onChanged((scheduleRefresh: boolean) => scheduleRefresh && scheduler.call(async () => {
@@ -32,7 +32,7 @@ class RefresherImpl<Name extends string, Data> implements Refresher<Name, Data> 
 export interface RefresherArgs<Name extends string, Data> {
     /**
      * The name of the data being refreshed. This name is passed to any listener installed with
-     * {@linkcode Refresher.on} when the data has been refreshed.
+     * {@linkcode Refresher.onChanged} when the data has been refreshed.
      */
     readonly name: Name;
 
@@ -45,12 +45,12 @@ export interface RefresherArgs<Name extends string, Data> {
     /**
      * Subscribes the passed listener to all events that indicate a change to the data. `scheduleRefresh` must be truthy
      * whenever the data might have changed. It should not be truthy if a change can be ruled out.
-     * Is called when the first listener is installed with a call to {@linkcode Refresher.on}. The passed
+     * Is called when the first listener is installed with a call to {@linkcode Refresher.onChanged}. The passed
      * listener function schedules a refresh and notify operation to occur after
      * {@linkcode RefresherArgs.delayMilliseconds}, if and only if `scheduleRefresh` is truthy **and** no other such
      * operation is currently scheduled or in progress. The refresh and notify operation consists of calling `refresh`,
      * assigning the awaited result to {@linkcode Refresher.data} and finally calling all listeners installed through
-     * {@linkcode Refresher.on}.
+     * {@linkcode Refresher.onChanged}.
      */
     readonly onChanged: (listener: (scheduleRefresh: boolean) => void) => void;
 
@@ -66,11 +66,10 @@ export interface Refresher<Name extends string, Data> {
     readonly data: Readonly<Data>;
 
     /**
-     * Adds the `listener` function to the end of the listeners array for the event named `eventName`.
-     * @description Behaves exactly like {@linkcode EventEmitter.on}. The registered listener is called whenever
-     * {@linkcode Refresher.data} has changed.
+     * Adds the `listener` function to the end of the listeners array for any event that indicates that
+     * {@linkcode Refresher.data} might have changed.
      */
-    readonly on: (eventName: Name, listener: (name: Name) => void) => this;
+    readonly onChanged: (listener: (name: Name) => void) => this;
 
     /**
      * Removes all listeners.
