@@ -11,6 +11,10 @@ export class PaymentsRefresherArgs extends PartialRefresherArgs<"payments", Paym
         this.emitter.on("confirmed", () => listener(true));
     }
 
+    public override onError(listener: (error: unknown) => void): void {
+        this.emitter.on("error", listener);
+    }
+
     public override removeAllListeners() {
         this.emitter.removeAllListeners();
     }

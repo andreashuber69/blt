@@ -12,6 +12,10 @@ export class ForwardsRefresherArgs extends PartialRefresherArgs<"forwards", Forw
         this.emitter.on("forward", (e: SubscribeToForwardsForwardEvent) => listener(e.is_confirmed));
     }
 
+    public override onError(listener: (error: unknown) => void): void {
+        this.emitter.on("error", listener);
+    }
+
     public override removeAllListeners() {
         this.emitter.removeAllListeners();
     }

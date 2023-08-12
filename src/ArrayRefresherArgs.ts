@@ -9,10 +9,9 @@ export abstract class ArrayRefresherArgs<Name extends string, Element> implement
     public abstract readonly name: Name;
 
     public abstract refresh(current?: Element[]): Promise<Element[]>;
-
     public readonly delayMilliseconds = 10_000;
 
     public abstract onChanged(listener: (scheduleRefresh: boolean) => void): void;
-
+    public abstract onError(listener: (error: unknown) => void): void;
     public abstract removeAllListeners(): void;
 }

@@ -19,6 +19,11 @@ class RefresherImpl<Name extends string, Data> implements Refresher<Name, Data> 
         return this;
     }
 
+    public onError(listener: (error: unknown) => void) {
+        this.args.onError(listener);
+        return this;
+    }
+
     public removeAllListeners() {
         this.emitter.removeAllListeners();
         this.args.removeAllListeners();
@@ -43,16 +48,22 @@ export interface RefresherArgs<Name extends string, Data> {
     readonly delayMilliseconds: number;
 
     /**
-     * Subscribes the passed listener to all events that indicate a change to the data. `scheduleRefresh` must be truthy
-     * whenever the data might have changed. It should not be truthy if a change can be ruled out.
-     * Is called when the first listener is installed with a call to {@linkcode Refresher.onChanged}. The passed
-     * listener function schedules a refresh and notify operation to occur after
+     * Subscribes the passed listener to all events that indicate a change to the data.
+     * @description Is called when the first listener is installed with a call to {@linkcode Refresher.onChanged}.
+     * @param listener Schedules a refresh and notify operation to occur after
      * {@linkcode RefresherArgs.delayMilliseconds}, if and only if `scheduleRefresh` is truthy **and** no other such
-     * operation is currently scheduled or in progress. The refresh and notify operation consists of calling `refresh`,
-     * assigning the awaited result to {@linkcode Refresher.data} and finally calling all listeners installed through
-     * {@linkcode Refresher.onChanged}.
+     * operation is currently scheduled or in progress. So, `scheduleRefresh` must be truthy whenever the data might
+     * have changed. It should be falsy if a change can be ruled out. The refresh and notify operation consists of
+     * calling {@linkcode RefresherArgs.refresh}, assigning the awaited result to {@linkcode Refresher.data} and
+     * finally calling all listeners installed through {@linkcode Refresher.onChanged}.
      */
     readonly onChanged: (listener: (scheduleRefresh: boolean) => void) => void;
+
+    /**
+     * Subscribes the passed listener to all events that indicate an error preventing further update of
+     * {@linkcode Refresher.data}.
+     */
+    readonly onError: (listener: (error: unknown) => void) => void;
 
     /** Is called after each call to {@linkcode Refresher.removeAllListeners}. */
     readonly removeAllListeners: () => void;
@@ -70,6 +81,12 @@ export interface Refresher<Name extends string, Data> {
      * {@linkcode Refresher.data} might have changed.
      */
     readonly onChanged: (listener: (name: Name) => void) => this;
+
+    /**
+     * Adds the `listener` function to the end of the listeners array for any event that indicates an error preventing
+     * further update of {@linkcode Refresher.data}.
+     */
+    readonly onError: (listener: (error: unknown) => void) => this;
 
     /**
      * Removes all listeners.

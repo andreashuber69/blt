@@ -80,7 +80,7 @@ while (true) {
         await deleteOldFailedPayments(lnd);
         const info = await getInfo(lnd);
         console.log(`Connected successfully: ${(Date.now() - start) / 1000}`);
-        await new Promise<void>((resolve) => info.on("connectionLost", resolve));
+        console.error(await new Promise((resolve) => info.onError(resolve)));
         console.log("\r\nConnection lost!");
     } catch (error: unknown) {
         console.log("\r\n\r\nEncountered error:");

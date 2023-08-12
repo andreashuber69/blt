@@ -12,6 +12,10 @@ export class ChannelsRefresherArgs extends FullRefresherArgs<"channels", Channel
         this.emitter.on("channel_closed", () => listener(true));
     }
 
+    public override onError(listener: (error: unknown) => void): void {
+        this.emitter.on("error", listener);
+    }
+
     public override removeAllListeners() {
         this.emitter.removeAllListeners();
     }
