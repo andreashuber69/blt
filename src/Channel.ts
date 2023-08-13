@@ -1,4 +1,6 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import type { getChannels } from "./getChannels.js";
 
-export type Channel = Readonly<Awaited<ReturnType<typeof getChannels>>[number]>;
+type PropertyNames = "id";
+
+export type Channel = Readonly<Pick<Awaited<ReturnType<typeof getChannels>>[number], PropertyNames>>;

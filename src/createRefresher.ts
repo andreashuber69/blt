@@ -80,20 +80,20 @@ export interface Refresher<Name extends string, Data> {
      * Adds the `listener` function to the end of the listeners array for any event that indicates that
      * {@linkcode Refresher.data} might have changed.
      */
-    readonly onChanged: (listener: (name: Name) => void) => this;
+    readonly onChanged: (listener: (name: Name) => void) => void;
 
     /**
      * Adds the `listener` function to the end of the listeners array for any event that indicates an error preventing
      * further update of {@linkcode Refresher.data}.
      */
-    readonly onError: (listener: (error: unknown) => void) => this;
+    readonly onError: (listener: (error: unknown) => void) => void;
 
     /**
      * Removes all listeners.
      * @description Behaves like {@linkcode EventEmitter.removeAllListeners}, without the option to only remove the
      * listeners for a given event.
      */
-    readonly removeAllListeners: () => this;
+    readonly removeAllListeners: () => void;
 }
 
 /**

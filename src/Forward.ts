@@ -2,4 +2,6 @@
 import type { getForwards } from "./getForwards.js";
 import type { YieldType } from "./YieldType.js";
 
-export type Forward = Readonly<YieldType<ReturnType<typeof getForwards>>>;
+type PropertyNames = "created_at" | "fee" | "incoming_channel" | "outgoing_channel" | "tokens";
+
+export type Forward = Readonly<Pick<YieldType<ReturnType<typeof getForwards>>, PropertyNames>>;

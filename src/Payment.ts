@@ -2,4 +2,6 @@
 import type { getPayments } from "./getPayments.js";
 import type { YieldType } from "./YieldType.js";
 
-export type Payment = Readonly<YieldType<ReturnType<typeof getPayments>>>;
+type PropertyNames = "created_at" | "destination" | "fee" | "id" | "is_confirmed" | "tokens";
+
+export type Payment = Readonly<Pick<YieldType<ReturnType<typeof getPayments>>, PropertyNames>>;

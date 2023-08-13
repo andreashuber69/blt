@@ -1,61 +1,35 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
-import type { getForwards } from "./getForwards.js";
-import type { YieldType } from "./YieldType.js";
+import type { NodeInfo } from "./getNodeInfo.js";
 
-export type Forward = YieldType<ReturnType<typeof getForwards>>;
+interface ChannelStatistics {
+    outgoingTokens: number;
+    incomingTokens: number;
+}
 
 export class NodeStatistics {
-    /** Gets a collection of channel ids mapped to their incoming forwards, sorted from oldest to newest. */
-    public get incomingForwards(): ReadonlyMap<string, readonly Forward[]> {
-        if (!this.incomingSorted) {
-            NodeStatistics.sort(this.incomingForwardsField);
-            this.incomingSorted = true;
-        }
+    public constructor({ channels: { data: channels }, forwards: { data: forwards } }: NodeInfo) {
+        this.channelStatisticsImpl =
+            Object.fromEntries(channels.map(({ id }) => [id, { outgoingTokens: 0, incomingTokens: 0 }]));
 
-        return this.incomingForwardsField;
-    }
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        for (const { incoming_channel, outgoing_channel, tokens } of forwards) {
+            const incoming = this.channelStatisticsImpl[incoming_channel];
 
-    /** Gets a collection of channel ids mapped to their outgoing forwards, sorted from oldest to newest. */
-    public get outgoingForwards(): ReadonlyMap<string, readonly Forward[]> {
-        if (!this.outgoingSorted) {
-            NodeStatistics.sort(this.outgoingForwardsField);
-            this.outgoingSorted = true;
-        }
+            if (incoming) {
+                incoming.incomingTokens += tokens;
+            }
 
-        return this.outgoingForwardsField;
-    }
+            const outgoing = this.channelStatisticsImpl[outgoing_channel];
 
-    /**
-     * Adds to {@linkcode NodeStatistics#incomingForwards} and
-     * {@linkcode NodeStatistics#outgoingForwards}.
-     * @param forwards The forwards to add.
-     */
-    public addForwards(...forwards: Forward[]): void {
-        this.incomingSorted = false;
-        this.outgoingSorted = false;
-
-        for (const forward of forwards) {
-            NodeStatistics.addForward(this.incomingForwardsField, forward.incoming_channel, forward);
-            NodeStatistics.addForward(this.outgoingForwardsField, forward.outgoing_channel, forward);
+            if (outgoing) {
+                outgoing.outgoingTokens += tokens;
+            }
         }
     }
 
-    private static addForward(map: Map<string, Forward[]>, key: string, forward: Forward) {
-        if (!map.has(key)) {
-            map.set(key, []);
-        }
-
-        map.get(key)?.push(forward);
+    public get channelStatistics(): Readonly<Record<string, Readonly<ChannelStatistics>>> {
+        return this.channelStatisticsImpl;
     }
 
-    private static sort(map: Map<string, Forward[]>) {
-        for (const forwards of map.values()) {
-            forwards.sort((a, b) => new Date(a.created_at).valueOf() - new Date(b.created_at).valueOf());
-        }
-    }
-
-    private readonly incomingForwardsField = new Map<string, Forward[]>();
-    private incomingSorted = true;
-    private readonly outgoingForwardsField = new Map<string, Forward[]>();
-    private outgoingSorted = true;
+    private readonly channelStatisticsImpl: Readonly<Record<string, ChannelStatistics>>;
 }

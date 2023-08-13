@@ -26,23 +26,21 @@ class NodeInfoImpl implements NodeInfo {
     ) {}
 
     public onChanged(listener: (name: RefresherName) => void) {
-        return this.forEachRefresher((refresher) => refresher.onChanged(listener));
+        this.forEachRefresher((refresher) => refresher.onChanged(listener));
     }
 
     public onError(listener: (error: unknown) => void) {
-        return this.forEachRefresher((refresher) => refresher.onError(listener));
+        this.forEachRefresher((refresher) => refresher.onError(listener));
     }
 
     public removeAllListeners() {
-        return this.forEachRefresher((refresher) => refresher.removeAllListeners());
+        this.forEachRefresher((refresher) => refresher.removeAllListeners());
     }
 
     private forEachRefresher(callback: (refresher: NodeInfo[RefresherName]) => void) {
         for (const refresherName of refresherNames) {
             callback(this[refresherName]);
         }
-
-        return this;
     }
 }
 
@@ -67,17 +65,17 @@ export interface NodeInfo extends
      * @description When `listener` is called, {@linkcode Refresher.data} of the {@linkcode Refresher} named `name` has
      * changed.
      */
-    readonly onChanged: (listener: (name: RefresherName) => void) => this;
+    readonly onChanged: (listener: (name: RefresherName) => void) => void;
 
     /**
      * Calls {@linkcode Refresher.onError} for all {@linkcode Refresher} typed properties, forwarding `listener`.
      * @description When `listener` is called, client code dependent on being notified about changes should discard this
      * object and create a new one via {@linkcode getNodeInfo}.
      */
-    readonly onError: (listener: (error: unknown) => void) => this;
+    readonly onError: (listener: (error: unknown) => void) => void;
 
     /** Calls {@linkcode Refresher.removeAllListeners} for all {@linkcode Refresher} typed properties. */
-    readonly removeAllListeners: () => this;
+    readonly removeAllListeners: () => void;
 }
 
 /**
