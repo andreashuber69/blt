@@ -49,33 +49,33 @@ describe(createRefresher.name, () => {
         const refresher = await createRefresher(args);
         assert(refresher.data === "X");
         assert(changedListeners.length === 0);
-        let eventCount = 0;
+        let changedCount = 0;
 
-        const listener = (eventName: string) => {
+        const changedListener = (eventName: string) => {
             assert(eventName === "tests");
-            ++eventCount;
+            ++changedCount;
         };
 
-        refresher.onChanged(listener);
+        refresher.onChanged(changedListener);
         await delay(100);
-        assert(eventCount === 0);
+        assert(changedCount === 0);
         assert(refresher.data as string === "X");
         assert(changedListeners.length as number === 1);
         changedListeners[0]?.(true);
         await delay(100);
-        assert(eventCount as number === 1);
+        assert(changedCount as number === 1);
         assert(refresher.data as string === "XX");
         changedListeners[0]?.(true);
         await delay(100);
-        assert(eventCount as number === 2);
+        assert(changedCount as number === 2);
         assert(refresher.data as string === "XXX");
-        refresher.onChanged(listener);
+        refresher.onChanged(changedListener);
         await delay(100);
-        assert(eventCount as number === 2);
+        assert(changedCount as number === 2);
         assert(refresher.data as string === "XXX");
         changedListeners[0]?.(true);
         await delay(100);
-        assert(eventCount as number === 4);
+        assert(changedCount as number === 4);
         assert(refresher.data as string === "XXXX");
         refresher.removeAllListeners();
         assert(changedListeners.length as number === 0);
@@ -97,24 +97,24 @@ describe(createRefresher.name, () => {
         const refresher = await createRefresher(args);
         assert(refresher.data === "X");
         assert(listeners.length === 0);
-        let eventCount = 0;
+        let changedCount = 0;
 
-        const listener = (eventName: string) => {
+        const changedListener = (eventName: string) => {
             assert(eventName === "tests");
-            ++eventCount;
+            ++changedCount;
         };
 
-        refresher.onChanged(listener);
+        refresher.onChanged(changedListener);
         await delay(1100);
-        assert(eventCount === 0);
+        assert(changedCount === 0);
         assert(refresher.data as string === "X");
         assert(listeners.length as number === 1);
         listeners[0]?.(true);
         await delay(100);
-        assert(eventCount === 0);
+        assert(changedCount === 0);
         assert(refresher.data as string === "X");
         await delay(1000);
-        assert(eventCount as number === 1);
+        assert(changedCount as number === 1);
         assert(refresher.data as string === "XX");
     });
 
@@ -134,25 +134,25 @@ describe(createRefresher.name, () => {
         const refresher = await createRefresher(args);
         assert(refresher.data === "X");
         assert(listeners.length === 0);
-        let eventCount = 0;
+        let changedCount = 0;
 
         const listener = (eventName: string) => {
             assert(eventName === "tests");
-            ++eventCount;
+            ++changedCount;
         };
 
         refresher.onChanged(listener);
         await delay(100);
-        assert(eventCount === 0);
+        assert(changedCount === 0);
         assert(refresher.data as string === "X");
         assert(listeners.length as number === 1);
         listeners[0]?.(false);
         await delay(100);
-        assert(eventCount === 0);
+        assert(changedCount === 0);
         assert(refresher.data as string === "X");
         listeners[0]?.(true);
         await delay(100);
-        assert(eventCount as number === 1);
+        assert(changedCount as number === 1);
         assert(refresher.data as string === "XX");
     });
 });
