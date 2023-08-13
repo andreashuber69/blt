@@ -35,7 +35,7 @@ class Subscriber {
 describe(createRefresher.name, () => {
     it("should return a working refresher", async () => {
         const subscriber = new Subscriber();
-        const { changedListeners, onChanged, onError, removeAllListeners } = subscriber;
+        const { changedListeners, errorListeners, onChanged, onError, removeAllListeners } = subscriber;
 
         const args: RefresherArgs<"tests", string> = {
             name: "tests",
@@ -49,6 +49,18 @@ describe(createRefresher.name, () => {
         const refresher = await createRefresher(args);
         assert(refresher.data === "X");
         assert(changedListeners.length === 0);
+
+        let errorCount = 0;
+
+        const errorListener = (error: unknown) => {
+            assert(error === "error");
+            ++errorCount;
+        };
+
+        refresher.onError(errorListener);
+        assert(errorListeners.length === 1);
+        assert(errorCount === 0);
+
         let changedCount = 0;
 
         const changedListener = (eventName: string) => {
@@ -77,8 +89,13 @@ describe(createRefresher.name, () => {
         await delay(100);
         assert(changedCount as number === 4);
         assert(refresher.data as string === "XXXX");
+
+        errorListeners[0]?.("error");
+        assert(errorCount as number === 1);
+
         refresher.removeAllListeners();
         assert(changedListeners.length as number === 0);
+        assert(errorListeners.length as number === 0);
     });
 
     it("should delay refresh", async () => {
