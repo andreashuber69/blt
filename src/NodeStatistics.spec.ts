@@ -19,12 +19,12 @@ const nodeInfo: NodeInfo = {
     },
     channels: {
         data: [
-            { capacity: 1_000_000, id: "0x3609x2", local_balance: 400_000, other_ids: [], remote_balance: 600_000 },
-            { capacity: 1_000_000, id: "0x1657x1", local_balance: 400_000, other_ids: [], remote_balance: 600_000 },
-            { capacity: 1_000_000, id: "0x3609x1", local_balance: 400_000, other_ids: [], remote_balance: 600_000 },
-            { capacity: 1_000_000, id: "0x2091x1", local_balance: 400_000, other_ids: [], remote_balance: 600_000 },
-            { capacity: 1_000_000, id: "0x1657x0", local_balance: 400_000, other_ids: [], remote_balance: 600_000 },
-            { capacity: 1_000_000, id: "0x2916x2", local_balance: 400_000, other_ids: [], remote_balance: 600_000 },
+            { capacity: 1_000_000, id: "0x3609x2", local_balance: 400_000, remote_balance: 600_000 },
+            { capacity: 1_000_000, id: "0x1657x1", local_balance: 400_000, remote_balance: 600_000 },
+            { capacity: 1_000_000, id: "0x3609x1", local_balance: 400_000, remote_balance: 600_000 },
+            { capacity: 1_000_000, id: "0x2091x1", local_balance: 400_000, remote_balance: 600_000 },
+            { capacity: 1_000_000, id: "0x1657x0", local_balance: 400_000, remote_balance: 600_000 },
+            { capacity: 1_000_000, id: "0x2916x2", local_balance: 400_000, remote_balance: 600_000 },
         ],
         ...getManagerMethods<"channels">(),
     },
