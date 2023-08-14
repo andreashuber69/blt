@@ -5,7 +5,7 @@ import type { NodeInfo } from "./getNodeInfo.js";
 
 export class NodeStatistics {
     public constructor({ channels: { data: channels }, forwards: { data: forwards } }: NodeInfo) {
-        this.channelsImpl = Object.fromEntries(channels.map(({ id }) => [id, getNewChannelStats()]));
+        this.channelsImpl = Object.fromEntries(channels.map(({ id, ...props }) => [id, getNewChannelStats(props)]));
 
         // eslint-disable-next-line @typescript-eslint/naming-convention
         for (const { incoming_channel, outgoing_channel, tokens } of forwards) {
