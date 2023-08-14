@@ -2,8 +2,8 @@
 import assert from "node:assert";
 import { describe, it } from "node:test";
 
-import type { NodeInfo } from "./getNodeInfo.js";
 import type { ChannelStats } from "./ChannelStats.js";
+import type { NodeInfo } from "./getNodeInfo.js";
 import { NodeStatistics } from "./NodeStatistics.js";
 
 const getManagerMethods = <Name extends string>() => ({

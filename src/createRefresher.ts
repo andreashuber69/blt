@@ -1,3 +1,4 @@
+// https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import { EventEmitter } from "node:events";
 import { Scheduler } from "./Scheduler.js";
 
