@@ -3,6 +3,7 @@ import assert from "node:assert";
 import { describe, it } from "node:test";
 
 import type { NodeInfo } from "./getNodeInfo.js";
+import type { ChannelStatistics } from "./NodeStatistics.js";
 import { NodeStatistics } from "./NodeStatistics.js";
 
 const getManagerMethods = <Name extends string>() => ({
@@ -18,8 +19,11 @@ const nodeInfo: NodeInfo = {
     },
     channels: {
         data: [
-            { id: "0x3609x1" },
+            { id: "0x3609x2" },
             { id: "0x1657x1" },
+            { id: "0x3609x1" },
+            { id: "0x2091x1" },
+            { id: "0x1657x0" },
             { id: "0x2916x2" },
         ],
         ...getManagerMethods<"channels">(),
@@ -28,40 +32,82 @@ const nodeInfo: NodeInfo = {
         data: [
             /* eslint-disable @typescript-eslint/naming-convention */
             {
-                created_at: "2023-06-28T00:01:40.000Z",
-                fee: 33,
+                created_at: "2023-07-31T06:08:51.000Z",
+                fee: 4,
+                incoming_channel: "0x3609x2",
+                outgoing_channel: "0x1657x1",
+                tokens: 35_949,
+            },
+            {
+                created_at: "2023-07-31T06:08:56.000Z",
+                fee: 5,
+                incoming_channel: "0x3609x2",
+                outgoing_channel: "0x1657x1",
+                tokens: 43_497,
+            },
+            {
+                created_at: "2023-07-31T06:51:21.000Z",
+                fee: 7,
                 incoming_channel: "0x3609x1",
                 outgoing_channel: "0x1657x1",
-                tokens: 237_462,
-            } as const,
+                tokens: 59_023,
+            },
             {
-                created_at: "2023-06-28T00:01:35.000Z",
-                fee: 18,
+                created_at: "2023-07-31T09:06:05.000Z",
+                fee: 4,
                 incoming_channel: "0x3609x1",
                 outgoing_channel: "0x1657x1",
-                tokens: 131_998,
-            } as const,
+                tokens: 39_186,
+            },
             {
-                created_at: "2023-06-27T17:36:41.000Z",
-                fee: 0,
-                incoming_channel: "0x2916x2",
-                outgoing_channel: "0x3609x1",
-                tokens: 100_010,
-            } as const,
-            {
-                created_at: "2023-06-27T17:36:35.000Z",
-                fee: 0,
-                incoming_channel: "0x2916x2",
-                outgoing_channel: "0x3609x1",
-                tokens: 100_010,
-            } as const,
-            {
-                created_at: "2023-06-27T08:02:35.000Z",
-                fee: 24,
+                created_at: "2023-07-31T11:05:13.000Z",
+                fee: 7,
                 incoming_channel: "0x3609x1",
                 outgoing_channel: "0x1657x1",
-                tokens: 173_917,
-            } as const,
+                tokens: 61_526,
+            },
+            {
+                created_at: "2023-07-31T13:56:09.000Z",
+                fee: 4,
+                incoming_channel: "0x3609x1",
+                outgoing_channel: "0x1657x1",
+                tokens: 38_508,
+            },
+            {
+                created_at: "2023-07-31T15:12:45.000Z",
+                fee: 10,
+                incoming_channel: "0x2091x1",
+                outgoing_channel: "0x1657x0",
+                tokens: 49_845,
+            },
+            {
+                created_at: "2023-07-31T15:14:27.000Z",
+                fee: 7,
+                incoming_channel: "0x2091x1",
+                outgoing_channel: "0x1657x1",
+                tokens: 60_316,
+            },
+            {
+                created_at: "2023-07-31T15:17:30.000Z",
+                fee: 3,
+                incoming_channel: "0x2091x1",
+                outgoing_channel: "0x2916x2",
+                tokens: 48_008,
+            },
+            {
+                created_at: "2023-07-31T15:20:16.000Z",
+                fee: 4,
+                incoming_channel: "0x2091x1",
+                outgoing_channel: "0x2916x2",
+                tokens: 58_089,
+            },
+            {
+                created_at: "2023-07-31T19:49:29.000Z",
+                fee: 7,
+                incoming_channel: "0x1234x2",
+                outgoing_channel: "0x5678x1",
+                tokens: 100_000,
+            },
             /* eslint-enable @typescript-eslint/naming-convention */
         ],
         ...getManagerMethods<"forwards">(),
@@ -73,12 +119,32 @@ const nodeInfo: NodeInfo = {
     ...getManagerMethods<"channels" | "forwards" | "payments">(),
 };
 
+const verifyFlow = (
+    stats: Readonly<Record<string, Readonly<ChannelStatistics>>>,
+    channel: string,
+    incoming: number,
+    outgoing: number,
+) => {
+    it(channel, () => {
+        const { [channel]: channelStats } = stats;
+        assert(channelStats);
+        assert(channelStats.incomingTokens === incoming);
+        assert(channelStats.outgoingTokens === outgoing);
+    });
+};
+
 describe(NodeStatistics.name, () => {
-    describe("constructor", () => {
-        it("should create a valid object", () => {
-            const sut = new NodeStatistics(nodeInfo);
-            assert(sut.channelStatistics);
-            console.log(sut.channelStatistics);
+    describe("channelStatistics", () => {
+        describe("should contain the correct flows", () => {
+            const { channelStatistics } = new NodeStatistics(nodeInfo);
+
+            assert(Object.keys(channelStatistics).length === nodeInfo.channels.data.length);
+            verifyFlow(channelStatistics, "0x3609x2", 79_446, 0);
+            verifyFlow(channelStatistics, "0x1657x1", 0, 338_005);
+            verifyFlow(channelStatistics, "0x3609x1", 198_243, 0);
+            verifyFlow(channelStatistics, "0x2091x1", 216_258, 0);
+            verifyFlow(channelStatistics, "0x1657x0", 0, 49_845);
+            verifyFlow(channelStatistics, "0x2916x2", 0, 106_097);
         });
     });
 });

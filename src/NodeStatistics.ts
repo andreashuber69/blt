@@ -1,7 +1,7 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import type { NodeInfo } from "./getNodeInfo.js";
 
-interface ChannelStatistics {
+export interface ChannelStatistics {
     outgoingTokens: number;
     incomingTokens: number;
 }
