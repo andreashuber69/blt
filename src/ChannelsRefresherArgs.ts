@@ -21,7 +21,8 @@ export class ChannelsRefresherArgs extends FullRefresherArgs<"channels", Channel
     }
 
     protected override async getAllData() {
-        return await getChannels(this.args);
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        return await getChannels({ ...this.args, is_public: true });
     }
 
     private readonly emitter = subscribeToChannels(this.args);
