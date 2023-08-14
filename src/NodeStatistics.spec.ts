@@ -13,24 +13,23 @@ const getManagerMethods = <Name extends string>() => ({
 });
 
 const nodeInfo: NodeInfo = {
+    /* eslint-disable @typescript-eslint/naming-convention */
     identity: {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
         public_key: "",
     },
     channels: {
         data: [
-            { id: "0x3609x2" },
-            { id: "0x1657x1" },
-            { id: "0x3609x1" },
-            { id: "0x2091x1" },
-            { id: "0x1657x0" },
-            { id: "0x2916x2" },
+            { capacity: 1_000_000, id: "0x3609x2", local_balance: 400_000, other_ids: [], remote_balance: 600_000 },
+            { capacity: 1_000_000, id: "0x1657x1", local_balance: 400_000, other_ids: [], remote_balance: 600_000 },
+            { capacity: 1_000_000, id: "0x3609x1", local_balance: 400_000, other_ids: [], remote_balance: 600_000 },
+            { capacity: 1_000_000, id: "0x2091x1", local_balance: 400_000, other_ids: [], remote_balance: 600_000 },
+            { capacity: 1_000_000, id: "0x1657x0", local_balance: 400_000, other_ids: [], remote_balance: 600_000 },
+            { capacity: 1_000_000, id: "0x2916x2", local_balance: 400_000, other_ids: [], remote_balance: 600_000 },
         ],
         ...getManagerMethods<"channels">(),
     },
     forwards: {
         data: [
-            /* eslint-disable @typescript-eslint/naming-convention */
             {
                 created_at: "2023-07-31T06:08:51.000Z",
                 fee: 4,
@@ -108,10 +107,10 @@ const nodeInfo: NodeInfo = {
                 outgoing_channel: "0x5678x1",
                 tokens: 100_000,
             },
-            /* eslint-enable @typescript-eslint/naming-convention */
         ],
         ...getManagerMethods<"forwards">(),
     },
+    /* eslint-enable @typescript-eslint/naming-convention */
     payments: {
         data: [],
         ...getManagerMethods<"payments">(),
