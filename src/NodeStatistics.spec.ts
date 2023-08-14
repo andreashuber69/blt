@@ -122,14 +122,19 @@ const nodeInfo: NodeInfo = {
 const verifyFlow = (
     stats: Readonly<Record<string, Readonly<ChannelStatistics>>>,
     channel: string,
-    incoming: number,
-    outgoing: number,
+    incomingPayments: number,
+    incomingTokens: number,
+    outgoingPayments: number,
+    outgoingTokens: number,
 ) => {
     it(channel, () => {
-        const { [channel]: channelStats } = stats;
+        const channelStats = stats[channel];
         assert(channelStats);
-        assert(channelStats.incomingTokens === incoming);
-        assert(channelStats.outgoingTokens === outgoing);
+        const { forwards } = channelStats;
+        assert(forwards.incomingPayments === incomingPayments);
+        assert(forwards.incomingTokens === incomingTokens);
+        assert(forwards.outgoingPayments === outgoingPayments);
+        assert(forwards.outgoingTokens === outgoingTokens);
     });
 };
 
@@ -139,12 +144,12 @@ describe(NodeStatistics.name, () => {
             const { channelStatistics } = new NodeStatistics(nodeInfo);
 
             assert(Object.keys(channelStatistics).length === nodeInfo.channels.data.length);
-            verifyFlow(channelStatistics, "0x3609x2", 79_446, 0);
-            verifyFlow(channelStatistics, "0x1657x1", 0, 338_005);
-            verifyFlow(channelStatistics, "0x3609x1", 198_243, 0);
-            verifyFlow(channelStatistics, "0x2091x1", 216_258, 0);
-            verifyFlow(channelStatistics, "0x1657x0", 0, 49_845);
-            verifyFlow(channelStatistics, "0x2916x2", 0, 106_097);
+            verifyFlow(channelStatistics, "0x3609x2", 2, 79_446, 0, 0);
+            verifyFlow(channelStatistics, "0x1657x1", 0, 0, 7, 338_005);
+            verifyFlow(channelStatistics, "0x3609x1", 4, 198_243, 0, 0);
+            verifyFlow(channelStatistics, "0x2091x1", 4, 216_258, 0, 0);
+            verifyFlow(channelStatistics, "0x1657x0", 0, 0, 1, 49_845);
+            verifyFlow(channelStatistics, "0x2916x2", 0, 0, 2, 106_097);
         });
     });
 });
