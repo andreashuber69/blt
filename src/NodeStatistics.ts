@@ -3,14 +3,14 @@
 import type { NodeInfo } from "./getNodeInfo.js";
 
 interface Forwards {
-    incomingPayments: number;
+    incomingCount: number;
     incomingTokens: number;
-    outgoingPayments: number;
+    outgoingCount: number;
     outgoingTokens: number;
 }
 
 class ChannelStatisticsImpl implements ChannelStatistics {
-    public readonly forwards = { incomingPayments: 0, incomingTokens: 0, outgoingPayments: 0, outgoingTokens: 0 };
+    public readonly forwards = { incomingCount: 0, incomingTokens: 0, outgoingCount: 0, outgoingTokens: 0 };
 }
 
 export interface ChannelStatistics {
@@ -28,9 +28,9 @@ export class NodeStatistics {
 
             // A forward should no longer appear in the statistics if one or both channels have been closed.
             if (incoming && outgoing) {
-                ++incoming.forwards.incomingPayments;
+                ++incoming.forwards.incomingCount;
                 incoming.forwards.incomingTokens += tokens;
-                ++outgoing.forwards.outgoingPayments;
+                ++outgoing.forwards.outgoingCount;
                 outgoing.forwards.outgoingTokens += tokens;
             }
         }

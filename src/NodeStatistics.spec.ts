@@ -122,18 +122,18 @@ const nodeInfo: NodeInfo = {
 const verifyFlow = (
     stats: Readonly<Record<string, Readonly<ChannelStatistics>>>,
     channel: string,
-    incomingPayments: number,
+    incomingCount: number,
     incomingTokens: number,
-    outgoingPayments: number,
+    outgoingCount: number,
     outgoingTokens: number,
 ) => {
     it(channel, () => {
         const channelStats = stats[channel];
         assert(channelStats);
         const { forwards } = channelStats;
-        assert(forwards.incomingPayments === incomingPayments);
+        assert(forwards.incomingCount === incomingCount);
         assert(forwards.incomingTokens === incomingTokens);
-        assert(forwards.outgoingPayments === outgoingPayments);
+        assert(forwards.outgoingCount === outgoingCount);
         assert(forwards.outgoingTokens === outgoingTokens);
     });
 };
