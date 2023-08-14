@@ -3,7 +3,7 @@ import assert from "node:assert";
 import { describe, it } from "node:test";
 
 import type { NodeInfo } from "./getNodeInfo.js";
-import type { ChannelStatistics } from "./NodeStatistics.js";
+import type { ChannelStats } from "./ChannelStats.js";
 import { NodeStatistics } from "./NodeStatistics.js";
 
 const getManagerMethods = <Name extends string>() => ({
@@ -120,7 +120,7 @@ const nodeInfo: NodeInfo = {
 };
 
 const verifyFlow = (
-    stats: Readonly<Record<string, Readonly<ChannelStatistics>>>,
+    channels: Readonly<Record<string, Readonly<ChannelStats>>>,
     channel: string,
     incomingCount: number,
     incomingTokens: number,
@@ -128,7 +128,7 @@ const verifyFlow = (
     outgoingTokens: number,
 ) => {
     it(channel, () => {
-        const channelStats = stats[channel];
+        const channelStats = channels[channel];
         assert(channelStats);
         const { forwards } = channelStats;
         assert(forwards.incomingCount === incomingCount);
@@ -141,15 +141,15 @@ const verifyFlow = (
 describe(NodeStatistics.name, () => {
     describe("channelStatistics", () => {
         describe("should contain the correct flows", () => {
-            const { channelStatistics } = new NodeStatistics(nodeInfo);
+            const { channels } = new NodeStatistics(nodeInfo);
 
-            assert(Object.keys(channelStatistics).length === nodeInfo.channels.data.length);
-            verifyFlow(channelStatistics, "0x3609x2", 2, 79_446, 0, 0);
-            verifyFlow(channelStatistics, "0x1657x1", 0, 0, 7, 338_005);
-            verifyFlow(channelStatistics, "0x3609x1", 4, 198_243, 0, 0);
-            verifyFlow(channelStatistics, "0x2091x1", 4, 216_258, 0, 0);
-            verifyFlow(channelStatistics, "0x1657x0", 0, 0, 1, 49_845);
-            verifyFlow(channelStatistics, "0x2916x2", 0, 0, 2, 106_097);
+            assert(Object.keys(channels).length === nodeInfo.channels.data.length);
+            verifyFlow(channels, "0x3609x2", 2, 79_446, 0, 0);
+            verifyFlow(channels, "0x1657x1", 0, 0, 7, 338_005);
+            verifyFlow(channels, "0x3609x1", 4, 198_243, 0, 0);
+            verifyFlow(channels, "0x2091x1", 4, 216_258, 0, 0);
+            verifyFlow(channels, "0x1657x0", 0, 0, 1, 49_845);
+            verifyFlow(channels, "0x2916x2", 0, 0, 2, 106_097);
         });
     });
 });
