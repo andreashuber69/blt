@@ -3,7 +3,7 @@ import type { ForwardStats } from "./ForwardStats.js";
 import { getNewForwardStats } from "./ForwardStats.js";
 
 export interface ChannelStats {
-    readonly forwards: Readonly<ForwardStats>;
+    readonly forwards: ForwardStats;
 }
 
 export const getNewChannelStats = () => new class implements ChannelStats {
