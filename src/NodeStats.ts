@@ -3,7 +3,7 @@ import type { ChannelStats } from "./ChannelStats.js";
 import { getNewChannelStats } from "./ChannelStats.js";
 import type { NodeInfo } from "./getNodeInfo.js";
 
-export class NodeStatistics {
+export class NodeStats {
     public constructor({ channels: { data: channels }, forwards: { data: forwards } }: NodeInfo) {
         this.channelsImpl = Object.fromEntries(channels.map(
             // eslint-disable-next-line @typescript-eslint/naming-convention

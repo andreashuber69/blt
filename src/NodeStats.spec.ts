@@ -4,7 +4,7 @@ import { describe, it } from "node:test";
 
 import type { ChannelStats } from "./ChannelStats.js";
 import type { NodeInfo } from "./getNodeInfo.js";
-import { NodeStatistics } from "./NodeStatistics.js";
+import { NodeStats } from "./NodeStats.js";
 
 const getManagerMethods = <Name extends string>() => ({
     onChanged: (_listener: (name: Name) => void) => { /* empty */ },
@@ -137,10 +137,10 @@ const verifyFlow = (
     });
 };
 
-describe(NodeStatistics.name, () => {
-    describe("channelStatistics", () => {
+describe(NodeStats.name, () => {
+    describe("channels", () => {
         describe("should contain the correct flows", () => {
-            const { channels } = new NodeStatistics(nodeInfo);
+            const { channels } = new NodeStats(nodeInfo);
 
             assert(Object.keys(channels).length === nodeInfo.channels.data.length);
             verifyFlow(channels, "0x3609x2", 2, 79_446, 0, 0);
