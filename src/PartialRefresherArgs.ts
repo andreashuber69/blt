@@ -1,4 +1,5 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
+import type { EventEmitter } from "node:events";
 import type { AuthenticatedLightningArgs } from "lightning";
 import { BaseRefresherArgs } from "./BaseRefresherArgs.js";
 import type { Refresher, RefresherArgs } from "./createRefresher.js";
@@ -18,10 +19,6 @@ export interface TimeBoundArgs {
  */
 // eslint-disable-next-line max-len
 export abstract class PartialRefresherArgs<Name extends string, Element extends TimeBoundElement> extends BaseRefresherArgs<Name, Element[]> {
-    public constructor(protected readonly args: AuthenticatedLightningArgs<TimeBoundArgs>) {
-        super();
-    }
-
     public override async refresh(current?: Element[]) {
         const result = current ?? [];
         const { after, before } = getRangeDays(this.args.days);
@@ -35,6 +32,14 @@ export abstract class PartialRefresherArgs<Name extends string, Element extends 
         const newElements = await toSortedArray(this.getDataRange(lastElementCreatedAt, before));
         result.push(...this.eliminateDuplicates(result, newElements));
         return result;
+    }
+
+    protected constructor(
+        name: Name,
+        emitter: EventEmitter,
+        protected readonly args: AuthenticatedLightningArgs<TimeBoundArgs>,
+    ) {
+        super(name, emitter);
     }
 
     /** Gets data in the time period defined by `after` and `before`, both inclusive. */
