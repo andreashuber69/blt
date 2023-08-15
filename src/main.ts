@@ -7,6 +7,7 @@ import { deletePayment } from "lightning";
 import { connectLnd } from "./connectLnd.js";
 import { getFailedPayments } from "./getFailedPayments.js";
 import { getNodeInfo } from "./getNodeInfo.js";
+import { NodeStats } from "./NodeStats.js";
 
 interface PackageJson {
     readonly name: string;
@@ -38,12 +39,14 @@ const getInfo = async (authenticatedLnd: AuthenticatedLightningArgs) => {
     console.log("Getting node info...");
     const nodeInfo = await getNodeInfo(authenticatedLnd);
 
-    const handler = (property: "channels") => console.log(`${property}: ${nodeInfo[property].data.length}`);
+    const handler = (property: "channels") =>
+        console.log(`${new Date(Date.now()).toTimeString()} ${property}: ${nodeInfo[property].data.length}`);
 
     const timeBoundHandler = (property: "forwards" | "payments") => {
         const { [property]: { data } } = nodeInfo;
         const aux = data.at(-1)?.tokens;
-        console.log(`${property}: ${data.length} ${data.at(0)?.created_at} - ${data.at(-1)?.created_at} ${aux}`);
+        // eslint-disable-next-line max-len
+        console.log(`${new Date(Date.now()).toTimeString()} ${property}: ${data.length} ${data.at(0)?.created_at} - ${data.at(-1)?.created_at} ${aux}`);
     };
 
     handler("channels");
@@ -80,6 +83,8 @@ while (true) {
         await deleteOldFailedPayments(lnd);
         const info = await getInfo(lnd);
         console.log(`Connected successfully: ${(Date.now() - start) / 1000}`);
+        const { channels } = new NodeStats(info);
+        console.log(JSON.stringify(channels, undefined, 2));
         console.error(await new Promise((resolve) => info.onError(resolve)));
         console.log("\r\nConnection lost!");
     } catch (error: unknown) {
