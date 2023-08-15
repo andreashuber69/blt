@@ -1,4 +1,5 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
+import type { SubscribeToPaymentsPaymentEvent } from "lightning";
 import { subscribeToPayments } from "lightning";
 import { getPayments } from "./getPayments.js";
 import { PartialRefresherArgs } from "./PartialRefresherArgs.js";
@@ -8,7 +9,10 @@ export class PaymentsRefresherArgs extends PartialRefresherArgs<"payments", Paym
     public override readonly name = "payments";
 
     public override onChanged(listener: (scheduleRefresh: boolean) => void) {
-        this.emitter.on("confirmed", () => listener(true));
+        this.emitter.on("confirmed", (e: SubscribeToPaymentsPaymentEvent) => {
+            console.log(`${new Date(Date.now()).toTimeString()} payment ${e.created_at}: ${e.tokens}`);
+            listener(true);
+        });
     }
 
     public override onError(listener: (error: unknown) => void): void {

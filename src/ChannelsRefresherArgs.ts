@@ -1,4 +1,5 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
+import type { SubscribeToChannelsChannelClosedEvent, SubscribeToChannelsChannelOpenedEvent } from "lightning";
 import { subscribeToChannels } from "lightning";
 import type { Channel } from "./Channel.js";
 import { FullRefresherArgs } from "./FullRefresherArgs.js";
@@ -8,8 +9,13 @@ export class ChannelsRefresherArgs extends FullRefresherArgs<"channels", Channel
     public override readonly name = "channels";
 
     public override onChanged(listener: (scheduleRefresh: boolean) => void) {
-        this.emitter.on("channel_opened", () => listener(true));
-        this.emitter.on("channel_closed", () => listener(true));
+        const handler = (e: SubscribeToChannelsChannelClosedEvent | SubscribeToChannelsChannelOpenedEvent) => {
+            console.log(`${new Date(Date.now()).toTimeString()} channel ${e.id}`);
+            listener(true);
+        };
+
+        this.emitter.on("channel_opened", handler);
+        this.emitter.on("channel_closed", handler);
     }
 
     public override onError(listener: (error: unknown) => void): void {

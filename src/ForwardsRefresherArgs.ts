@@ -9,7 +9,12 @@ export class ForwardsRefresherArgs extends PartialRefresherArgs<"forwards", Forw
     public override readonly name = "forwards";
 
     public override onChanged(listener: (scheduleRefresh: boolean) => void) {
-        this.emitter.on("forward", (e: SubscribeToForwardsForwardEvent) => listener(e.is_confirmed));
+        this.emitter.on("forward", (e: SubscribeToForwardsForwardEvent) => {
+            if (e.is_confirmed) {
+                console.log(`${new Date(Date.now()).toTimeString()} forward ${e.at}: ${e.tokens}`);
+                listener(e.is_confirmed);
+            }
+        });
     }
 
     public override onError(listener: (error: unknown) => void): void {
