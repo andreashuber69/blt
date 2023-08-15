@@ -3,6 +3,7 @@ import type { SubscribeToForwardsForwardEvent } from "lightning";
 import { subscribeToForwards } from "lightning";
 import type { Forward } from "./Forward.js";
 import { getForwards } from "./getForwards.js";
+import { log } from "./Logger.js";
 import { PartialRefresherArgs } from "./PartialRefresherArgs.js";
 
 export class ForwardsRefresherArgs extends PartialRefresherArgs<"forwards", Forward> {
@@ -11,7 +12,7 @@ export class ForwardsRefresherArgs extends PartialRefresherArgs<"forwards", Forw
     public override onChanged(listener: (scheduleRefresh: boolean) => void) {
         this.emitter.on("forward", (e: SubscribeToForwardsForwardEvent) => {
             if (e.is_confirmed) {
-                console.log(`${new Date(Date.now()).toTimeString()} forward ${e.at}: ${e.tokens}`);
+                log(`forward ${e.at}: ${e.tokens}`);
                 listener(e.is_confirmed);
             }
         });

@@ -2,6 +2,7 @@
 import type { SubscribeToPaymentsPaymentEvent } from "lightning";
 import { subscribeToPayments } from "lightning";
 import { getPayments } from "./getPayments.js";
+import { log } from "./Logger.js";
 import { PartialRefresherArgs } from "./PartialRefresherArgs.js";
 import type { Payment } from "./Payment.js";
 
@@ -10,7 +11,7 @@ export class PaymentsRefresherArgs extends PartialRefresherArgs<"payments", Paym
 
     public override onChanged(listener: (scheduleRefresh: boolean) => void) {
         this.emitter.on("confirmed", (e: SubscribeToPaymentsPaymentEvent) => {
-            console.log(`${new Date(Date.now()).toTimeString()} payment ${e.created_at}: ${e.tokens}`);
+            log(`payment ${e.created_at}: ${e.tokens}`);
             listener(true);
         });
     }

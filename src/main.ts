@@ -7,6 +7,7 @@ import { deletePayment } from "lightning";
 import { connectLnd } from "./connectLnd.js";
 import { getFailedPayments } from "./getFailedPayments.js";
 import { getNodeInfo } from "./getNodeInfo.js";
+import { error, log } from "./Logger.js";
 import { NodeStats } from "./NodeStats.js";
 
 interface PackageJson {
@@ -15,7 +16,7 @@ interface PackageJson {
 }
 
 const deleteOldFailedPayments = async (authenticatedLnd: AuthenticatedLightningArgs) => {
-    console.log("Deleting old failed payments...");
+    log("Deleting old failed payments...");
 
     const getFailedPaymentArgs = {
         ...authenticatedLnd,
@@ -32,21 +33,19 @@ const deleteOldFailedPayments = async (authenticatedLnd: AuthenticatedLightningA
         ++count;
     }
 
-    console.log(`Deleted ${count} old failed payments.`);
+    log(`Deleted ${count} old failed payments.`);
 };
 
 const getInfo = async (authenticatedLnd: AuthenticatedLightningArgs) => {
-    console.log("Getting node info...");
+    log("Getting node info...");
     const nodeInfo = await getNodeInfo(authenticatedLnd);
 
-    const handler = (property: "channels") =>
-        console.log(`${new Date(Date.now()).toTimeString()} ${property}: ${nodeInfo[property].data.length}`);
+    const handler = (property: "channels") => log(`${property}: ${nodeInfo[property].data.length}`);
 
     const timeBoundHandler = (property: "forwards" | "payments") => {
         const { [property]: { data } } = nodeInfo;
         const aux = data.at(-1)?.tokens;
-        // eslint-disable-next-line max-len
-        console.log(`${new Date(Date.now()).toTimeString()} ${property}: ${data.length} ${data.at(0)?.created_at} - ${data.at(-1)?.created_at} ${aux}`);
+        log(`${property}: ${data.length} ${data.at(0)?.created_at} - ${data.at(-1)?.created_at} ${aux}`);
     };
 
     handler("channels");
@@ -64,35 +63,30 @@ try {
     // imports. There are alternatives to calling require, but these seem overly complicated:
     // https://stackoverflow.com/questions/58172911/typescript-compiler-options-trying-to-get-flat-output-to-outdir
     const { name, version } = createRequire(import.meta.url)("../package.json") as PackageJson;
-    console.log(`${name} v${version}`);
-} catch (error: unknown) {
-    console.error(error);
+    log(`${name} v${version}`);
+} catch (error_: unknown) {
+    error(error_);
     process.exit(1);
-} finally {
-    console.log("\r\n");
 }
 
-console.log("Connecting...");
+log("Connecting...");
 
 // eslint-disable-next-line no-constant-condition
 while (true) {
     try {
-        const start = Date.now();
         /* eslint-disable no-await-in-loop */
         const lnd = await connectLnd();
         await deleteOldFailedPayments(lnd);
         const info = await getInfo(lnd);
-        console.log(`Connected successfully: ${(Date.now() - start) / 1000}`);
         const { channels } = new NodeStats(info);
-        console.log(JSON.stringify(channels, undefined, 2));
-        console.error(await new Promise((resolve) => info.onError(resolve)));
-        console.log("\r\nConnection lost!");
-    } catch (error: unknown) {
-        console.log("\r\n\r\nEncountered error:");
-        console.error(error);
+        log(JSON.stringify(channels, undefined, 2));
+        error(await new Promise((resolve) => info.onError(resolve)));
+        log("\nConnection lost!");
+    } catch (error_: unknown) {
+        error(error_);
     }
 
-    console.log("\r\n\r\nAttempting to reconnect...");
+    log("\n\nAttempting to reconnect...");
     await new Promise((resolve) => setTimeout(resolve, 10_000));
     /* eslint-enable no-await-in-loop */
 }

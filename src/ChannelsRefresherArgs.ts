@@ -4,13 +4,14 @@ import { subscribeToChannels } from "lightning";
 import type { Channel } from "./Channel.js";
 import { FullRefresherArgs } from "./FullRefresherArgs.js";
 import { getChannels } from "./getChannels.js";
+import { log } from "./Logger.js";
 
 export class ChannelsRefresherArgs extends FullRefresherArgs<"channels", Channel> {
     public override readonly name = "channels";
 
     public override onChanged(listener: (scheduleRefresh: boolean) => void) {
         const handler = (e: SubscribeToChannelsChannelClosedEvent | SubscribeToChannelsChannelOpenedEvent) => {
-            console.log(`${new Date(Date.now()).toTimeString()} channel ${e.id}`);
+            log(`channel ${e.id}`);
             listener(true);
         };
 
