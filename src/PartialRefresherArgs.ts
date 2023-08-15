@@ -1,7 +1,7 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import type { AuthenticatedLightningArgs } from "lightning";
-import { ArrayRefresherArgs } from "./ArrayRefresherArgs.js";
-import type { Refresher } from "./createRefresher.js";
+import { BaseRefresherArgs } from "./BaseRefresherArgs.js";
+import type { Refresher, RefresherArgs } from "./createRefresher.js";
 import { getRangeDays } from "./getRange.js";
 import type { TimeBoundElement } from "./TimeBoundElement.js";
 import { toSortedArray } from "./toSortedArray.js";
@@ -12,12 +12,12 @@ export interface TimeBoundArgs {
 }
 
 /**
- * Provides the base for all {@linkcode ArrayRefresherArgs} where the elements in {@linkcode Refresher.data} extend
- * {@linkcode TimeBoundElement}. This enables refreshing data partially, by restricting the time period into which newly
- * created elements can fall.
+ * Provides the base for all {@linkcode RefresherArgs} where {@linkcode Refresher.data} is an array, the elements of
+ * which implement {@linkcode TimeBoundElement}. This enables refreshing data partially, by restricting the time period
+ * into which newly created elements can fall.
  */
 // eslint-disable-next-line max-len
-export abstract class PartialRefresherArgs<Name extends string, Element extends TimeBoundElement> extends ArrayRefresherArgs<Name, Element> {
+export abstract class PartialRefresherArgs<Name extends string, Element extends TimeBoundElement> extends BaseRefresherArgs<Name, Element[]> {
     public constructor(protected readonly args: AuthenticatedLightningArgs<TimeBoundArgs>) {
         super();
     }
