@@ -11,7 +11,7 @@ class RefresherImpl<Name extends string, Data> implements Refresher<Name, Data> 
         if (this.emitter.listenerCount(this.args.name) === 1) {
             const scheduler = new Scheduler(this.args.delayMilliseconds);
 
-            this.args.onChanged((scheduleRefresh: boolean) => scheduleRefresh && scheduler.call(async () => {
+            this.args.onChanged(() => scheduler.call(async () => {
                 this.data = await this.args.refresh(this.data);
                 this.emitter.emit(this.args.name, this.args.name);
             }));
@@ -49,16 +49,17 @@ export interface RefresherArgs<Name extends string, Data> {
     readonly delayMilliseconds: number;
 
     /**
-     * Subscribes the passed listener to all events that indicate a change to the data.
+     * Subscribes the passed listener to all events that might indicate {@linkcode Refresher.data} needs to be
+     * refreshed.
      * @description Is called when the first listener is installed with a call to {@linkcode Refresher.onChanged}.
-     * @param listener Schedules a refresh and notify operation to occur after
-     * {@linkcode RefresherArgs.delayMilliseconds}, if and only if `scheduleRefresh` is truthy **and** no other such
-     * operation is currently scheduled or in progress. So, `scheduleRefresh` must be truthy whenever the data might
-     * have changed. It should be falsy if a change can be ruled out. The refresh and notify operation consists of
-     * calling {@linkcode RefresherArgs.refresh}, assigning the awaited result to {@linkcode Refresher.data} and
-     * finally calling all listeners installed through {@linkcode Refresher.onChanged}.
+     * @param listener Must be called whenever it has been detected that {@linkcode Refresher.data} might need to be
+     * updated. Each call schedules a refresh and notify operation to occur after
+     * {@linkcode RefresherArgs.delayMilliseconds}, if and only if no other such operation is currently scheduled or in
+     * progress. The refresh and notify operation consists of calling {@linkcode RefresherArgs.refresh}, assigning the
+     * awaited result to {@linkcode Refresher.data} and finally calling all listeners installed through
+     * {@linkcode Refresher.onChanged}.
      */
-    readonly onChanged: (listener: (scheduleRefresh: boolean) => void) => void;
+    readonly onChanged: (listener: () => void) => void;
 
     /**
      * Subscribes the passed listener to all events that indicate an error preventing further update of

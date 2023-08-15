@@ -9,10 +9,10 @@ import { log } from "./Logger.js";
 export class ChannelsRefresherArgs extends FullRefresherArgs<"channels", Channel> {
     public override readonly name = "channels";
 
-    public override onChanged(listener: (scheduleRefresh: boolean) => void) {
+    public override onChanged(listener: () => void) {
         const handler = (e: SubscribeToChannelsChannelClosedEvent | SubscribeToChannelsChannelOpenedEvent) => {
             log(`channel ${e.id}`);
-            listener(true);
+            listener();
         };
 
         this.emitter.on("channel_opened", handler);

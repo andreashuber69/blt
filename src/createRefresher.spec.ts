@@ -8,7 +8,7 @@ import { delay } from "./testHelpers/delay.js";
 const refresh = async (data?: string) => await Promise.resolve(`${data ?? ""}X`);
 
 class Subscriber {
-    public get changedListeners(): ReadonlyArray<(scheduleRefresh: boolean) => void> {
+    public get changedListeners(): ReadonlyArray<() => void> {
         return this.changedListenersImpl;
     }
 
@@ -16,7 +16,7 @@ class Subscriber {
         return this.errorListenersImpl;
     }
 
-    public readonly onChanged = (listener: (scheduleRefresh: boolean) => void) => {
+    public readonly onChanged = (listener: () => void) => {
         this.changedListenersImpl.push(listener);
     };
 
@@ -29,7 +29,7 @@ class Subscriber {
         this.errorListenersImpl.splice(0);
     };
 
-    private readonly changedListenersImpl = new Array<(scheduleRefresh: boolean) => void>();
+    private readonly changedListenersImpl = new Array<() => void>();
     private readonly errorListenersImpl = new Array<(error: unknown) => void>();
 }
 
@@ -74,11 +74,11 @@ describe(createRefresher.name, () => {
         assert(changedCount === 0);
         assert(refresher.data as string === "X");
         assert(changedListeners.length as number === 1);
-        changedListeners[0]?.(true);
+        changedListeners[0]?.();
         await delay(100);
         assert(changedCount as number === 1);
         assert(refresher.data as string === "XX");
-        changedListeners[0]?.(true);
+        changedListeners[0]?.();
         await delay(100);
         assert(changedCount as number === 2);
         assert(refresher.data as string === "XXX");
@@ -86,7 +86,7 @@ describe(createRefresher.name, () => {
         await delay(100);
         assert(changedCount as number === 2);
         assert(refresher.data as string === "XXX");
-        changedListeners[0]?.(true);
+        changedListeners[0]?.();
         await delay(100);
         assert(changedCount as number === 4);
         assert(refresher.data as string === "XXXX");
@@ -127,49 +127,11 @@ describe(createRefresher.name, () => {
         assert(changedCount === 0);
         assert(refresher.data as string === "X");
         assert(listeners.length as number === 1);
-        listeners[0]?.(true);
+        listeners[0]?.();
         await delay(100);
         assert(changedCount === 0);
         assert(refresher.data as string === "X");
         await delay(1000);
-        assert(changedCount as number === 1);
-        assert(refresher.data as string === "XX");
-    });
-
-    it("should not refresh when scheduleRefresh is false", async () => {
-        const subscriber = new Subscriber();
-        const { changedListeners: listeners, onChanged, onError, removeAllListeners } = subscriber;
-
-        const args: RefresherArgs<"tests", string> = {
-            name: "tests",
-            refresh,
-            delayMilliseconds: 50,
-            onChanged,
-            onError,
-            removeAllListeners,
-        };
-
-        const refresher = await createRefresher(args);
-        assert(refresher.data === "X");
-        assert(listeners.length === 0);
-        let changedCount = 0;
-
-        const listener = (eventName: string) => {
-            assert(eventName === "tests");
-            ++changedCount;
-        };
-
-        refresher.onChanged(listener);
-        await delay(100);
-        assert(changedCount === 0);
-        assert(refresher.data as string === "X");
-        assert(listeners.length as number === 1);
-        listeners[0]?.(false);
-        await delay(100);
-        assert(changedCount === 0);
-        assert(refresher.data as string === "X");
-        listeners[0]?.(true);
-        await delay(100);
         assert(changedCount as number === 1);
         assert(refresher.data as string === "XX");
     });

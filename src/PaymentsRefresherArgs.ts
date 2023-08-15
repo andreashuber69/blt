@@ -9,10 +9,10 @@ import type { Payment } from "./Payment.js";
 export class PaymentsRefresherArgs extends PartialRefresherArgs<"payments", Payment> {
     public override readonly name = "payments";
 
-    public override onChanged(listener: (scheduleRefresh: boolean) => void) {
+    public override onChanged(listener: () => void) {
         this.emitter.on("confirmed", (e: SubscribeToPaymentsPaymentEvent) => {
             log(`payment ${e.created_at}: ${e.tokens}`);
-            listener(true);
+            listener();
         });
     }
 

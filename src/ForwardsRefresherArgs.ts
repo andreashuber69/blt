@@ -9,11 +9,11 @@ import { PartialRefresherArgs } from "./PartialRefresherArgs.js";
 export class ForwardsRefresherArgs extends PartialRefresherArgs<"forwards", Forward> {
     public override readonly name = "forwards";
 
-    public override onChanged(listener: (scheduleRefresh: boolean) => void) {
+    public override onChanged(listener: () => void) {
         this.emitter.on("forward", (e: SubscribeToForwardsForwardEvent) => {
             if (e.is_confirmed) {
                 log(`forward ${e.at}: ${e.tokens}`);
-                listener(e.is_confirmed);
+                listener();
             }
         });
     }
