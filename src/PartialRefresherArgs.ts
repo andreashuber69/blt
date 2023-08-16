@@ -37,14 +37,12 @@ export abstract class PartialRefresherArgs<Name extends string, Element extends 
         readonly emitter: EventEmitter;
     }) {
         super(args);
-        ({ days: this.days = 14, lndArgs: this.lndArgs } = args);
+        ({ days: this.days = 14 } = args);
 
         if (typeof this.days !== "number" || this.days <= 0) {
             throw new Error(`args.days is invalid: ${args.days}.`);
         }
     }
-
-    protected readonly lndArgs: AuthenticatedLightningArgs;
 
     /** Gets data in the time period defined by `after` and `before`, both inclusive. */
     protected abstract getDataRange(after: string, before: string): AsyncGenerator<Element>;

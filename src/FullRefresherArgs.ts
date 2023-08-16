@@ -23,10 +23,7 @@ export abstract class FullRefresherArgs<Name extends string, Element> extends Ba
         readonly emitter: EventEmitter;
     }) {
         super(args);
-        ({ lndArgs: this.lndArgs } = args);
     }
-
-    protected readonly lndArgs: AuthenticatedLightningArgs;
 
     /** Gets all data. */
     protected abstract getAllData(): Promise<Element[]>;
