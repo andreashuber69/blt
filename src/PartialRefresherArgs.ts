@@ -1,19 +1,19 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import type { EventEmitter } from "node:events";
 import type { AuthenticatedLightningArgs } from "lightning";
-import { BaseRefresherArgs } from "./BaseRefresherArgs.js";
+import { RefresherArgs } from "./BaseRefresherArgs.js";
 import { getRangeDays } from "./getRange.js";
 import type { Refresher } from "./Refresher.js";
 import type { TimeBoundElement } from "./TimeBoundElement.js";
 import { toSortedArray } from "./toSortedArray.js";
 
 /**
- * Provides the base for all {@linkcode BaseRefresherArgs} where {@linkcode Refresher.data} is an array, the elements of
+ * Provides the base for all {@linkcode RefresherArgs} where {@linkcode Refresher.data} is an array, the elements of
  * which implement {@linkcode TimeBoundElement}. This enables refreshing data partially, by restricting the time period
  * into which newly created elements can fall.
  */
 // eslint-disable-next-line max-len
-export abstract class PartialRefresherArgs<Name extends string, Element extends TimeBoundElement> extends BaseRefresherArgs<Name, Element[]> {
+export abstract class PartialRefresherArgs<Name extends string, Element extends TimeBoundElement> extends RefresherArgs<Name, Element[]> {
     public override async refresh(current?: Element[]) {
         const result = current ?? [];
         const { after, before } = getRangeDays(this.days);

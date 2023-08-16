@@ -4,7 +4,7 @@ import type { AuthenticatedLightningArgs } from "lightning";
 import type { Refresher } from "./Refresher.js";
 
 /** Provides the base implementation for arguments passed to {@linkcode Refresher.create} .*/
-export abstract class BaseRefresherArgs<Name extends string, Data> {
+export abstract class RefresherArgs<Name extends string, Data> {
     /**
      * The name of the data being refreshed. This name is passed to any listener installed with
      * {@linkcode Refresher.onChanged} when the data has been refreshed.
@@ -23,8 +23,8 @@ export abstract class BaseRefresherArgs<Name extends string, Data> {
      * @description Is called when the first listener is installed with a call to {@linkcode Refresher.onChanged}.
      * @param listener Must be called whenever it has been detected that {@linkcode Refresher.data} might need to be
      * updated. Each call schedules a refresh and notify operation to occur after
-     * {@linkcode BaseRefresherArgs.delayMilliseconds}, if and only if no other such operation is currently scheduled
-     * or in progress. The refresh and notify operation consists of calling {@linkcode BaseRefresherArgs.refresh},
+     * {@linkcode RefresherArgs.delayMilliseconds}, if and only if no other such operation is currently scheduled
+     * or in progress. The refresh and notify operation consists of calling {@linkcode RefresherArgs.refresh},
      * assigning the awaited result to {@linkcode Refresher.data} and finally calling all listeners installed through
      * {@linkcode Refresher.onChanged}.
      */
@@ -69,4 +69,4 @@ export abstract class BaseRefresherArgs<Name extends string, Data> {
 
 export type IRefresherArgs<Name extends string, Data> =
     // eslint-disable-next-line max-len
-    Pick<BaseRefresherArgs<Name, Data>, "delayMilliseconds" | "name" | "onChanged" | "onError" | "refresh" | "removeAllListeners">;
+    Pick<RefresherArgs<Name, Data>, "delayMilliseconds" | "name" | "onChanged" | "onError" | "refresh" | "removeAllListeners">;
