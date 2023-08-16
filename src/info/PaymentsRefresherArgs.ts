@@ -2,9 +2,9 @@
 import type { AuthenticatedLightningArgs, SubscribeToPaymentsPaymentEvent } from "lightning";
 import { subscribeToPayments } from "lightning";
 
-import type { Payment } from "./lightning/getPayments.js";
-import { getPayments } from "./lightning/getPayments.js";
-import { log } from "./Logger.js";
+import type { Payment } from "../lightning/getPayments.js";
+import { getPayments } from "../lightning/getPayments.js";
+import { log } from "../Logger.js";
 import { PartialRefresherArgs } from "./PartialRefresherArgs.js";
 
 export class PaymentsRefresherArgs extends PartialRefresherArgs<"payments", Payment> {

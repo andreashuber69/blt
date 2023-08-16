@@ -2,10 +2,10 @@
 import type { EventEmitter } from "node:events";
 import type { AuthenticatedLightningArgs } from "lightning";
 
+import type { TimeBoundElement } from "../TimeBoundElement.js";
 import { getRangeDays } from "./getRange.js";
 import type { Refresher } from "./Refresher.js";
 import { RefresherArgs } from "./RefresherArgs.js";
-import type { TimeBoundElement } from "./TimeBoundElement.js";
 import { toSortedArray } from "./toSortedArray.js";
 
 /**

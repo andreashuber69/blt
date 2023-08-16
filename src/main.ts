@@ -5,9 +5,9 @@ import type { AuthenticatedLightningArgs } from "lightning";
 import { deletePayment } from "lightning";
 
 import { connectLnd } from "./connectLnd.js";
+import { NodeInfo } from "./info/NodeInfo.js";
 import { getFailedPayments } from "./lightning/getFailedPayments.js";
 import { error, log } from "./Logger.js";
-import { NodeInfo } from "./NodeInfo.js";
 import { NodeStats } from "./NodeStats.js";
 
 interface PackageJson {

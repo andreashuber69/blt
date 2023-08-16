@@ -1,7 +1,7 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import type { ChannelStats } from "./ChannelStats.js";
 import { getNewChannelStats } from "./ChannelStats.js";
-import type { INodeInfo } from "./NodeInfo.js";
+import type { INodeInfo } from "./info/NodeInfo.js";
 
 export class NodeStats {
     public constructor({ channels: { data: channels }, forwards: { data: forwards } }: INodeInfo) {
