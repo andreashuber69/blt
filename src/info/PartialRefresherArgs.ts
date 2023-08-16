@@ -4,14 +4,15 @@ import type { AuthenticatedLightningArgs } from "lightning";
 
 import type { TimeBoundElement } from "../TimeBoundElement.js";
 import { getRangeDays } from "./getRange.js";
-import type { Refresher } from "./Refresher.js";
+import type { IRefresher } from "./Refresher.js";
+import type { IRefresherArgs } from "./RefresherArgs.js";
 import { RefresherArgs } from "./RefresherArgs.js";
 import { toSortedArray } from "./toSortedArray.js";
 
 /**
- * Provides the base for all {@linkcode RefresherArgs} where {@linkcode Refresher.data} is an array, the elements of
- * which implement {@linkcode TimeBoundElement}. This enables refreshing data partially, by restricting the time period
- * into which newly created elements can fall.
+ * Provides an {@linkcode IRefresherArgs} implementation for use cases where {@linkcode IRefresher.data} is an array,
+ * the elements of which implement {@linkcode TimeBoundElement}. This enables refreshing data partially, by restricting
+ * the time period into which newly created elements can fall.
  */
 // eslint-disable-next-line max-len
 export abstract class PartialRefresherArgs<Name extends string, Element extends TimeBoundElement> extends RefresherArgs<Name, Element[]> {

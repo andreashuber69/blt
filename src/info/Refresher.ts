@@ -13,7 +13,7 @@ export class Refresher<Name extends string, Data> {
     /**
      * Creates a new refresher.
      * @description Calls {@linkcode IRefresherArgs.refresh} and assigns the awaited result to the
-     * {@linkcode Refresher.data} property of the returned object.
+     * {@linkcode IRefresher.data} property of the returned object.
      * @param args An object implementing {@linkcode IRefresherArgs}.
      */
     public static async create<Name extends string, Data>(

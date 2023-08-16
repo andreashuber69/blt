@@ -54,9 +54,9 @@ export class NodeInfo implements
     }
 
     /**
-     * Calls {@linkcode Refresher.onChanged} for all {@linkcode Refresher} typed properties, forwarding `listener`.
-     * @description When `listener` is called, {@linkcode Refresher.data} of the {@linkcode Refresher} named `name` has
-     * changed.
+     * Calls {@linkcode IRefresher.onChanged} for all {@linkcode IRefresher} typed properties, forwarding `listener`.
+     * @description When `listener` is called, {@linkcode IRefresher.data} of the {@linkcode IRefresher} named `name`
+     * might have changed.
      * @param listener The listener to add.
      */
     public onChanged(listener: (name: RefresherName) => void) {
@@ -64,7 +64,7 @@ export class NodeInfo implements
     }
 
     /**
-     * Calls {@linkcode Refresher.onError} for all {@linkcode Refresher} typed properties, forwarding `listener`.
+     * Calls {@linkcode IRefresher.onError} for all {@linkcode IRefresher} typed properties, forwarding `listener`.
      * @description When `listener` is called, client code dependent on being notified about changes should discard this
      * object and create a new one via {@linkcode NodeInfo.get}.
      * @param listener The listener to add.
@@ -73,7 +73,7 @@ export class NodeInfo implements
         this.forEachRefresher((refresher) => refresher.onError(listener));
     }
 
-    /** Calls {@linkcode Refresher.removeAllListeners} for all {@linkcode Refresher} typed properties. */
+    /** Calls {@linkcode IRefresher.removeAllListeners} for all {@linkcode IRefresher} typed properties. */
     public removeAllListeners() {
         this.forEachRefresher((refresher) => refresher.removeAllListeners());
     }
