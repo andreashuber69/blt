@@ -64,5 +64,6 @@ export class Refresher<Name extends string, Data> {
     private readonly emitter = new EventEmitter();
 }
 
+/** See {@linkcode Refresher}. */
 export type IRefresher<Name extends string, Data> =
     Pick<Refresher<Name, Data>, "data" | "onChanged" | "onError" | "removeAllListeners">;
