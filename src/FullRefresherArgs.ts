@@ -16,9 +16,17 @@ export abstract class FullRefresherArgs<Name extends string, Element> extends Ba
         return result;
     }
 
-    protected constructor(name: Name, emitter: EventEmitter, protected readonly args: AuthenticatedLightningArgs) {
-        super(name, emitter);
+    protected constructor(args: {
+        readonly lndArgs: AuthenticatedLightningArgs;
+        readonly delayMilliseconds?: number | undefined;
+        readonly name: Name;
+        readonly emitter: EventEmitter;
+    }) {
+        super(args);
+        ({ lndArgs: this.lndArgs } = args);
     }
+
+    protected readonly lndArgs: AuthenticatedLightningArgs;
 
     /** Gets all data. */
     protected abstract getAllData(): Promise<Element[]>;

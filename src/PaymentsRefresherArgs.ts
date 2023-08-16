@@ -3,13 +3,16 @@ import type { AuthenticatedLightningArgs, SubscribeToPaymentsPaymentEvent } from
 import { subscribeToPayments } from "lightning";
 import { getPayments } from "./getPayments.js";
 import { log } from "./Logger.js";
-import type { TimeBoundArgs } from "./PartialRefresherArgs.js";
 import { PartialRefresherArgs } from "./PartialRefresherArgs.js";
 import type { Payment } from "./Payment.js";
 
 export class PaymentsRefresherArgs extends PartialRefresherArgs<"payments", Payment> {
-    public constructor(args: AuthenticatedLightningArgs<TimeBoundArgs>) {
-        super("payments", subscribeToPayments(args), args);
+    public constructor(args: {
+        readonly lndArgs: AuthenticatedLightningArgs;
+        readonly delayMilliseconds?: number;
+        readonly days?: number;
+    }) {
+        super({ ...args, name: "payments", emitter: subscribeToPayments(args.lndArgs) });
     }
 
     public override onChanged(listener: () => void) {
@@ -21,7 +24,7 @@ export class PaymentsRefresherArgs extends PartialRefresherArgs<"payments", Paym
 
     protected override getDataRange(after: string, before: string) {
         // eslint-disable-next-line @typescript-eslint/naming-convention
-        return getPayments({ ...this.args, created_after: after, created_before: before });
+        return getPayments({ ...this.lndArgs, created_after: after, created_before: before });
     }
 
     // eslint-disable-next-line @typescript-eslint/class-methods-use-this

@@ -7,7 +7,6 @@ import { ChannelsRefresherArgs } from "./ChannelsRefresherArgs.js";
 import type { Forward } from "./Forward.js";
 import { ForwardsRefresherArgs } from "./ForwardsRefresherArgs.js";
 import type { Identity } from "./Identity.js";
-import type { TimeBoundArgs } from "./PartialRefresherArgs.js";
 import type { Payment } from "./Payment.js";
 import { PaymentsRefresherArgs } from "./PaymentsRefresherArgs.js";
 import type { IRefresher } from "./Refresher.js";
@@ -80,20 +79,19 @@ export interface NodeInfo extends
 
 /**
  * Gets information about the node.
- * @param args The authenticated LND API object, optionally combined with a number how far back historical data should
- * be retrieved. The default is 14 days.
+ * @param args See properties for details.
+ * @param args.lndArgs The {@linkcode AuthenticatedLightningArgs} of the node the data should be retrieved from.
+ * @param args.delayMilliseconds The amount of time a refresh operation should be delayed after a change has been
+ * detected.
+ * @param args.days The number of days in the past time-bound data should be retrieved.
  */
-export const getNodeInfo = async (args: AuthenticatedLightningArgs<Partial<TimeBoundArgs>>): Promise<NodeInfo> => {
-    const sanitized = { days: 14, ...args };
-
-    if (typeof sanitized.days !== "number" || sanitized.days <= 0) {
-        throw new Error(`args.days is invalid: ${args.days}.`);
-    }
-
-    return new NodeInfoImpl(
-        await getIdentity(sanitized),
-        await Refresher.create(new ChannelsRefresherArgs(sanitized)),
-        await Refresher.create(new ForwardsRefresherArgs(sanitized)),
-        await Refresher.create(new PaymentsRefresherArgs(sanitized)),
-    );
-};
+export const getNodeInfo = async (args: {
+    readonly lndArgs: AuthenticatedLightningArgs;
+    readonly delayMilliseconds?: number;
+    readonly days?: number;
+}): Promise<NodeInfo> => new NodeInfoImpl(
+    await getIdentity(args.lndArgs),
+    await Refresher.create(new ChannelsRefresherArgs(args)),
+    await Refresher.create(new ForwardsRefresherArgs(args)),
+    await Refresher.create(new PaymentsRefresherArgs(args)),
+);

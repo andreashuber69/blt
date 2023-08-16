@@ -7,11 +7,6 @@ import type { Refresher, RefresherArgs } from "./Refresher.js";
 import type { TimeBoundElement } from "./TimeBoundElement.js";
 import { toSortedArray } from "./toSortedArray.js";
 
-export interface TimeBoundArgs {
-    /** Retrieve time-bound data up to this number of days in the past. */
-    readonly days: number;
-}
-
 /**
  * Provides the base for all {@linkcode RefresherArgs} where {@linkcode Refresher.data} is an array, the elements of
  * which implement {@linkcode TimeBoundElement}. This enables refreshing data partially, by restricting the time period
@@ -21,7 +16,7 @@ export interface TimeBoundArgs {
 export abstract class PartialRefresherArgs<Name extends string, Element extends TimeBoundElement> extends BaseRefresherArgs<Name, Element[]> {
     public override async refresh(current?: Element[]) {
         const result = current ?? [];
-        const { after, before } = getRangeDays(this.args.days);
+        const { after, before } = getRangeDays(this.days);
         result.splice(0, result.findIndex((v) => v.created_at >= after)); // Delete old data
         const lastElementCreatedAt = result.at(-1)?.created_at ?? after;
 
@@ -34,19 +29,30 @@ export abstract class PartialRefresherArgs<Name extends string, Element extends 
         return result;
     }
 
-    protected constructor(
-        name: Name,
-        emitter: EventEmitter,
-        protected readonly args: AuthenticatedLightningArgs<TimeBoundArgs>,
-    ) {
-        super(name, emitter);
+    protected constructor(args: {
+        readonly lndArgs: AuthenticatedLightningArgs;
+        readonly delayMilliseconds?: number;
+        readonly days?: number | undefined;
+        readonly name: Name;
+        readonly emitter: EventEmitter;
+    }) {
+        super(args);
+        ({ days: this.days = 14, lndArgs: this.lndArgs } = args);
+
+        if (typeof this.days !== "number" || this.days <= 0) {
+            throw new Error(`args.days is invalid: ${args.days}.`);
+        }
     }
+
+    protected readonly lndArgs: AuthenticatedLightningArgs;
 
     /** Gets data in the time period defined by `after` and `before`, both inclusive. */
     protected abstract getDataRange(after: string, before: string): AsyncGenerator<Element>;
 
     /** Returns `true` when both elements are equal, otherwise `false`. */
     protected abstract equals(a: Element, b: Element): boolean;
+
+    private readonly days: number;
 
     private eliminateDuplicates(currentElements: readonly Element[], possiblyNewElements: readonly Element[]) {
         const result = new Array<Element>();

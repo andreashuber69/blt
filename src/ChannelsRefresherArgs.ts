@@ -9,8 +9,11 @@ import { getChannels } from "./getChannels.js";
 import { log } from "./Logger.js";
 
 export class ChannelsRefresherArgs extends FullRefresherArgs<"channels", Channel> {
-    public constructor(args: AuthenticatedLightningArgs) {
-        super("channels", subscribeToChannels(args), args);
+    public constructor(args: {
+        readonly lndArgs: AuthenticatedLightningArgs;
+        readonly delayMilliseconds?: number;
+    }) {
+        super({ ...args, name: "channels", emitter: subscribeToChannels(args.lndArgs) });
     }
 
     public override onChanged(listener: () => void) {
@@ -25,6 +28,6 @@ export class ChannelsRefresherArgs extends FullRefresherArgs<"channels", Channel
 
     protected override async getAllData() {
         // eslint-disable-next-line @typescript-eslint/naming-convention
-        return await getChannels({ ...this.args, is_public: true });
+        return await getChannels({ ...this.lndArgs, is_public: true });
     }
 }

@@ -4,12 +4,15 @@ import { subscribeToForwards } from "lightning";
 import type { Forward } from "./Forward.js";
 import { getForwards } from "./getForwards.js";
 import { log } from "./Logger.js";
-import type { TimeBoundArgs } from "./PartialRefresherArgs.js";
 import { PartialRefresherArgs } from "./PartialRefresherArgs.js";
 
 export class ForwardsRefresherArgs extends PartialRefresherArgs<"forwards", Forward> {
-    public constructor(args: AuthenticatedLightningArgs<TimeBoundArgs>) {
-        super("forwards", subscribeToForwards(args), args);
+    public constructor(args: {
+        readonly lndArgs: AuthenticatedLightningArgs;
+        readonly delayMilliseconds?: number;
+        readonly days?: number;
+    }) {
+        super({ ...args, name: "forwards", emitter: subscribeToForwards(args.lndArgs) });
     }
 
     public override onChanged(listener: () => void) {
@@ -22,7 +25,7 @@ export class ForwardsRefresherArgs extends PartialRefresherArgs<"forwards", Forw
     }
 
     protected override getDataRange(after: string, before: string) {
-        return getForwards({ ...this.args, after, before });
+        return getForwards({ ...this.lndArgs, after, before });
     }
 
     // eslint-disable-next-line @typescript-eslint/class-methods-use-this

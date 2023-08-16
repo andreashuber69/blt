@@ -38,7 +38,7 @@ const deleteOldFailedPayments = async (authenticatedLnd: AuthenticatedLightningA
 
 const getInfo = async (authenticatedLnd: AuthenticatedLightningArgs) => {
     log("Getting node info...");
-    const nodeInfo = await getNodeInfo(authenticatedLnd);
+    const nodeInfo = await getNodeInfo({ lndArgs: authenticatedLnd });
 
     const handler = (property: "channels") => log(`${property}: ${nodeInfo[property].data.length}`);
 
