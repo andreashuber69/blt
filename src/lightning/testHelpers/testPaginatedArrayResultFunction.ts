@@ -2,8 +2,9 @@
 import assert from "node:assert";
 import { describe, it } from "node:test";
 import type { AuthenticatedLightningArgs, PaginationArgs } from "lightning";
-import { connectLnd } from "../connectLnd.js";
-import type { TimeBoundElement } from "../TimeBoundElement.js";
+
+import { connectLnd } from "../../connectLnd.js";
+import type { TimeBoundElement } from "../../TimeBoundElement.js";
 
 export const testPaginatedArrayResultFunction = <
     Element extends TimeBoundElement,

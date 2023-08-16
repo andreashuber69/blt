@@ -2,7 +2,8 @@
 import assert from "node:assert";
 import { describe, it } from "node:test";
 import type { AuthenticatedLightningArgs } from "lightning";
-import { connectLnd } from "../connectLnd.js";
+
+import { connectLnd } from "../../connectLnd.js";
 
 export const testArrayResultFunction = <Return extends unknown[]>(
     func: (args: AuthenticatedLightningArgs) => Promise<Return>,

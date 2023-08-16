@@ -3,9 +3,9 @@ import type {
     AuthenticatedLightningArgs, SubscribeToChannelsChannelClosedEvent, SubscribeToChannelsChannelOpenedEvent,
 } from "lightning";
 import { subscribeToChannels } from "lightning";
-import type { Channel } from "./Channel.js";
 import { FullRefresherArgs } from "./FullRefresherArgs.js";
-import { getChannels } from "./getChannels.js";
+import type { Channel } from "./lightning/getChannels.js";
+import { getChannels } from "./lightning/getChannels.js";
 import { log } from "./Logger.js";
 
 export class ChannelsRefresherArgs extends FullRefresherArgs<"channels", Channel> {

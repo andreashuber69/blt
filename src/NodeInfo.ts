@@ -2,12 +2,12 @@
 import type { AuthenticatedLightningArgs } from "lightning";
 import { getIdentity } from "lightning";
 
-import type { Channel } from "./Channel.js";
 import { ChannelsRefresherArgs } from "./ChannelsRefresherArgs.js";
-import type { Forward } from "./Forward.js";
 import { ForwardsRefresherArgs } from "./ForwardsRefresherArgs.js";
-import type { Identity } from "./Identity.js";
-import type { Payment } from "./Payment.js";
+import type { Channel } from "./lightning/getChannels.js";
+import type { Forward } from "./lightning/getForwards.js";
+import type { Payment } from "./lightning/getPayments.js";
+import type { Identity } from "./lightning/Identity.js";
 import { PaymentsRefresherArgs } from "./PaymentsRefresherArgs.js";
 import type { IRefresher } from "./Refresher.js";
 import { Refresher } from "./Refresher.js";

@@ -1,8 +1,8 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import type { AuthenticatedLightningArgs, SubscribeToForwardsForwardEvent } from "lightning";
 import { subscribeToForwards } from "lightning";
-import type { Forward } from "./Forward.js";
-import { getForwards } from "./getForwards.js";
+import type { Forward } from "./lightning/getForwards.js";
+import { getForwards } from "./lightning/getForwards.js";
 import { log } from "./Logger.js";
 import { PartialRefresherArgs } from "./PartialRefresherArgs.js";
 
