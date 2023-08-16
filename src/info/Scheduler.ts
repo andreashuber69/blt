@@ -1,3 +1,4 @@
+// https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 export class Scheduler {
     public constructor(public readonly delayMilliseconds = 10_000) {}
 

@@ -1,30 +1,24 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
+import type { EventEmitter } from "node:events";
 import type { AuthenticatedLightningArgs } from "lightning";
-import { ArrayRefresherArgs } from "./ArrayRefresherArgs.js";
-import type { Refresher } from "./createRefresher.js";
+
+import type { TimeBoundElement } from "../TimeBoundElement.js";
 import { getRangeDays } from "./getRange.js";
-import type { TimeBoundElement } from "./TimeBoundElement.js";
+import type { IRefresher } from "./Refresher.js";
+import type { IRefresherArgs } from "./RefresherArgs.js";
+import { RefresherArgs } from "./RefresherArgs.js";
 import { toSortedArray } from "./toSortedArray.js";
 
-export interface TimeBoundArgs {
-    /** Retrieve time-bound data up to this number of days in the past. */
-    readonly days: number;
-}
-
 /**
- * Provides the base for all {@linkcode ArrayRefresherArgs} where the elements in {@linkcode Refresher.data} extend
- * {@linkcode TimeBoundElement}. This enables refreshing data partially, by restricting the time period into which newly
- * created elements can fall.
+ * Provides an {@linkcode IRefresherArgs} implementation for use cases where {@linkcode IRefresher.data} is an array,
+ * the elements of which implement {@linkcode TimeBoundElement}. This enables refreshing data partially, by restricting
+ * the time period into which newly created elements can fall.
  */
 // eslint-disable-next-line max-len
-export abstract class PartialRefresherArgs<Name extends string, Element extends TimeBoundElement> extends ArrayRefresherArgs<Name, Element> {
-    public constructor(protected readonly args: AuthenticatedLightningArgs<TimeBoundArgs>) {
-        super();
-    }
-
+export abstract class PartialRefresherArgs<Name extends string, Element extends TimeBoundElement> extends RefresherArgs<Name, Element[]> {
     public override async refresh(current?: Element[]) {
         const result = current ?? [];
-        const { after, before } = getRangeDays(this.args.days);
+        const { after, before } = getRangeDays(this.days);
         result.splice(0, result.findIndex((v) => v.created_at >= after)); // Delete old data
         const lastElementCreatedAt = result.at(-1)?.created_at ?? after;
 
@@ -37,11 +31,28 @@ export abstract class PartialRefresherArgs<Name extends string, Element extends 
         return result;
     }
 
+    protected constructor(args: {
+        readonly lndArgs: AuthenticatedLightningArgs;
+        readonly delayMilliseconds?: number;
+        readonly days?: number;
+        readonly name: Name;
+        readonly emitter: EventEmitter;
+    }) {
+        super(args);
+        ({ days: this.days = 14 } = args);
+
+        if (typeof this.days !== "number" || this.days <= 0) {
+            throw new Error(`args.days is invalid: ${args.days}.`);
+        }
+    }
+
     /** Gets data in the time period defined by `after` and `before`, both inclusive. */
     protected abstract getDataRange(after: string, before: string): AsyncGenerator<Element>;
 
     /** Returns `true` when both elements are equal, otherwise `false`. */
     protected abstract equals(a: Element, b: Element): boolean;
+
+    private readonly days: number;
 
     private eliminateDuplicates(currentElements: readonly Element[], possiblyNewElements: readonly Element[]) {
         const result = new Array<Element>();
