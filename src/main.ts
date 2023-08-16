@@ -4,8 +4,8 @@ import { createRequire } from "node:module";
 import type { AuthenticatedLightningArgs } from "lightning";
 import { deletePayment } from "lightning";
 
-import { connectLnd } from "./connectLnd.js";
 import { NodeInfo } from "./info/NodeInfo.js";
+import { connectLnd } from "./lightning/connectLnd.js";
 import { getFailedPayments } from "./lightning/getFailedPayments.js";
 import { error, log } from "./Logger.js";
 import { NodeStats } from "./NodeStats.js";
