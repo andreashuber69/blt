@@ -3,10 +3,10 @@ import type { EventEmitter } from "node:events";
 import type { AuthenticatedLightningArgs } from "lightning";
 
 import { BaseRefresherArgs } from "./BaseRefresherArgs.js";
-import type { Refresher, RefresherArgs } from "./Refresher.js";
+import type { Refresher } from "./Refresher.js";
 
 /**
- * Provides the base for all {@linkcode RefresherArgs} where {@linkcode Refresher.data} is an array, the elements of
+ * Provides the base for all {@linkcode BaseRefresherArgs} where {@linkcode Refresher.data} is an array, the elements of
  * which do not implement a particular interface.
  */
 export abstract class FullRefresherArgs<Name extends string, Element> extends BaseRefresherArgs<Name, Element[]> {

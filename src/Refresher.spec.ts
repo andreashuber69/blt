@@ -1,7 +1,7 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import assert from "node:assert";
 import { describe, it } from "node:test";
-import type { RefresherArgs } from "./Refresher.js";
+import type { IRefresherArgs } from "./BaseRefresherArgs.js";
 import { Refresher } from "./Refresher.js";
 import { delay } from "./testHelpers/delay.js";
 
@@ -39,7 +39,7 @@ describe(Refresher.name, () => {
             const subscriber = new Subscriber();
             const { changedListeners, errorListeners, onChanged, onError, removeAllListeners } = subscriber;
 
-            const args: RefresherArgs<"tests", string> = {
+            const args: IRefresherArgs<"tests", string> = {
                 name: "tests",
                 refresh,
                 delayMilliseconds: 50,
@@ -104,7 +104,7 @@ describe(Refresher.name, () => {
             const subscriber = new Subscriber();
             const { changedListeners: listeners, onChanged, onError, removeAllListeners } = subscriber;
 
-            const args: RefresherArgs<"tests", string> = {
+            const args: IRefresherArgs<"tests", string> = {
                 name: "tests",
                 refresh,
                 delayMilliseconds: 1000,

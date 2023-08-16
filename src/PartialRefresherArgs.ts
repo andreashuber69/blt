@@ -3,12 +3,12 @@ import type { EventEmitter } from "node:events";
 import type { AuthenticatedLightningArgs } from "lightning";
 import { BaseRefresherArgs } from "./BaseRefresherArgs.js";
 import { getRangeDays } from "./getRange.js";
-import type { Refresher, RefresherArgs } from "./Refresher.js";
+import type { Refresher } from "./Refresher.js";
 import type { TimeBoundElement } from "./TimeBoundElement.js";
 import { toSortedArray } from "./toSortedArray.js";
 
 /**
- * Provides the base for all {@linkcode RefresherArgs} where {@linkcode Refresher.data} is an array, the elements of
+ * Provides the base for all {@linkcode BaseRefresherArgs} where {@linkcode Refresher.data} is an array, the elements of
  * which implement {@linkcode TimeBoundElement}. This enables refreshing data partially, by restricting the time period
  * into which newly created elements can fall.
  */
