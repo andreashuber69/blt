@@ -3,7 +3,7 @@ import assert from "node:assert";
 import { describe, it } from "node:test";
 
 import type { ChannelStats } from "./ChannelStats.js";
-import type { NodeInfo } from "./getNodeInfo.js";
+import type { INodeInfo } from "./getNodeInfo.js";
 import { NodeStats } from "./NodeStats.js";
 
 const getManagerMethods = <Name extends string>() => ({
@@ -12,7 +12,7 @@ const getManagerMethods = <Name extends string>() => ({
     removeAllListeners: () => { /* empty */ },
 });
 
-const nodeInfo: NodeInfo = {
+const nodeInfo: INodeInfo = {
     /* eslint-disable @typescript-eslint/naming-convention */
     identity: {
         public_key: "",

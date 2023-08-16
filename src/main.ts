@@ -6,7 +6,7 @@ import { deletePayment } from "lightning";
 
 import { connectLnd } from "./connectLnd.js";
 import { getFailedPayments } from "./getFailedPayments.js";
-import { getNodeInfo } from "./getNodeInfo.js";
+import { NodeInfo } from "./getNodeInfo.js";
 import { error, log } from "./Logger.js";
 import { NodeStats } from "./NodeStats.js";
 
@@ -38,7 +38,7 @@ const deleteOldFailedPayments = async (authenticatedLnd: AuthenticatedLightningA
 
 const getInfo = async (authenticatedLnd: AuthenticatedLightningArgs) => {
     log("Getting node info...");
-    const nodeInfo = await getNodeInfo({ lndArgs: authenticatedLnd });
+    const nodeInfo = await NodeInfo.get({ lndArgs: authenticatedLnd });
 
     const handler = (property: "channels") => log(`${property}: ${nodeInfo[property].data.length}`);
 
