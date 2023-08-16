@@ -78,10 +78,23 @@ while (true) {
         const lnd = await connectLnd();
         await deleteOldFailedPayments(lnd);
         const info = await getInfo(lnd);
-        const { channels } = new NodeStats(info);
-        log(JSON.stringify(channels, undefined, 2));
-        error(await new Promise((resolve) => info.onError(resolve)));
-        log("\nConnection lost!");
+
+        // eslint-disable-next-line no-constant-condition
+        while (true) {
+            const { channels } = new NodeStats(info);
+            log(JSON.stringify(channels, undefined, 2));
+
+            try {
+                const changed = await new Promise<string>((resolve, reject) => {
+                    info.onChanged(resolve);
+                    info.onError(reject);
+                });
+
+                log(`${changed} has changed.`);
+            } finally {
+                info.removeAllListeners();
+            }
+        }
     } catch (error_: unknown) {
         error(error_);
     }
