@@ -31,7 +31,7 @@ export abstract class BaseRefresherArgs<Name extends string, Data> implements Re
      * @param args.emitter The {@linkcode EventEmitter} to add listeners to or remove listeners from.
      */
     protected constructor(args: {
-        readonly delayMilliseconds?: number | undefined;
+        readonly delayMilliseconds?: number;
         readonly name: Name;
         readonly emitter: EventEmitter;
     }) {

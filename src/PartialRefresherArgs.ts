@@ -32,7 +32,7 @@ export abstract class PartialRefresherArgs<Name extends string, Element extends 
     protected constructor(args: {
         readonly lndArgs: AuthenticatedLightningArgs;
         readonly delayMilliseconds?: number;
-        readonly days?: number | undefined;
+        readonly days?: number;
         readonly name: Name;
         readonly emitter: EventEmitter;
     }) {

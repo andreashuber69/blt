@@ -18,7 +18,7 @@ export abstract class FullRefresherArgs<Name extends string, Element> extends Ba
 
     protected constructor(args: {
         readonly lndArgs: AuthenticatedLightningArgs;
-        readonly delayMilliseconds?: number | undefined;
+        readonly delayMilliseconds?: number;
         readonly name: Name;
         readonly emitter: EventEmitter;
     }) {
