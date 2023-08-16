@@ -2,8 +2,8 @@
 import type { EventEmitter } from "node:events";
 import type { AuthenticatedLightningArgs } from "lightning";
 
-import { RefresherArgs } from "./BaseRefresherArgs.js";
 import type { Refresher } from "./Refresher.js";
+import { RefresherArgs } from "./RefresherArgs.js";
 
 /**
  * Provides the base for all {@linkcode RefresherArgs} where {@linkcode Refresher.data} is an array, the elements of
