@@ -4,6 +4,8 @@ import { EventEmitter } from "node:events";
 import type { IRefresherArgs } from "./RefresherArgs.js";
 import { Scheduler } from "./Scheduler.js";
 
+type PropertyNames = "data" | "onChanged" | "onError" | "removeAllListeners";
+
 /**
  * Exposes data that is optionally continuously refreshed from an external source.
  */
@@ -66,5 +68,4 @@ export class Refresher<Name extends string, Data> {
 }
 
 /** See {@linkcode Refresher}. */
-export type IRefresher<Name extends string, Data> =
-    Pick<Refresher<Name, Data>, "data" | "onChanged" | "onError" | "removeAllListeners">;
+export type IRefresher<Name extends string, Data> = Pick<Refresher<Name, Data>, PropertyNames>;

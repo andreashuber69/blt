@@ -4,6 +4,8 @@ import type { AuthenticatedLightningArgs } from "lightning";
 
 import type { Refresher } from "./Refresher.js";
 
+type PropertyNames = "delayMilliseconds" | "name" | "onChanged" | "onError" | "refresh" | "removeAllListeners";
+
 /** Provides the base implementation for arguments passed to {@linkcode Refresher.create} .*/
 export abstract class RefresherArgs<Name extends string, Data> {
     /**
@@ -69,6 +71,4 @@ export abstract class RefresherArgs<Name extends string, Data> {
 }
 
 /** See {@linkcode RefresherArgs}. */
-export type IRefresherArgs<Name extends string, Data> =
-    // eslint-disable-next-line max-len
-    Pick<RefresherArgs<Name, Data>, "delayMilliseconds" | "name" | "onChanged" | "onError" | "refresh" | "removeAllListeners">;
+export type IRefresherArgs<Name extends string, Data> = Pick<RefresherArgs<Name, Data>, PropertyNames>;

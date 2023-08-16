@@ -20,6 +20,8 @@ type RefresherProperty<Name extends RefresherName, Data> = {
     readonly [name in Name]: IRefresher<Name, Data>;
 };
 
+type PropertyNames = "channels" | "forwards" | "identity" | "onChanged" | "onError" | "payments" | "removeAllListeners";
+
 /**
  * Provides various information about a node.
  * @description All time-bound data (like {@linkcode NodeInfo.forwards}) will be sorted earliest to latest. Apart
@@ -91,5 +93,4 @@ export class NodeInfo implements
 }
 
 /** See {@linkcode NodeInfo}. */
-export type INodeInfo =
-    Pick<NodeInfo, "channels" | "forwards" | "identity" | "onChanged" | "onError" | "payments" | "removeAllListeners">;
+export type INodeInfo = Pick<NodeInfo, PropertyNames>;
