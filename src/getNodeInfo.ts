@@ -4,14 +4,14 @@ import { getIdentity } from "lightning";
 
 import type { Channel } from "./Channel.js";
 import { ChannelsRefresherArgs } from "./ChannelsRefresherArgs.js";
-import type { IRefresher } from "./createRefresher.js";
-import { Refresher } from "./createRefresher.js";
 import type { Forward } from "./Forward.js";
 import { ForwardsRefresherArgs } from "./ForwardsRefresherArgs.js";
 import type { Identity } from "./Identity.js";
 import type { TimeBoundArgs } from "./PartialRefresherArgs.js";
 import type { Payment } from "./Payment.js";
 import { PaymentsRefresherArgs } from "./PaymentsRefresherArgs.js";
+import type { IRefresher } from "./Refresher.js";
+import { Refresher } from "./Refresher.js";
 
 const refresherNames = ["channels", "forwards", "payments"] as const;
 

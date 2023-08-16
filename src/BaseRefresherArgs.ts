@@ -1,6 +1,6 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import type { EventEmitter } from "node:events";
-import type { Refresher, RefresherArgs } from "./createRefresher.js";
+import type { Refresher, RefresherArgs } from "./Refresher.js";
 
 /**
  * Provides the base implementation for all {@linkcode RefresherArgs}.

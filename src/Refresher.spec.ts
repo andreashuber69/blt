@@ -1,8 +1,8 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import assert from "node:assert";
 import { describe, it } from "node:test";
-import type { RefresherArgs } from "./createRefresher.js";
-import { Refresher } from "./createRefresher.js";
+import type { RefresherArgs } from "./Refresher.js";
+import { Refresher } from "./Refresher.js";
 import { delay } from "./testHelpers/delay.js";
 
 const refresh = async (data?: string) => await Promise.resolve(`${data ?? ""}X`);

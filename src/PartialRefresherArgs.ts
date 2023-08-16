@@ -2,8 +2,8 @@
 import type { EventEmitter } from "node:events";
 import type { AuthenticatedLightningArgs } from "lightning";
 import { BaseRefresherArgs } from "./BaseRefresherArgs.js";
-import type { Refresher, RefresherArgs } from "./createRefresher.js";
 import { getRangeDays } from "./getRange.js";
+import type { Refresher, RefresherArgs } from "./Refresher.js";
 import type { TimeBoundElement } from "./TimeBoundElement.js";
 import { toSortedArray } from "./toSortedArray.js";
 
