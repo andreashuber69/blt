@@ -67,6 +67,7 @@ export abstract class RefresherArgs<Name extends string, Data> {
     protected readonly emitter: EventEmitter;
 }
 
+/** See {@linkcode RefresherArgs}. */
 export type IRefresherArgs<Name extends string, Data> =
     // eslint-disable-next-line max-len
     Pick<RefresherArgs<Name, Data>, "delayMilliseconds" | "name" | "onChanged" | "onError" | "refresh" | "removeAllListeners">;
