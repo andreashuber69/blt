@@ -1,6 +1,7 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import assert from "node:assert";
 import { describe, it } from "node:test";
+
 import { Refresher } from "./Refresher.js";
 import type { IRefresherArgs } from "./RefresherArgs.js";
 import { delay } from "./testHelpers/delay.js";

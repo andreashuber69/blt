@@ -1,6 +1,7 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import type { AuthenticatedLightningArgs, SubscribeToPaymentsPaymentEvent } from "lightning";
 import { subscribeToPayments } from "lightning";
+
 import type { Payment } from "./lightning/getPayments.js";
 import { getPayments } from "./lightning/getPayments.js";
 import { log } from "./Logger.js";

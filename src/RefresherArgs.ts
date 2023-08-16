@@ -1,6 +1,7 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import type { EventEmitter } from "node:events";
 import type { AuthenticatedLightningArgs } from "lightning";
+
 import type { Refresher } from "./Refresher.js";
 
 /** Provides the base implementation for arguments passed to {@linkcode Refresher.create} .*/

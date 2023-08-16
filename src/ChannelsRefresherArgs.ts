@@ -3,6 +3,7 @@ import type {
     AuthenticatedLightningArgs, SubscribeToChannelsChannelClosedEvent, SubscribeToChannelsChannelOpenedEvent,
 } from "lightning";
 import { subscribeToChannels } from "lightning";
+
 import { FullRefresherArgs } from "./FullRefresherArgs.js";
 import type { Channel } from "./lightning/getChannels.js";
 import { getChannels } from "./lightning/getChannels.js";

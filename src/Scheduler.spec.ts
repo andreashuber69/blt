@@ -1,6 +1,7 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import assert from "node:assert";
 import { describe, it } from "node:test";
+
 import { Scheduler } from "./Scheduler.js";
 import { delay } from "./testHelpers/delay.js";
 

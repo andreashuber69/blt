@@ -1,6 +1,7 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import type { EventEmitter } from "node:events";
 import type { AuthenticatedLightningArgs } from "lightning";
+
 import { getRangeDays } from "./getRange.js";
 import type { Refresher } from "./Refresher.js";
 import { RefresherArgs } from "./RefresherArgs.js";
