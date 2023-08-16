@@ -3,7 +3,7 @@ import assert from "node:assert";
 import { describe, it } from "node:test";
 
 import type { ChannelStats } from "./ChannelStats.js";
-import type { INodeInfo } from "./getNodeInfo.js";
+import type { INodeInfo } from "./NodeInfo.js";
 import { NodeStats } from "./NodeStats.js";
 
 const getManagerMethods = <Name extends string>() => ({

@@ -6,8 +6,8 @@ import { deletePayment } from "lightning";
 
 import { connectLnd } from "./connectLnd.js";
 import { getFailedPayments } from "./getFailedPayments.js";
-import { NodeInfo } from "./getNodeInfo.js";
 import { error, log } from "./Logger.js";
+import { NodeInfo } from "./NodeInfo.js";
 import { NodeStats } from "./NodeStats.js";
 
 interface PackageJson {
