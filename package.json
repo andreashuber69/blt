@@ -52,7 +52,7 @@
     "tslib": "^2.6.1"
   },
   "devDependencies": {
-    "@andreashuber69/eslint-config": "^1.1.44",
+    "@andreashuber69/eslint-config": "^1.1.46",
     "@tsconfig/node-lts-strictest-esm": "^18.12.1",
     "@types/node": "^18.17.4",
     "c8": "^8.0.1",

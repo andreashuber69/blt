@@ -4,8 +4,8 @@ import { getIdentity } from "lightning";
 
 import type { Channel } from "./Channel.js";
 import { ChannelsRefresherArgs } from "./ChannelsRefresherArgs.js";
-import { createRefresher } from "./createRefresher.js";
-import type { Refresher } from "./createRefresher.js";
+import type { IRefresher } from "./createRefresher.js";
+import { Refresher } from "./createRefresher.js";
 import type { Forward } from "./Forward.js";
 import { ForwardsRefresherArgs } from "./ForwardsRefresherArgs.js";
 import type { Identity } from "./Identity.js";
@@ -20,9 +20,9 @@ type RefresherName = (typeof refresherNames)[number];
 class NodeInfoImpl implements NodeInfo {
     public constructor(
         public readonly identity: Identity,
-        public readonly channels: Refresher<"channels", Channel[]>,
-        public readonly forwards: Refresher<"forwards", Forward[]>,
-        public readonly payments: Refresher<"payments", Payment[]>,
+        public readonly channels: IRefresher<"channels", Channel[]>,
+        public readonly forwards: IRefresher<"forwards", Forward[]>,
+        public readonly payments: IRefresher<"payments", Payment[]>,
     ) {}
 
     public onChanged(listener: (name: RefresherName) => void) {
@@ -45,7 +45,7 @@ class NodeInfoImpl implements NodeInfo {
 }
 
 type RefresherProperty<Name extends RefresherName, Data> = {
-    readonly [name in Name]: Refresher<Name, Data>;
+    readonly [name in Name]: IRefresher<Name, Data>;
 };
 
 /**
@@ -92,8 +92,8 @@ export const getNodeInfo = async (args: AuthenticatedLightningArgs<Partial<TimeB
 
     return new NodeInfoImpl(
         await getIdentity(sanitized),
-        await createRefresher(new ChannelsRefresherArgs(sanitized)),
-        await createRefresher(new ForwardsRefresherArgs(sanitized)),
-        await createRefresher(new PaymentsRefresherArgs(sanitized)),
+        await Refresher.create(new ChannelsRefresherArgs(sanitized)),
+        await Refresher.create(new ForwardsRefresherArgs(sanitized)),
+        await Refresher.create(new PaymentsRefresherArgs(sanitized)),
     );
 };

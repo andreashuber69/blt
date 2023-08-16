@@ -2,39 +2,6 @@
 import { EventEmitter } from "node:events";
 import { Scheduler } from "./Scheduler.js";
 
-class RefresherImpl<Name extends string, Data> implements Refresher<Name, Data> {
-    public constructor(private readonly args: RefresherArgs<Name, Data>, public data: Data) {}
-
-    public onChanged(listener: (name: Name) => void) {
-        this.emitter.on(this.args.name, listener);
-
-        if (this.emitter.listenerCount(this.args.name) === 1) {
-            const scheduler = new Scheduler(this.args.delayMilliseconds);
-
-            this.args.onChanged(() => scheduler.call(async () => {
-                this.data = await this.args.refresh(this.data);
-                this.emitter.emit(this.args.name, this.args.name);
-            }));
-        }
-
-        return this;
-    }
-
-    public onError(listener: (error: unknown) => void) {
-        this.args.onError(listener);
-        return this;
-    }
-
-    public removeAllListeners() {
-        this.emitter.removeAllListeners();
-        this.args.removeAllListeners();
-        return this;
-    }
-
-    // eslint-disable-next-line unicorn/prefer-event-target
-    private readonly emitter = new EventEmitter();
-}
-
 export interface RefresherArgs<Name extends string, Data> {
     /**
      * The name of the data being refreshed. This name is passed to any listener installed with
@@ -74,37 +41,63 @@ export interface RefresherArgs<Name extends string, Data> {
 /**
  * Exposes data that is optionally continuously refreshed from an external source.
  */
-export interface Refresher<Name extends string, Data> {
-    /** The data, only refreshed as long as at least one listener is registered. */
-    readonly data: Readonly<Data>;
+export class Refresher<Name extends string, Data> {
+    /**
+     * Creates a new refresher.
+     * @description Calls {@linkcode RefresherArgs.refresh} and assigns the awaited result to the
+     * {@linkcode Refresher.data} property of the returned object.
+     * @param args An object implementing {@linkcode RefresherArgs}.
+     */
+    public static async create<Name extends string, Data>(
+        args: RefresherArgs<Name, Data>,
+    ): Promise<IRefresher<Name, Data>> {
+        return new Refresher<Name, Data>(args, await args.refresh());
+    }
+
+    /** The data, only refreshed as long as at least one listener is registered with {@linkcode Refresher.onChanged}. */
+    public get data(): Readonly<Data> {
+        return this.dataImpl;
+    }
 
     /**
-     * Adds the `listener` function to the end of the listeners array for any event that indicates that
-     * {@linkcode Refresher.data} might have changed.
+     * Adds the `listener` function to the end of the listeners array.
+     * @param listener The listener to add. Is called whenever {@linkcode Refresher.data} might have changed.
      */
-    readonly onChanged: (listener: (name: Name) => void) => void;
+    public onChanged(listener: (name: Name) => void) {
+        this.emitter.on(this.args.name, listener);
+
+        if (this.emitter.listenerCount(this.args.name) === 1) {
+            const scheduler = new Scheduler(this.args.delayMilliseconds);
+
+            this.args.onChanged(() => scheduler.call(async () => {
+                this.dataImpl = await this.args.refresh(this.dataImpl);
+                this.emitter.emit(this.args.name, this.args.name);
+            }));
+        }
+    }
 
     /**
-     * Adds the `listener` function to the end of the listeners array for any event that indicates an error preventing
-     * further update of {@linkcode Refresher.data}.
+     * Adds the `listener` function to the end of the listeners array.
+     * @param listener The listener to add. Is called when an error occurred that prevents further update of
+     * {@linkcode Refresher.data}.
      */
-    readonly onError: (listener: (error: unknown) => void) => void;
+    public onError(listener: (error: unknown) => void) {
+        this.args.onError(listener);
+    }
 
     /**
-     * Removes all listeners.
-     * @description Behaves like {@linkcode EventEmitter.removeAllListeners}, without the option to only remove the
-     * listeners for a given event.
+     * Removes all listeners previously added through {@linkcode Refresher.onChanged} and {@linkcode Refresher.onError}.
      */
-    readonly removeAllListeners: () => void;
+    public removeAllListeners() {
+        this.emitter.removeAllListeners();
+        this.args.removeAllListeners();
+    }
+
+    private constructor(private readonly args: RefresherArgs<Name, Data>, private dataImpl: Data) {}
+
+    // eslint-disable-next-line unicorn/prefer-event-target
+    private readonly emitter = new EventEmitter();
 }
 
-/**
- * Creates a new refresher.
- * @description Calls `refresh` and assigns the awaited result to the {@linkcode Refresher.data} property of the
- * returned object.
- * @param args An object implementing {@linkcode RefresherArgs}.
- */
-export const createRefresher = async <Name extends string, Data>(
-    args: RefresherArgs<Name, Data>,
-): Promise<Refresher<Name, Data>> =>
-    new RefresherImpl(args, await args.refresh());
+export type IRefresher<Name extends string, Data> =
+    Pick<Refresher<Name, Data>, "data" | "onChanged" | "onError" | "removeAllListeners">;
