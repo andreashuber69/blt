@@ -76,7 +76,6 @@ export abstract class PartialRefresherArgs<Name extends string, Element extends 
     }
 
     // We need to reference class type parameters which is not possible for static methods.
-    // eslint-disable-next-line @typescript-eslint/class-methods-use-this
     private getLastElementsCreatedAtSameTime(currentElements: readonly Element[]) {
         let index = currentElements.length - 1;
 

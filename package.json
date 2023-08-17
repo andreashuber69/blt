@@ -48,13 +48,13 @@
     "ci": "npm run build"
   },
   "dependencies": {
-    "lightning": "^9.11.1",
+    "lightning": "^9.11.2",
     "tslib": "^2.6.1"
   },
   "devDependencies": {
-    "@andreashuber69/eslint-config": "^1.1.46",
+    "@andreashuber69/eslint-config": "^1.1.47",
     "@tsconfig/node-lts-strictest-esm": "^18.12.1",
-    "@types/node": "^18.17.4",
+    "@types/node": "^18.17.5",
     "c8": "^8.0.1",
     "coveralls": "^3.1.1",
     "cspell": "^7.0.0",

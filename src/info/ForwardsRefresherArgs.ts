@@ -29,7 +29,6 @@ export class ForwardsRefresherArgs extends PartialRefresherArgs<"forwards", Forw
         return getForwards({ ...this.lndArgs, after, before });
     }
 
-    // eslint-disable-next-line @typescript-eslint/class-methods-use-this
     protected override equals(a: Forward, b: Forward) {
         return a.created_at === b.created_at && a.fee === b.fee && a.tokens === b.tokens &&
         a.incoming_channel === b.incoming_channel && a.outgoing_channel === b.outgoing_channel;
