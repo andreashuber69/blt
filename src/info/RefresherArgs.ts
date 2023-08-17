@@ -62,7 +62,7 @@ export abstract class RefresherArgs<Name extends string, Data> {
 
     protected readonly lndArgs: AuthenticatedLightningArgs;
 
-    protected get emitter(): EventEmitter {
+    protected get emitter() {
         this.emitterImpl ??= this.createEmitter();
         return this.emitterImpl;
     }
