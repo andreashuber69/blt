@@ -1,5 +1,4 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
-import type { EventEmitter } from "node:events";
 import type { AuthenticatedLightningArgs } from "lightning";
 
 import type { TimeBoundElement } from "../TimeBoundElement.js";
@@ -36,7 +35,6 @@ export abstract class PartialRefresherArgs<Name extends string, Element extends 
         readonly delayMilliseconds?: number;
         readonly days?: number;
         readonly name: Name;
-        readonly emitter: EventEmitter;
     }) {
         super(args);
         ({ days: this.days = 14 } = args);
