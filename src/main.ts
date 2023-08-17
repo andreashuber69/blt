@@ -4,6 +4,7 @@ import { createRequire } from "node:module";
 import type { AuthenticatedLightningArgs } from "lightning";
 import { deletePayment } from "lightning";
 
+import type { INodeInfo } from "./info/NodeInfo.js";
 import { NodeInfo } from "./info/NodeInfo.js";
 import { connectLnd } from "./lightning/connectLnd.js";
 import { getFailedPayments } from "./lightning/getFailedPayments.js";
@@ -38,8 +39,10 @@ const deleteOldFailedPayments = async (authenticatedLnd: AuthenticatedLightningA
 
 const getInfo = async (authenticatedLnd: AuthenticatedLightningArgs) => {
     log("Getting node info...");
-    const nodeInfo = await NodeInfo.get({ lndArgs: authenticatedLnd });
+    return await NodeInfo.get({ lndArgs: authenticatedLnd });
+};
 
+const subscribeHandlers = (nodeInfo: INodeInfo) => {
     const handler = (property: "channels") => log(`${property}: ${nodeInfo[property].data.length}`);
 
     const timeBoundHandler = (property: "forwards" | "payments") => {
@@ -54,7 +57,6 @@ const getInfo = async (authenticatedLnd: AuthenticatedLightningArgs) => {
     nodeInfo.forwards.onChanged(timeBoundHandler);
     timeBoundHandler("payments");
     nodeInfo.payments.onChanged(timeBoundHandler);
-    return nodeInfo;
 };
 
 try {
@@ -81,6 +83,7 @@ while (true) {
 
         // eslint-disable-next-line no-constant-condition
         while (true) {
+            subscribeHandlers(info);
             const { channels } = new NodeStats(info);
             log(JSON.stringify(channels, undefined, 2));
 
@@ -99,7 +102,7 @@ while (true) {
         error(error_);
     }
 
-    log("\n\nAttempting to reconnect...");
+    log("Attempting to reconnect in a few seconds...");
     await new Promise((resolve) => setTimeout(resolve, 10_000));
     /* eslint-enable no-await-in-loop */
 }
