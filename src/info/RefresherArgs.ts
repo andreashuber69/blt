@@ -45,20 +45,15 @@ export abstract class RefresherArgs<Name extends string, Data> {
     /** Is called after each call to {@linkcode IRefresher.removeAllListeners}. */
     public removeAllListeners() {
         this.emitter.removeAllListeners();
+        this.emitterImpl = undefined;
     }
 
     protected constructor(args: {
         readonly lndArgs: AuthenticatedLightningArgs;
         readonly delayMilliseconds?: number;
         readonly name: Name;
-        readonly emitter: EventEmitter;
     }) {
-        ({
-            lndArgs: this.lndArgs,
-            delayMilliseconds: this.delayMilliseconds = 10_000,
-            name: this.name,
-            emitter: this.emitter,
-        } = args);
+        ({ lndArgs: this.lndArgs, delayMilliseconds: this.delayMilliseconds = 10_000, name: this.name } = args);
 
         if (typeof this.delayMilliseconds !== "number" || this.delayMilliseconds <= 0) {
             throw new Error(`args.delayMilliseconds is invalid: ${args.delayMilliseconds}.`);
@@ -67,7 +62,14 @@ export abstract class RefresherArgs<Name extends string, Data> {
 
     protected readonly lndArgs: AuthenticatedLightningArgs;
 
-    protected readonly emitter: EventEmitter;
+    protected get emitter() {
+        this.emitterImpl ??= this.createEmitter();
+        return this.emitterImpl;
+    }
+
+    protected abstract createEmitter(): EventEmitter;
+
+    private emitterImpl: EventEmitter | undefined;
 }
 
 /** See {@linkcode RefresherArgs}. */

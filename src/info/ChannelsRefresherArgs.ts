@@ -14,7 +14,7 @@ export class ChannelsRefresherArgs extends FullRefresherArgs<"channels", Channel
         readonly lndArgs: AuthenticatedLightningArgs;
         readonly delayMilliseconds?: number;
     }) {
-        super({ ...args, name: "channels", emitter: subscribeToChannels(args.lndArgs) });
+        super({ ...args, name: "channels" });
     }
 
     public override onChanged(listener: () => void) {
@@ -30,5 +30,9 @@ export class ChannelsRefresherArgs extends FullRefresherArgs<"channels", Channel
     protected override async getAllData() {
         // eslint-disable-next-line @typescript-eslint/naming-convention
         return await getChannels({ ...this.lndArgs, is_public: true });
+    }
+
+    protected override createEmitter() {
+        return subscribeToChannels(this.lndArgs);
     }
 }

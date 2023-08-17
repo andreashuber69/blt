@@ -13,7 +13,7 @@ export class PaymentsRefresherArgs extends PartialRefresherArgs<"payments", Paym
         readonly delayMilliseconds?: number;
         readonly days?: number;
     }) {
-        super({ ...args, name: "payments", emitter: subscribeToPayments(args.lndArgs) });
+        super({ ...args, name: "payments" });
     }
 
     public override onChanged(listener: () => void) {
@@ -28,8 +28,11 @@ export class PaymentsRefresherArgs extends PartialRefresherArgs<"payments", Paym
         return getPayments({ ...this.lndArgs, created_after: after, created_before: before });
     }
 
-    // eslint-disable-next-line @typescript-eslint/class-methods-use-this
     protected override equals(a: Payment, b: Payment) {
         return a.id === b.id;
+    }
+
+    protected override createEmitter() {
+        return subscribeToPayments(this.lndArgs);
     }
 }

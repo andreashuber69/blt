@@ -13,13 +13,13 @@ export class ForwardsRefresherArgs extends PartialRefresherArgs<"forwards", Forw
         readonly delayMilliseconds?: number;
         readonly days?: number;
     }) {
-        super({ ...args, name: "forwards", emitter: subscribeToForwards(args.lndArgs) });
+        super({ ...args, name: "forwards" });
     }
 
     public override onChanged(listener: () => void) {
         this.emitter.on("forward", (e: SubscribeToForwardsForwardEvent) => {
             if (e.is_confirmed) {
-                log(`forward ${e.at}: ${e}`);
+                log(`forward ${e.at}: ${JSON.stringify(e, undefined, 2)}`);
                 listener();
             }
         });
@@ -29,9 +29,12 @@ export class ForwardsRefresherArgs extends PartialRefresherArgs<"forwards", Forw
         return getForwards({ ...this.lndArgs, after, before });
     }
 
-    // eslint-disable-next-line @typescript-eslint/class-methods-use-this
     protected override equals(a: Forward, b: Forward) {
         return a.created_at === b.created_at && a.fee === b.fee && a.tokens === b.tokens &&
         a.incoming_channel === b.incoming_channel && a.outgoing_channel === b.outgoing_channel;
+    }
+
+    protected override createEmitter() {
+        return subscribeToForwards(this.lndArgs);
     }
 }
