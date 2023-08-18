@@ -25,8 +25,9 @@ export abstract class PartialRefresherArgs<Name extends string, Element extends 
         // would get all of them in one go. This is why we must get newly added data at and after the time of the last
         // element and eliminate duplicates ourselves. The matter is complicated by the fact that e.g. forwards do not
         // contain a unique id, so we have to eliminate duplicates by comparing for equality of properties.
-        const newElements = await toSortedArray(this.getDataRange(lastElementCreatedAt, before));
-        result.push(...this.eliminateDuplicates(result, newElements));
+        const possiblyNewElements = await toSortedArray(this.getDataRange(lastElementCreatedAt, before));
+        const newElements = this.eliminateDuplicates(result, possiblyNewElements);
+        result.push(...newElements);
         return result;
     }
 
