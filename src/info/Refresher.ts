@@ -19,12 +19,13 @@ export class Refresher<Name extends string, Data> {
     public static async create<Name extends string, Data>(
         args: IRefresherArgs<Name, Data>,
     ): Promise<IRefresher<Name, Data>> {
-        return new Refresher<Name, Data>(args, await args.refresh());
+        await args.refresh();
+        return new Refresher<Name, Data>(args);
     }
 
     /** The data, only refreshed as long as at least one listener is registered with {@linkcode Refresher.onChanged}. */
     public get data(): Readonly<Data> {
-        return this.dataImpl;
+        return this.args.data;
     }
 
     /**
@@ -38,8 +39,9 @@ export class Refresher<Name extends string, Data> {
             const scheduler = new Scheduler(this.args.delayMilliseconds);
 
             this.args.onChanged(() => scheduler.call(async () => {
-                this.dataImpl = await this.args.refresh(this.dataImpl);
-                this.emitter.emit(this.args.name, this.args.name);
+                if (await this.args.refresh()) {
+                    this.emitter.emit(this.args.name, this.args.name);
+                }
             }));
         }
     }
@@ -61,7 +63,7 @@ export class Refresher<Name extends string, Data> {
         this.args.removeAllListeners();
     }
 
-    private constructor(private readonly args: IRefresherArgs<Name, Data>, private dataImpl: Data) {}
+    private constructor(private readonly args: IRefresherArgs<Name, Data>) {}
 
     // eslint-disable-next-line unicorn/prefer-event-target
     private readonly emitter = new EventEmitter();

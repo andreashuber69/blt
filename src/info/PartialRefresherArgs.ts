@@ -15,20 +15,20 @@ import { toSortedArray } from "./toSortedArray.js";
  */
 // eslint-disable-next-line max-len
 export abstract class PartialRefresherArgs<Name extends string, Element extends TimeBoundElement> extends RefresherArgs<Name, Element[]> {
-    public override async refresh(current?: Element[]) {
-        const result = current ?? [];
+    public override async refresh() {
+        this.dataImpl ??= [];
         const { after, before } = getRangeDays(this.days);
-        result.splice(0, result.findIndex((v) => v.created_at >= after)); // Delete old data
-        const lastElementCreatedAt = result.at(-1)?.created_at ?? after;
+        const deletedElements = this.dataImpl.splice(0, this.dataImpl.findIndex((v) => v.created_at >= after));
+        const lastElementCreatedAt = this.dataImpl.at(-1)?.created_at ?? after;
 
         // Multiple time-bound elements can theoretically be created at the same time and there's no guarantee that we
         // would get all of them in one go. This is why we must get newly added data at and after the time of the last
         // element and eliminate duplicates ourselves. The matter is complicated by the fact that e.g. forwards do not
         // contain a unique id, so we have to eliminate duplicates by comparing for equality of properties.
         const possiblyNewElements = await toSortedArray(this.getDataRange(lastElementCreatedAt, before));
-        const newElements = this.eliminateDuplicates(result, possiblyNewElements);
-        result.push(...newElements);
-        return result;
+        const newElements = this.eliminateDuplicates(this.dataImpl, possiblyNewElements);
+        this.dataImpl.push(...newElements);
+        return deletedElements.length > 0 || newElements.length > 0;
     }
 
     protected constructor(args: {

@@ -3,7 +3,6 @@ import assert from "node:assert";
 import { describe, it } from "node:test";
 
 import { Refresher } from "./Refresher.js";
-import type { IRefresherArgs } from "./RefresherArgs.js";
 import { delay } from "./testHelpers/delay.js";
 
 const refresh = async (data?: string) => await Promise.resolve(`${data ?? ""}X`);
@@ -40,13 +39,26 @@ describe(Refresher.name, () => {
             const subscriber = new Subscriber();
             const { changedListeners, errorListeners, onChanged, onError, removeAllListeners } = subscriber;
 
-            const args: IRefresherArgs<"tests", string> = {
+            let dataImpl: string | undefined;
+
+            const args = {
                 name: "tests",
-                refresh,
+                get data() {
+                    if (!this.dataImpl) {
+                        throw new Error("Something went wrong");
+                    }
+
+                    return this.dataImpl;
+                },
+                async refresh() {
+                    this.dataImpl = await refresh(this.dataImpl);
+                    return true;
+                },
                 delayMilliseconds: 50,
                 onChanged,
                 onError,
                 removeAllListeners,
+                dataImpl,
             };
 
             const refresher = await Refresher.create(args);
@@ -105,13 +117,26 @@ describe(Refresher.name, () => {
             const subscriber = new Subscriber();
             const { changedListeners: listeners, onChanged, onError, removeAllListeners } = subscriber;
 
-            const args: IRefresherArgs<"tests", string> = {
+            let dataImpl: string | undefined;
+
+            const args = {
                 name: "tests",
-                refresh,
+                get data() {
+                    if (!this.dataImpl) {
+                        throw new Error("Something went wrong");
+                    }
+
+                    return this.dataImpl;
+                },
+                async refresh() {
+                    this.dataImpl = await refresh(this.dataImpl);
+                    return true;
+                },
                 delayMilliseconds: 1000,
                 onChanged,
                 onError,
                 removeAllListeners,
+                dataImpl,
             };
 
             const refresher = await Refresher.create(args);

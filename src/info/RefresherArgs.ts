@@ -4,7 +4,7 @@ import type { AuthenticatedLightningArgs } from "lightning";
 
 import type { IRefresher, Refresher } from "./Refresher.js";
 
-type PropertyNames = "delayMilliseconds" | "name" | "onChanged" | "onError" | "refresh" | "removeAllListeners";
+type PropertyNames = "data" | "delayMilliseconds" | "name" | "onChanged" | "onError" | "refresh" | "removeAllListeners";
 
 /** Provides the base implementation for the arguments object passed to {@linkcode Refresher.create} .*/
 export abstract class RefresherArgs<Name extends string, Data> {
@@ -14,8 +14,23 @@ export abstract class RefresherArgs<Name extends string, Data> {
      */
     public readonly name: Name;
 
-    /** Refreshes the data to the current state. */
-    public abstract refresh(current?: Data): Promise<Data>;
+    /** The current state of the data. */
+    public get data(): Readonly<Data> {
+        if (!this.dataImpl) {
+            throw new Error("Unexpected get of data before refresh has completed!");
+        }
+
+        return this.dataImpl;
+    }
+
+    /**
+     * Refreshes {@linkcode RefresherArgs.dataImpl} to the current state.
+     * @description After {@linkcode RefresherArgs.refresh} fulfills, {@linkcode RefresherArgs.dataImpl} must not be
+     * equal to `undefined`.
+     * @returns `true` if the current state of {@linkcode RefresherArgs.dataImpl} is different from the old state,
+     * otherwise `false`.
+     */
+    public abstract refresh(): Promise<boolean>;
 
     /** The length of time subsequent refreshes should be delayed. */
     public readonly delayMilliseconds: number;
@@ -59,6 +74,8 @@ export abstract class RefresherArgs<Name extends string, Data> {
             throw new Error(`args.delayMilliseconds is invalid: ${args.delayMilliseconds}.`);
         }
     }
+
+    protected dataImpl: Data | undefined;
 
     protected readonly lndArgs: AuthenticatedLightningArgs;
 

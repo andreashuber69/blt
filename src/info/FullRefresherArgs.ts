@@ -10,10 +10,10 @@ import { RefresherArgs } from "./RefresherArgs.js";
  * the elements of which do not implement a particular interface.
  */
 export abstract class FullRefresherArgs<Name extends string, Element> extends RefresherArgs<Name, Element[]> {
-    public override async refresh(current?: Element[]) {
-        const result = current ?? [];
-        result.splice(0, Number.POSITIVE_INFINITY, ...await this.getAllData());
-        return result;
+    public override async refresh() {
+        this.dataImpl ??= [];
+        this.dataImpl.splice(0, Number.POSITIVE_INFINITY, ...await this.getAllData());
+        return true;
     }
 
     protected constructor(args: {
