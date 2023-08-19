@@ -33,14 +33,14 @@ export class Refresher<Name extends string, Data> {
      * @param listener The listener to add. Is called whenever {@linkcode Refresher.data} might have changed.
      */
     public onChanged(listener: (name: Name) => void) {
-        this.onChangedEmitter.on(this.args.name, listener);
+        this.clientEmitter.on(this.args.name, listener);
 
-        if (this.onChangedEmitter.listenerCount(this.args.name) === 1) {
+        if (this.clientEmitter.listenerCount(this.args.name) === 1) {
             const scheduler = new Scheduler(this.args.delayMilliseconds);
 
             this.args.onChanged(() => scheduler.call(async () => {
                 if (await this.args.refresh()) {
-                    this.onChangedEmitter.emit(this.args.name, this.args.name);
+                    this.clientEmitter.emit(this.args.name, this.args.name);
                 }
             }));
         }
@@ -59,14 +59,14 @@ export class Refresher<Name extends string, Data> {
      * Removes all listeners previously added through {@linkcode Refresher.onChanged} and {@linkcode Refresher.onError}.
      */
     public removeAllListeners() {
-        this.onChangedEmitter.removeAllListeners();
+        this.clientEmitter.removeAllListeners();
         this.args.removeAllListeners();
     }
 
     private constructor(private readonly args: IRefresherArgs<Name, Data>) {}
 
     // eslint-disable-next-line unicorn/prefer-event-target
-    private readonly onChangedEmitter = new EventEmitter();
+    private readonly clientEmitter = new EventEmitter();
 }
 
 /** See {@linkcode Refresher}. */
