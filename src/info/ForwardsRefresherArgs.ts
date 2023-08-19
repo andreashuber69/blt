@@ -16,7 +16,7 @@ export class ForwardsRefresherArgs extends PartialRefresherArgs<"forwards", Forw
         super({ ...args, name: "forwards" });
     }
 
-    public override onChanged(listener: () => void) {
+    public override onServerChanged(listener: () => void) {
         this.emitter.on("forward", (e: SubscribeToForwardsForwardEvent) => {
             if (e.is_confirmed) {
                 log(`forward ${e.at}: ${JSON.stringify(e, undefined, 2)}`);

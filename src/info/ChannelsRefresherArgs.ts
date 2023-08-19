@@ -17,7 +17,7 @@ export class ChannelsRefresherArgs extends FullRefresherArgs<"channels", Channel
         super({ ...args, name: "channels" });
     }
 
-    public override onChanged(listener: () => void) {
+    public override onServerChanged(listener: () => void) {
         const handler = (e: SubscribeToChannelsChannelClosedEvent | SubscribeToChannelsChannelOpenedEvent) => {
             log(`channel ${e.id}`);
             listener();

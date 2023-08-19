@@ -4,7 +4,8 @@ import type { AuthenticatedLightningArgs } from "lightning";
 
 import type { IRefresher, Refresher } from "./Refresher.js";
 
-type PropertyNames = "data" | "delayMilliseconds" | "name" | "onChanged" | "onError" | "refresh" | "removeAllListeners";
+type PropertyNames =
+    "data" | "delayMilliseconds" | "name" | "onError" | "onServerChanged" | "refresh" | "removeAllListeners";
 
 /** Provides the base implementation for the arguments object passed to {@linkcode Refresher.create} .*/
 export abstract class RefresherArgs<Name extends string, Data> {
@@ -46,7 +47,7 @@ export abstract class RefresherArgs<Name extends string, Data> {
      * assigning the awaited result to {@linkcode IRefresher.data} and finally calling all listeners installed through
      * {@linkcode IRefresher.onChanged}.
      */
-    public abstract onChanged(listener: () => void): void;
+    public abstract onServerChanged(listener: () => void): void;
 
     /**
      * Subscribes the passed listener to all events that indicate an error preventing further update of

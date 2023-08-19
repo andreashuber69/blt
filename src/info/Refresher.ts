@@ -38,7 +38,7 @@ export class Refresher<Name extends string, Data> {
         if (this.clientEmitter.listenerCount(this.args.name) === 1) {
             const scheduler = new Scheduler(this.args.delayMilliseconds);
 
-            this.args.onChanged(() => scheduler.call(async () => {
+            this.args.onServerChanged(() => scheduler.call(async () => {
                 if (await this.args.refresh()) {
                     this.clientEmitter.emit(this.args.name, this.args.name);
                 }

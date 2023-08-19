@@ -16,7 +16,7 @@ export class PaymentsRefresherArgs extends PartialRefresherArgs<"payments", Paym
         super({ ...args, name: "payments" });
     }
 
-    public override onChanged(listener: () => void) {
+    public override onServerChanged(listener: () => void) {
         this.emitter.on("confirmed", (e: SubscribeToPaymentsPaymentEvent) => {
             log(`payment ${e.created_at}: ${e.tokens}`);
             listener();

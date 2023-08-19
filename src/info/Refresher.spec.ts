@@ -16,7 +16,7 @@ class Subscriber {
         return this.errorListenersImpl;
     }
 
-    public readonly onChanged = (listener: () => void) => {
+    public readonly onServerChanged = (listener: () => void) => {
         this.changedListenersImpl.push(listener);
     };
 
@@ -37,7 +37,7 @@ describe(Refresher.name, () => {
     describe(Refresher.create.name, () => {
         it("should return a working refresher", async () => {
             const subscriber = new Subscriber();
-            const { changedListeners, errorListeners, onChanged, onError, removeAllListeners } = subscriber;
+            const { changedListeners, errorListeners, onServerChanged, onError, removeAllListeners } = subscriber;
 
             let dataImpl: string | undefined;
 
@@ -55,7 +55,7 @@ describe(Refresher.name, () => {
                     return true;
                 },
                 delayMilliseconds: 50,
-                onChanged,
+                onServerChanged,
                 onError,
                 removeAllListeners,
                 dataImpl,
@@ -115,7 +115,7 @@ describe(Refresher.name, () => {
 
         it("should delay refresh", async () => {
             const subscriber = new Subscriber();
-            const { changedListeners: listeners, onChanged, onError, removeAllListeners } = subscriber;
+            const { changedListeners: listeners, onServerChanged, onError, removeAllListeners } = subscriber;
 
             let dataImpl: string | undefined;
 
@@ -133,7 +133,7 @@ describe(Refresher.name, () => {
                     return true;
                 },
                 delayMilliseconds: 1000,
-                onChanged,
+                onServerChanged,
                 onError,
                 removeAllListeners,
                 dataImpl,
