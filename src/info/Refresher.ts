@@ -14,11 +14,11 @@ export abstract class Refresher<Name extends string, Data> {
         Name extends string,
         Data,
     >(
-        ctor: new (args: Args) => T,
-        args2: Args,
+        ctor: new (_args: Args) => T,
+        args: Args,
     ): Promise<IRefresher<Name, Data>> {
-        const result = new ctor(args2);
-        await result.refresh(args2.lndArgs);
+        const result = new ctor(args);
+        await result.refresh(args.lndArgs);
         return result;
     }
 
