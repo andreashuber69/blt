@@ -53,7 +53,7 @@ export abstract class Refresher<Name extends string, Data> {
         this.emitter.on("error", listener);
     }
 
-    /** Is called after each call to {@linkcode IRefresher.removeAllListeners}. */
+    /** Removes all previously added listeners. */
     public removeAllListeners() {
         this.emitter.removeAllListeners();
         this.emitterImpl = undefined;
