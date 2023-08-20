@@ -5,7 +5,7 @@ import { subscribeToForwards } from "lightning";
 import type { Forward } from "../lightning/getForwards.js";
 import { getForwards } from "../lightning/getForwards.js";
 import { log } from "../Logger.js";
-import { PartialRefresher } from "./PartialRefresherArgs.js";
+import { PartialRefresher } from "./PartialRefresher.js";
 
 export class ForwardsRefresher extends PartialRefresher<"forwards", Forward> {
     public constructor(args: {

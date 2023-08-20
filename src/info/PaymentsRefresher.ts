@@ -5,7 +5,7 @@ import { subscribeToPayments } from "lightning";
 import type { Payment } from "../lightning/getPayments.js";
 import { getPayments } from "../lightning/getPayments.js";
 import { log } from "../Logger.js";
-import { PartialRefresher } from "./PartialRefresherArgs.js";
+import { PartialRefresher } from "./PartialRefresher.js";
 
 export class PaymentsRefresher extends PartialRefresher<"payments", Payment> {
     public constructor(args: {

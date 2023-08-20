@@ -6,11 +6,11 @@ import type { Channel } from "../lightning/getChannels.js";
 import type { Forward } from "../lightning/getForwards.js";
 import type { Payment } from "../lightning/getPayments.js";
 import type { Identity } from "../lightning/Identity.js";
-import { ChannelsRefresher } from "./ChannelsRefresherArgs.js";
-import { ForwardsRefresher } from "./ForwardsRefresherArgs.js";
-import { PaymentsRefresher } from "./PaymentsRefresherArgs.js";
-import type { IRefresher } from "./RefresherArgs.js";
-import { Refresher } from "./RefresherArgs.js";
+import { ChannelsRefresher } from "./ChannelsRefresher.js";
+import { ForwardsRefresher } from "./ForwardsRefresher.js";
+import { PaymentsRefresher } from "./PaymentsRefresher.js";
+import type { IRefresher } from "./Refresher.js";
+import { Refresher } from "./Refresher.js";
 
 const refresherNames = ["channels", "forwards", "payments"] as const;
 

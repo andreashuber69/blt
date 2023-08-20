@@ -7,7 +7,7 @@ import { subscribeToChannels } from "lightning";
 import type { Channel } from "../lightning/getChannels.js";
 import { getChannels } from "../lightning/getChannels.js";
 import { log } from "../Logger.js";
-import { FullRefresher } from "./FullRefresherArgs.js";
+import { FullRefresher } from "./FullRefresher.js";
 
 export class ChannelsRefresher extends FullRefresher<"channels", Channel> {
     public constructor(args: {

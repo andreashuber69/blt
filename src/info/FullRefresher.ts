@@ -1,8 +1,8 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import type { AuthenticatedLightningArgs } from "lightning";
 
-import type { IRefresher } from "./RefresherArgs.js";
-import { Refresher } from "./RefresherArgs.js";
+import type { IRefresher } from "./Refresher.js";
+import { Refresher } from "./Refresher.js";
 
 /**
  * Provides an {@linkcode IRefresher} implementation for use cases where {@linkcode IRefresher.data} is an
