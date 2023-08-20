@@ -1,4 +1,5 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
+import type { EventEmitter } from "node:events";
 import type { AuthenticatedLightningArgs, SubscribeToForwardsForwardEvent } from "lightning";
 import { subscribeToForwards } from "lightning";
 
@@ -25,8 +26,8 @@ export class ForwardsRefresher extends PartialRefresher<"forwards", Forward> {
         a.incoming_channel === b.incoming_channel && a.outgoing_channel === b.outgoing_channel;
     }
 
-    protected override onServerChanged(listener: () => void) {
-        this.emitter.on("forward", (e: SubscribeToForwardsForwardEvent) => {
+    protected override onServerChanged(serverEmitter: EventEmitter, listener: () => void) {
+        serverEmitter.on("forward", (e: SubscribeToForwardsForwardEvent) => {
             if (e.is_confirmed) {
                 log(`forward ${e.at}: ${JSON.stringify(e, undefined, 2)}`);
                 listener();

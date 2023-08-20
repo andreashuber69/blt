@@ -41,7 +41,7 @@ export abstract class Refresher<Name extends string, Data> {
         if (this.clientEmitter.listenerCount(this.name) === 1) {
             const scheduler = new Scheduler(this.delayMilliseconds);
 
-            this.onServerChanged(() => scheduler.call(async () => {
+            this.onServerChanged(this.serverEmitter, () => scheduler.call(async () => {
                 if (await this.refresh(this.lndArgs)) {
                     this.clientEmitter.emit(this.name, this.name);
                 }
@@ -55,13 +55,13 @@ export abstract class Refresher<Name extends string, Data> {
      * @param listener The listener to add.
      */
     public onError(listener: (error: unknown) => void) {
-        this.emitter.on("error", listener);
+        this.serverEmitter.on("error", listener);
     }
 
     /** Removes all previously added listeners. */
     public removeAllListeners() {
-        this.emitter.removeAllListeners();
-        this.serverEmitter = undefined;
+        this.serverEmitter.removeAllListeners();
+        this.serverEmitterImpl = undefined;
     }
 
     protected constructor(args: {
@@ -78,11 +78,6 @@ export abstract class Refresher<Name extends string, Data> {
 
     protected dataImpl: Data | undefined;
 
-    protected get emitter() {
-        this.serverEmitter ??= this.createServerEmitter(this.lndArgs);
-        return this.serverEmitter;
-    }
-
     /**
      * Refreshes {@linkcode Refresher.dataImpl} to the current state.
      * @description After {@linkcode Refresher.refresh} fulfills, {@linkcode Refresher.dataImpl} must not be
@@ -93,25 +88,31 @@ export abstract class Refresher<Name extends string, Data> {
     protected abstract refresh(lndArgs: AuthenticatedLightningArgs): Promise<boolean>;
 
     /**
-     * Subscribes the passed listener to all events that might indicate {@linkcode IRefresher.data} needs to be
+     * Subscribes `listener` to all `serverEmitter` events that might indicate {@linkcode IRefresher.data} needs to be
      * refreshed.
      * @description Is called when the first listener is installed with a call to {@linkcode IRefresher.onChanged}.
+     * @param serverEmitter `listener` will be added to one or more events of this emitter.
      * @param listener Must be called whenever it has been detected that {@linkcode IRefresher.data} might need to
      * be updated. Each call schedules a refresh and notify operation to occur after `delayMilliseconds`, if and only if
      * no other such operation is currently scheduled or in progress. The refresh and notify operation consists of
      * calling {@linkcode IRefresher.refresh}, assigning the awaited result to {@linkcode IRefresher.data} and
      * finally calling all listeners installed through {@linkcode IRefresher.onChanged}.
      */
-    protected abstract onServerChanged(listener: () => void): void;
+    protected abstract onServerChanged(serverEmitter: EventEmitter, listener: () => void): void;
 
     protected abstract createServerEmitter(lndArgs: AuthenticatedLightningArgs): EventEmitter;
+
+    private get serverEmitter() {
+        this.serverEmitterImpl ??= this.createServerEmitter(this.lndArgs);
+        return this.serverEmitterImpl;
+    }
 
     private readonly lndArgs: AuthenticatedLightningArgs;
     private readonly delayMilliseconds: number;
     private readonly name: Name;
     // eslint-disable-next-line unicorn/prefer-event-target
     private readonly clientEmitter = new EventEmitter();
-    private serverEmitter: EventEmitter | undefined;
+    private serverEmitterImpl: EventEmitter | undefined;
 }
 
 /** See {@linkcode Refresher}. */

@@ -1,4 +1,5 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
+import type { EventEmitter } from "node:events";
 import type {
     AuthenticatedLightningArgs, SubscribeToChannelsChannelClosedEvent, SubscribeToChannelsChannelOpenedEvent,
 } from "lightning";
@@ -22,14 +23,14 @@ export class ChannelsRefresher extends FullRefresher<"channels", Channel> {
         return await getChannels({ ...lndArgs, is_public: true });
     }
 
-    protected override onServerChanged(listener: () => void) {
+    protected override onServerChanged(serverEmitter: EventEmitter, listener: () => void) {
         const handler = (e: SubscribeToChannelsChannelClosedEvent | SubscribeToChannelsChannelOpenedEvent) => {
             log(`channel ${e.id}`);
             listener();
         };
 
-        this.emitter.on("channel_opened", handler);
-        this.emitter.on("channel_closed", handler);
+        serverEmitter.on("channel_opened", handler);
+        serverEmitter.on("channel_closed", handler);
     }
 
     protected override createServerEmitter(lndArgs: AuthenticatedLightningArgs) {
