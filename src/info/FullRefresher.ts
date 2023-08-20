@@ -18,11 +18,11 @@ export abstract class FullRefresher<Name extends string, Element> extends Refres
     }
 
     /** Gets all data. */
-    protected abstract getAllData(): Promise<Element[]>;
+    protected abstract getAllData(lndArgs: AuthenticatedLightningArgs): Promise<Element[]>;
 
-    protected override async refresh() {
+    protected override async refresh(lndArgs: AuthenticatedLightningArgs) {
         this.dataImpl ??= [];
-        this.dataImpl.splice(0, Number.POSITIVE_INFINITY, ...await this.getAllData());
+        this.dataImpl.splice(0, Number.POSITIVE_INFINITY, ...await this.getAllData(lndArgs));
         return true;
     }
 }

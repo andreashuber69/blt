@@ -17,9 +17,9 @@ export class ChannelsRefresher extends FullRefresher<"channels", Channel> {
         super({ ...args, name: "channels" });
     }
 
-    protected override async getAllData() {
+    protected override async getAllData(lndArgs: AuthenticatedLightningArgs) {
         // eslint-disable-next-line @typescript-eslint/naming-convention
-        return await getChannels({ ...this.lndArgs, is_public: true });
+        return await getChannels({ ...lndArgs, is_public: true });
     }
 
     protected override onServerChanged(listener: () => void) {
@@ -32,7 +32,7 @@ export class ChannelsRefresher extends FullRefresher<"channels", Channel> {
         this.emitter.on("channel_closed", handler);
     }
 
-    protected override createEmitter() {
-        return subscribeToChannels(this.lndArgs);
+    protected override createEmitter(lndArgs: AuthenticatedLightningArgs) {
+        return subscribeToChannels(lndArgs);
     }
 }

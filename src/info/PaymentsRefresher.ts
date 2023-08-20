@@ -16,9 +16,9 @@ export class PaymentsRefresher extends PartialRefresher<"payments", Payment> {
         super({ ...args, name: "payments" });
     }
 
-    protected override getDataRange(after: string, before: string) {
+    protected override getDataRange(lndArgs: AuthenticatedLightningArgs, after: string, before: string) {
         // eslint-disable-next-line @typescript-eslint/naming-convention
-        return getPayments({ ...this.lndArgs, created_after: after, created_before: before });
+        return getPayments({ ...lndArgs, created_after: after, created_before: before });
     }
 
     protected override equals(a: Payment, b: Payment) {
@@ -32,7 +32,7 @@ export class PaymentsRefresher extends PartialRefresher<"payments", Payment> {
         });
     }
 
-    protected override createEmitter() {
-        return subscribeToPayments(this.lndArgs);
+    protected override createEmitter(lndArgs: AuthenticatedLightningArgs) {
+        return subscribeToPayments(lndArgs);
     }
 }

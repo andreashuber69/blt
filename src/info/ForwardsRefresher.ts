@@ -16,8 +16,8 @@ export class ForwardsRefresher extends PartialRefresher<"forwards", Forward> {
         super({ ...args, name: "forwards" });
     }
 
-    protected override getDataRange(after: string, before: string) {
-        return getForwards({ ...this.lndArgs, after, before });
+    protected override getDataRange(lndArgs: AuthenticatedLightningArgs, after: string, before: string) {
+        return getForwards({ ...lndArgs, after, before });
     }
 
     protected override equals(a: Forward, b: Forward) {
@@ -34,7 +34,7 @@ export class ForwardsRefresher extends PartialRefresher<"forwards", Forward> {
         });
     }
 
-    protected override createEmitter() {
-        return subscribeToForwards(this.lndArgs);
+    protected override createEmitter(lndArgs: AuthenticatedLightningArgs) {
+        return subscribeToForwards(lndArgs);
     }
 }

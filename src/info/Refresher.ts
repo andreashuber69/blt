@@ -8,12 +8,17 @@ type PropertyNames = "data" | "onChanged" | "onError" | "removeAllListeners";
 
 /** Provides the base implementation for the arguments object passed to {@linkcode Refresher.create} .*/
 export abstract class Refresher<Name extends string, Data> {
-    public static async create<T extends Refresher<Name, Data>, Args, Name extends string, Data>(
+    public static async create<
+        T extends Refresher<Name, Data>,
+        Args extends { readonly lndArgs: AuthenticatedLightningArgs },
+        Name extends string,
+        Data,
+    >(
         ctor: new (args: Args) => T,
         args2: Args,
     ): Promise<IRefresher<Name, Data>> {
         const result = new ctor(args2);
-        await result.refresh();
+        await result.refresh(args2.lndArgs);
         return result;
     }
 
@@ -37,7 +42,7 @@ export abstract class Refresher<Name extends string, Data> {
             const scheduler = new Scheduler(this.delayMilliseconds);
 
             this.onServerChanged(() => scheduler.call(async () => {
-                if (await this.refresh()) {
+                if (await this.refresh(this.lndArgs)) {
                     this.clientEmitter.emit(this.name, this.name);
                 }
             }));
@@ -73,10 +78,8 @@ export abstract class Refresher<Name extends string, Data> {
 
     protected dataImpl: Data | undefined;
 
-    protected readonly lndArgs: AuthenticatedLightningArgs;
-
     protected get emitter() {
-        this.emitterImpl ??= this.createEmitter();
+        this.emitterImpl ??= this.createEmitter(this.lndArgs);
         return this.emitterImpl;
     }
 
@@ -87,7 +90,7 @@ export abstract class Refresher<Name extends string, Data> {
      * @returns `true` if the current state of {@linkcode Refresher.dataImpl} is different from the old state,
      * otherwise `false`.
      */
-    protected abstract refresh(): Promise<boolean>;
+    protected abstract refresh(lndArgs: AuthenticatedLightningArgs): Promise<boolean>;
 
     /**
      * Subscribes the passed listener to all events that might indicate {@linkcode IRefresher.data} needs to be
@@ -101,8 +104,9 @@ export abstract class Refresher<Name extends string, Data> {
      */
     protected abstract onServerChanged(listener: () => void): void;
 
-    protected abstract createEmitter(): EventEmitter;
+    protected abstract createEmitter(lndArgs: AuthenticatedLightningArgs): EventEmitter;
 
+    private readonly lndArgs: AuthenticatedLightningArgs;
     private readonly delayMilliseconds: number;
     private readonly name: Name;
     // eslint-disable-next-line unicorn/prefer-event-target

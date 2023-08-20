@@ -29,12 +29,16 @@ export abstract class PartialRefresher<Name extends string, Element extends Time
     }
 
     /** Gets data in the time period defined by `after` and `before`, both inclusive. */
-    protected abstract getDataRange(after: string, before: string): AsyncGenerator<Element>;
+    protected abstract getDataRange(
+        lndArgs: AuthenticatedLightningArgs,
+        after: string,
+        before: string,
+    ): AsyncGenerator<Element>;
 
     /** Returns `true` when both elements are equal, otherwise `false`. */
     protected abstract equals(a: Element, b: Element): boolean;
 
-    protected override async refresh() {
+    protected override async refresh(lndArgs: AuthenticatedLightningArgs) {
         this.dataImpl ??= [];
         const { after, before } = getRangeDays(this.days);
         const deletedElements = this.dataImpl.splice(0, this.dataImpl.findIndex((v) => v.created_at >= after));
@@ -44,7 +48,7 @@ export abstract class PartialRefresher<Name extends string, Element extends Time
         // would get all of them in one go. This is why we must get newly added data at and after the time of the last
         // element and eliminate duplicates ourselves. The matter is complicated by the fact that e.g. forwards do not
         // contain a unique id, so we have to eliminate duplicates by comparing for equality of properties.
-        const possiblyNewElements = await toSortedArray(this.getDataRange(lastElementCreatedAt, before));
+        const possiblyNewElements = await toSortedArray(this.getDataRange(lndArgs, lastElementCreatedAt, before));
         const newElements = this.eliminateDuplicates(this.dataImpl, possiblyNewElements);
         this.dataImpl.push(...newElements);
         return deletedElements.length > 0 || newElements.length > 0;
