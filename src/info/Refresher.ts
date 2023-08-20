@@ -24,10 +24,6 @@ export abstract class Refresher<Name extends string, Data> {
 
     /** The current state of the data. */
     public get data(): Readonly<Data> {
-        if (!this.dataImpl) {
-            throw new Error("Unexpected get of data before refresh has completed!");
-        }
-
         return this.dataImpl;
     }
 
@@ -68,15 +64,21 @@ export abstract class Refresher<Name extends string, Data> {
         readonly lndArgs: AuthenticatedLightningArgs;
         readonly delayMilliseconds?: number;
         readonly name: Name;
+        readonly noData: Data;
     }) {
-        ({ lndArgs: this.lndArgs, delayMilliseconds: this.delayMilliseconds = 10_000, name: this.name } = args);
+        ({
+            lndArgs: this.lndArgs,
+            delayMilliseconds: this.delayMilliseconds = 10_000,
+            name: this.name,
+            noData: this.dataImpl,
+        } = args);
 
         if (typeof this.delayMilliseconds !== "number" || this.delayMilliseconds <= 0) {
             throw new Error(`args.delayMilliseconds is invalid: ${args.delayMilliseconds}.`);
         }
     }
 
-    protected dataImpl: Data | undefined;
+    protected dataImpl: Data;
 
     /**
      * Refreshes {@linkcode Refresher.dataImpl} to the current state.

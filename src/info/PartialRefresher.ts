@@ -20,7 +20,7 @@ export abstract class PartialRefresher<Name extends string, Element extends Time
         readonly days?: number;
         readonly name: Name;
     }) {
-        super(args);
+        super({ ...args, noData: [] });
         ({ days: this.days = 14 } = args);
 
         if (typeof this.days !== "number" || this.days <= 0) {
@@ -39,7 +39,6 @@ export abstract class PartialRefresher<Name extends string, Element extends Time
     protected abstract equals(a: Element, b: Element): boolean;
 
     protected override async refresh(lndArgs: AuthenticatedLightningArgs) {
-        this.dataImpl ??= [];
         const { after, before } = getRangeDays(this.days);
         const deletedElements = this.dataImpl.splice(0, this.dataImpl.findIndex((v) => v.created_at >= after));
         const lastElementCreatedAt = this.dataImpl.at(-1)?.created_at ?? after;
