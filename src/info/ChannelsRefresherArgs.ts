@@ -17,7 +17,12 @@ export class ChannelsRefresherArgs extends FullRefresherArgs<"channels", Channel
         super({ ...args, name: "channels" });
     }
 
-    public override onServerChanged(listener: () => void) {
+    protected override async getAllData() {
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        return await getChannels({ ...this.lndArgs, is_public: true });
+    }
+
+    protected override onServerChanged(listener: () => void) {
         const handler = (e: SubscribeToChannelsChannelClosedEvent | SubscribeToChannelsChannelOpenedEvent) => {
             log(`channel ${e.id}`);
             listener();
@@ -25,11 +30,6 @@ export class ChannelsRefresherArgs extends FullRefresherArgs<"channels", Channel
 
         this.emitter.on("channel_opened", handler);
         this.emitter.on("channel_closed", handler);
-    }
-
-    protected override async getAllData() {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
-        return await getChannels({ ...this.lndArgs, is_public: true });
     }
 
     protected override createEmitter() {
