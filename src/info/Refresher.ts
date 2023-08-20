@@ -61,7 +61,7 @@ export abstract class Refresher<Name extends string, Data> {
     /** Removes all previously added listeners. */
     public removeAllListeners() {
         this.emitter.removeAllListeners();
-        this.emitterImpl = undefined;
+        this.serverEmitter = undefined;
     }
 
     protected constructor(args: {
@@ -79,8 +79,8 @@ export abstract class Refresher<Name extends string, Data> {
     protected dataImpl: Data | undefined;
 
     protected get emitter() {
-        this.emitterImpl ??= this.createEmitter(this.lndArgs);
-        return this.emitterImpl;
+        this.serverEmitter ??= this.createServerEmitter(this.lndArgs);
+        return this.serverEmitter;
     }
 
     /**
@@ -104,14 +104,14 @@ export abstract class Refresher<Name extends string, Data> {
      */
     protected abstract onServerChanged(listener: () => void): void;
 
-    protected abstract createEmitter(lndArgs: AuthenticatedLightningArgs): EventEmitter;
+    protected abstract createServerEmitter(lndArgs: AuthenticatedLightningArgs): EventEmitter;
 
     private readonly lndArgs: AuthenticatedLightningArgs;
     private readonly delayMilliseconds: number;
     private readonly name: Name;
     // eslint-disable-next-line unicorn/prefer-event-target
     private readonly clientEmitter = new EventEmitter();
-    private emitterImpl: EventEmitter | undefined;
+    private serverEmitter: EventEmitter | undefined;
 }
 
 /** See {@linkcode Refresher}. */

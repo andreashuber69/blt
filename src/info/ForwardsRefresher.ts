@@ -34,7 +34,7 @@ export class ForwardsRefresher extends PartialRefresher<"forwards", Forward> {
         });
     }
 
-    protected override createEmitter(lndArgs: AuthenticatedLightningArgs) {
+    protected override createServerEmitter(lndArgs: AuthenticatedLightningArgs) {
         return subscribeToForwards(lndArgs);
     }
 }

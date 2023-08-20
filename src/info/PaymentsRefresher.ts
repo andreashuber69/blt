@@ -32,7 +32,7 @@ export class PaymentsRefresher extends PartialRefresher<"payments", Payment> {
         });
     }
 
-    protected override createEmitter(lndArgs: AuthenticatedLightningArgs) {
+    protected override createServerEmitter(lndArgs: AuthenticatedLightningArgs) {
         return subscribeToPayments(lndArgs);
     }
 }

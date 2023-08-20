@@ -32,7 +32,7 @@ export class ChannelsRefresher extends FullRefresher<"channels", Channel> {
         this.emitter.on("channel_closed", handler);
     }
 
-    protected override createEmitter(lndArgs: AuthenticatedLightningArgs) {
+    protected override createServerEmitter(lndArgs: AuthenticatedLightningArgs) {
         return subscribeToChannels(lndArgs);
     }
 }
