@@ -6,18 +6,18 @@ import type { Channel } from "../lightning/getChannels.js";
 import type { Forward } from "../lightning/getForwards.js";
 import type { Payment } from "../lightning/getPayments.js";
 import type { Identity } from "../lightning/Identity.js";
-import { ChannelsRefresherArgs } from "./ChannelsRefresherArgs.js";
-import { ForwardsRefresherArgs } from "./ForwardsRefresherArgs.js";
-import { PaymentsRefresherArgs } from "./PaymentsRefresherArgs.js";
-import type { IRefresherArgs } from "./RefresherArgs.js";
-import { RefresherArgs } from "./RefresherArgs.js";
+import { ChannelsRefresher } from "./ChannelsRefresherArgs.js";
+import { ForwardsRefresher } from "./ForwardsRefresherArgs.js";
+import { PaymentsRefresher } from "./PaymentsRefresherArgs.js";
+import type { IRefresher } from "./RefresherArgs.js";
+import { Refresher } from "./RefresherArgs.js";
 
 const refresherNames = ["channels", "forwards", "payments"] as const;
 
 type RefresherName = (typeof refresherNames)[number];
 
 type RefresherProperty<Name extends RefresherName, Data> = {
-    readonly [name in Name]: IRefresherArgs<Name, Data>;
+    readonly [name in Name]: IRefresher<Name, Data>;
 };
 
 type PropertyNames = "channels" | "forwards" | "identity" | "onChanged" | "onError" | "payments" | "removeAllListeners";
@@ -47,16 +47,16 @@ export class NodeInfo implements
     }): Promise<INodeInfo> {
         return new NodeInfo(
             await getIdentity(args.lndArgs),
-            await RefresherArgs.create(ChannelsRefresherArgs, args),
-            await RefresherArgs.create(ForwardsRefresherArgs, args),
-            await RefresherArgs.create(PaymentsRefresherArgs, args),
+            await Refresher.create(ChannelsRefresher, args),
+            await Refresher.create(ForwardsRefresher, args),
+            await Refresher.create(PaymentsRefresher, args),
         );
     }
 
     /**
-     * Calls {@linkcode IRefresherArgs.onChanged} for all {@linkcode IRefresherArgs} typed properties, forwarding
+     * Calls {@linkcode IRefresher.onChanged} for all {@linkcode IRefresher} typed properties, forwarding
      * `listener`.
-     * @description When `listener` is called, {@linkcode IRefresherArgs.data} of the {@linkcode IRefresherArgs} named
+     * @description When `listener` is called, {@linkcode IRefresher.data} of the {@linkcode IRefresher} named
      * `name` might have changed.
      * @param listener The listener to add.
      */
@@ -65,7 +65,7 @@ export class NodeInfo implements
     }
 
     /**
-     * Calls {@linkcode IRefresherArgs.onError} for all {@linkcode IRefresherArgs} typed properties, forwarding
+     * Calls {@linkcode IRefresher.onError} for all {@linkcode IRefresher} typed properties, forwarding
      * `listener`.
      * @description When `listener` is called, client code dependent on being notified about changes should discard this
      * object and create a new one via {@linkcode NodeInfo.get}.
@@ -75,16 +75,16 @@ export class NodeInfo implements
         this.forEachRefresher((refresher) => refresher.onError(listener));
     }
 
-    /** Calls {@linkcode IRefresherArgs.removeAllListeners} for all {@linkcode IRefresherArgs} typed properties. */
+    /** Calls {@linkcode IRefresher.removeAllListeners} for all {@linkcode IRefresher} typed properties. */
     public removeAllListeners() {
         this.forEachRefresher((refresher) => refresher.removeAllListeners());
     }
 
     private constructor(
         public readonly identity: Identity,
-        public readonly channels: IRefresherArgs<"channels", Channel[]>,
-        public readonly forwards: IRefresherArgs<"forwards", Forward[]>,
-        public readonly payments: IRefresherArgs<"payments", Payment[]>,
+        public readonly channels: IRefresher<"channels", Channel[]>,
+        public readonly forwards: IRefresher<"forwards", Forward[]>,
+        public readonly payments: IRefresher<"payments", Payment[]>,
     ) {}
 
     private forEachRefresher(callback: (refresher: NodeInfo[RefresherName]) => void) {

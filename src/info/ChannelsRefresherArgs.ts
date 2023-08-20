@@ -7,9 +7,9 @@ import { subscribeToChannels } from "lightning";
 import type { Channel } from "../lightning/getChannels.js";
 import { getChannels } from "../lightning/getChannels.js";
 import { log } from "../Logger.js";
-import { FullRefresherArgs } from "./FullRefresherArgs.js";
+import { FullRefresher } from "./FullRefresherArgs.js";
 
-export class ChannelsRefresherArgs extends FullRefresherArgs<"channels", Channel> {
+export class ChannelsRefresher extends FullRefresher<"channels", Channel> {
     public constructor(args: {
         readonly lndArgs: AuthenticatedLightningArgs;
         readonly delayMilliseconds?: number;

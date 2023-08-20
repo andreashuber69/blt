@@ -1,14 +1,14 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import type { AuthenticatedLightningArgs } from "lightning";
 
-import type { IRefresherArgs } from "./RefresherArgs.js";
-import { RefresherArgs } from "./RefresherArgs.js";
+import type { IRefresher } from "./RefresherArgs.js";
+import { Refresher } from "./RefresherArgs.js";
 
 /**
- * Provides an {@linkcode IRefresherArgs} implementation for use cases where {@linkcode IRefresherArgs.data} is an
+ * Provides an {@linkcode IRefresher} implementation for use cases where {@linkcode IRefresher.data} is an
  * array, the elements of which do not implement a particular interface.
  */
-export abstract class FullRefresherArgs<Name extends string, Element> extends RefresherArgs<Name, Element[]> {
+export abstract class FullRefresher<Name extends string, Element> extends Refresher<Name, Element[]> {
     protected constructor(args: {
         readonly lndArgs: AuthenticatedLightningArgs;
         readonly delayMilliseconds?: number;

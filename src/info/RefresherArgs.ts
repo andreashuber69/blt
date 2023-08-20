@@ -6,12 +6,12 @@ import { Scheduler } from "./Scheduler.js";
 
 type PropertyNames = "data" | "onChanged" | "onError" | "removeAllListeners";
 
-/** Provides the base implementation for the arguments object passed to {@linkcode RefresherArgs.create} .*/
-export abstract class RefresherArgs<Name extends string, Data> {
-    public static async create<T extends RefresherArgs<Name, Data>, Args, Name extends string, Data>(
+/** Provides the base implementation for the arguments object passed to {@linkcode Refresher.create} .*/
+export abstract class Refresher<Name extends string, Data> {
+    public static async create<T extends Refresher<Name, Data>, Args, Name extends string, Data>(
         ctor: new (args: Args) => T,
         args2: Args,
-    ): Promise<IRefresherArgs<Name, Data>> {
+    ): Promise<IRefresher<Name, Data>> {
         const result = new ctor(args2);
         await result.refresh();
         return result;
@@ -28,7 +28,7 @@ export abstract class RefresherArgs<Name extends string, Data> {
 
     /**
      * Adds the `listener` function to the end of the listeners array.
-     * @param listener The listener to add. Is called whenever {@linkcode IRefresherArgs.data} might have changed.
+     * @param listener The listener to add. Is called whenever {@linkcode IRefresher.data} might have changed.
      */
     public onChanged(listener: (name: Name) => void) {
         this.clientEmitter.on(this.name, listener);
@@ -46,14 +46,14 @@ export abstract class RefresherArgs<Name extends string, Data> {
 
     /**
      * Subscribes the passed listener to all events that indicate an error preventing further update of
-     * {@linkcode IRefresherArgs.data}.
+     * {@linkcode IRefresher.data}.
      * @param listener The listener to add.
      */
     public onError(listener: (error: unknown) => void) {
         this.emitter.on("error", listener);
     }
 
-    /** Is called after each call to {@linkcode IRefresherArgs.removeAllListeners}. */
+    /** Is called after each call to {@linkcode IRefresher.removeAllListeners}. */
     public removeAllListeners() {
         this.emitter.removeAllListeners();
         this.emitterImpl = undefined;
@@ -81,23 +81,23 @@ export abstract class RefresherArgs<Name extends string, Data> {
     }
 
     /**
-     * Refreshes {@linkcode RefresherArgs.dataImpl} to the current state.
-     * @description After {@linkcode RefresherArgs.refresh} fulfills, {@linkcode RefresherArgs.dataImpl} must not be
+     * Refreshes {@linkcode Refresher.dataImpl} to the current state.
+     * @description After {@linkcode Refresher.refresh} fulfills, {@linkcode Refresher.dataImpl} must not be
      * equal to `undefined`.
-     * @returns `true` if the current state of {@linkcode RefresherArgs.dataImpl} is different from the old state,
+     * @returns `true` if the current state of {@linkcode Refresher.dataImpl} is different from the old state,
      * otherwise `false`.
      */
     protected abstract refresh(): Promise<boolean>;
 
     /**
-     * Subscribes the passed listener to all events that might indicate {@linkcode IRefresherArgs.data} needs to be
+     * Subscribes the passed listener to all events that might indicate {@linkcode IRefresher.data} needs to be
      * refreshed.
-     * @description Is called when the first listener is installed with a call to {@linkcode IRefresherArgs.onChanged}.
-     * @param listener Must be called whenever it has been detected that {@linkcode IRefresherArgs.data} might need to
+     * @description Is called when the first listener is installed with a call to {@linkcode IRefresher.onChanged}.
+     * @param listener Must be called whenever it has been detected that {@linkcode IRefresher.data} might need to
      * be updated. Each call schedules a refresh and notify operation to occur after `delayMilliseconds`, if and only if
      * no other such operation is currently scheduled or in progress. The refresh and notify operation consists of
-     * calling {@linkcode IRefresherArgs.refresh}, assigning the awaited result to {@linkcode IRefresherArgs.data} and
-     * finally calling all listeners installed through {@linkcode IRefresherArgs.onChanged}.
+     * calling {@linkcode IRefresher.refresh}, assigning the awaited result to {@linkcode IRefresher.data} and
+     * finally calling all listeners installed through {@linkcode IRefresher.onChanged}.
      */
     protected abstract onServerChanged(listener: () => void): void;
 
@@ -110,5 +110,5 @@ export abstract class RefresherArgs<Name extends string, Data> {
     private emitterImpl: EventEmitter | undefined;
 }
 
-/** See {@linkcode RefresherArgs}. */
-export type IRefresherArgs<Name extends string, Data> = Pick<RefresherArgs<Name, Data>, PropertyNames>;
+/** See {@linkcode Refresher}. */
+export type IRefresher<Name extends string, Data> = Pick<Refresher<Name, Data>, PropertyNames>;
