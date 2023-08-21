@@ -14,14 +14,14 @@ export abstract class FullRefresher<Name extends string, Element> extends Refres
         readonly delayMilliseconds?: number;
         readonly name: Name;
     }) {
-        super({ ...args, noData: [] });
+        super({ ...args, empty: [] });
     }
 
     /** Gets all data. */
     protected abstract getAllData(lndArgs: AuthenticatedLightningArgs): Promise<Element[]>;
 
-    protected override async refresh(lndArgs: AuthenticatedLightningArgs) {
-        this.dataImpl.splice(0, Number.POSITIVE_INFINITY, ...await this.getAllData(lndArgs));
+    protected override async refresh(lndArgs: AuthenticatedLightningArgs, current: Element[]) {
+        current.splice(0, Number.POSITIVE_INFINITY, ...await this.getAllData(lndArgs));
         return true;
     }
 }

@@ -6,8 +6,13 @@ import { Scheduler } from "./Scheduler.js";
 
 type PropertyNames = "data" | "onChanged" | "onError" | "removeAllListeners";
 
-/** Provides the base implementation for the arguments object passed to {@linkcode Refresher.create} .*/
+/** Provides the base for all {@linkcode Refresher} implementations. */
 export abstract class Refresher<Name extends string, Data> {
+    /**
+     * Creates a new {@linkcode Refresher} subclass object.
+     * @param ctor The constructor of the class an object should be created of.
+     * @param args The arguments to be passed to the constructor.
+     */
     public static async create<
         T extends Refresher<Name, Data>,
         Args extends { readonly lndArgs: AuthenticatedLightningArgs },
@@ -18,7 +23,7 @@ export abstract class Refresher<Name extends string, Data> {
         args: Args,
     ): Promise<IRefresher<Name, Data>> {
         const result = new ctor(args);
-        await result.refresh(args.lndArgs);
+        await result.refresh(args.lndArgs, result.dataImpl);
         return result;
     }
 
@@ -28,7 +33,7 @@ export abstract class Refresher<Name extends string, Data> {
     }
 
     /**
-     * Adds the `listener` function to the end of the listeners array.
+     * Adds `listener` to the end of the listeners array.
      * @param listener The listener to add. Is called whenever {@linkcode IRefresher.data} might have changed.
      */
     public onChanged(listener: (name: Name) => void) {
@@ -38,7 +43,7 @@ export abstract class Refresher<Name extends string, Data> {
             const scheduler = new Scheduler(this.delayMilliseconds);
 
             this.onServerChanged(this.serverEmitter, () => scheduler.call(async () => {
-                if (await this.refresh(this.lndArgs)) {
+                if (await this.refresh(this.lndArgs, this.dataImpl)) {
                     this.clientEmitter.emit(this.name, this.name);
                 }
             }));
@@ -46,8 +51,8 @@ export abstract class Refresher<Name extends string, Data> {
     }
 
     /**
-     * Subscribes the passed listener to all events that indicate an error preventing further update of
-     * {@linkcode IRefresher.data}.
+     * Subscribes the passed listener to the `"error"` event of the server emitter, which signals that
+     * {@linkcode IRefresher.data} will no longer be updated.
      * @param listener The listener to add.
      */
     public onError(listener: (error: unknown) => void) {
@@ -60,17 +65,28 @@ export abstract class Refresher<Name extends string, Data> {
         this.serverEmitterImpl = undefined;
     }
 
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Initializes a new instance of {@linkcode Refresher}.
+     * @param args See properties for details.
+     * @param args.lndArgs The authenticated lightning args.
+     * @param args.delayMilliseconds The length of time each refresh and notify operation will be delayed after a change
+     * has been detected.
+     * @param args.name The name that will be passed to any listener added through {@linkcode IRefresher.onChanged}.
+     * @param args.empty The value {@linkcode IRefresher.data} will be initialized with.
+     */
     protected constructor(args: {
         readonly lndArgs: AuthenticatedLightningArgs;
         readonly delayMilliseconds?: number;
         readonly name: Name;
-        readonly noData: Data;
+        readonly empty: Data;
     }) {
         ({
             lndArgs: this.lndArgs,
             delayMilliseconds: this.delayMilliseconds = 10_000,
             name: this.name,
-            noData: this.dataImpl,
+            empty: this.dataImpl,
         } = args);
 
         if (typeof this.delayMilliseconds !== "number" || this.delayMilliseconds <= 0) {
@@ -78,16 +94,14 @@ export abstract class Refresher<Name extends string, Data> {
         }
     }
 
-    protected dataImpl: Data;
-
     /**
-     * Refreshes {@linkcode Refresher.dataImpl} to the current state.
-     * @description After {@linkcode Refresher.refresh} fulfills, {@linkcode Refresher.dataImpl} must not be
-     * equal to `undefined`.
-     * @returns `true` if the current state of {@linkcode Refresher.dataImpl} is different from the old state,
-     * otherwise `false`.
+     * Refreshes {@linkcode IRefresher.data} to the current state.
+     * @param lndArgs The authenticated lightning args.
+     * @param current The current state of the data. Overrides must modify this such that it represents the new state
+     * after the returned promise fulfills.
+     * @returns `true` if the new state is different from the old state, otherwise `false`.
      */
-    protected abstract refresh(lndArgs: AuthenticatedLightningArgs): Promise<boolean>;
+    protected abstract refresh(lndArgs: AuthenticatedLightningArgs, current: Data): Promise<boolean>;
 
     /**
      * Subscribes `listener` to all `serverEmitter` events that might indicate {@linkcode IRefresher.data} needs to be
@@ -97,12 +111,15 @@ export abstract class Refresher<Name extends string, Data> {
      * @param listener Must be called whenever it has been detected that {@linkcode IRefresher.data} might need to
      * be updated. Each call schedules a refresh and notify operation to occur after `delayMilliseconds`, if and only if
      * no other such operation is currently scheduled or in progress. The refresh and notify operation consists of
-     * calling {@linkcode IRefresher.refresh}, assigning the awaited result to {@linkcode IRefresher.data} and
+     * calling {@linkcode IRefresher.refresh} which modifies {@linkcode IRefresher.data} to represent the new state and
      * finally calling all listeners installed through {@linkcode IRefresher.onChanged}.
      */
     protected abstract onServerChanged(serverEmitter: EventEmitter, listener: () => void): void;
 
+    /** Creates a new emitter which will be passed to {@linkcode Refresher.onServerChanged}. */
     protected abstract createServerEmitter(lndArgs: AuthenticatedLightningArgs): EventEmitter;
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     private get serverEmitter() {
         this.serverEmitterImpl ??= this.createServerEmitter(this.lndArgs);
@@ -112,6 +129,7 @@ export abstract class Refresher<Name extends string, Data> {
     private readonly lndArgs: AuthenticatedLightningArgs;
     private readonly delayMilliseconds: number;
     private readonly name: Name;
+    private readonly dataImpl: Data;
     // eslint-disable-next-line unicorn/prefer-event-target
     private readonly clientEmitter = new EventEmitter();
     private serverEmitterImpl: EventEmitter | undefined;
