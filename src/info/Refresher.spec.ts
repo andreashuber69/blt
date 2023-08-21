@@ -49,15 +49,15 @@ const argsMock = {
     delayMilliseconds,
 };
 
-describe.only(Refresher.name, () => {
+describe(Refresher.name, () => {
     const errorEventName = "error";
 
-    it.only("should only create a server emitter on demand", async () => {
+    it("should only create a server emitter on demand", async () => {
         const refresher = await Refresher.create(RefresherImpl, argsMock);
         assert((refresher as RefresherImpl).currentServerEmitter === undefined);
     });
 
-    it.only("should keep the server emitter as necessary", async () => {
+    it("should keep the server emitter as necessary", async () => {
         const sut = await Refresher.create(RefresherImpl, argsMock);
 
         sut.onError(() => { /* intentionally empty */ });
@@ -84,8 +84,8 @@ describe.only(Refresher.name, () => {
         assert((sut as RefresherImpl).currentServerEmitter !== serverEmitter);
     });
 
-    describe.only(Refresher.create.name, () => {
-        it.only("should throw for invalid delay", async () => {
+    describe(Refresher.create.name, () => {
+        it("should throw for invalid delay", async () => {
             try {
                 const refresher = await Refresher.create(RefresherImpl, { ...argsMock, delayMilliseconds: -1 });
                 assert(false, `Unexpected success: ${refresher}`);
@@ -95,16 +95,16 @@ describe.only(Refresher.name, () => {
         });
     });
 
-    describe.only("data", () => {
-        it.only("should be initialized after creation", async () => {
+    describe("data", () => {
+        it("should be initialized after creation", async () => {
             const sut = await Refresher.create(RefresherImpl, argsMock);
 
             assert(sut.data.value === "Z");
         });
     });
 
-    describe.only(Refresher.prototype.onChanged.name, () => {
-        it.only("should delay refresh and notification", async () => {
+    describe(Refresher.prototype.onChanged.name, () => {
+        it("should delay refresh and notification", async () => {
             const sut = await Refresher.create(RefresherImpl, argsMock);
 
             let onChangedCalls = 0;
@@ -130,10 +130,10 @@ describe.only(Refresher.name, () => {
         });
     });
 
-    describe.only(Refresher.prototype.onError.name, () => {
+    describe(Refresher.prototype.onError.name, () => {
         const err = "oops!";
 
-        it.only("should notify errors immediately", async () => {
+        it("should notify errors immediately", async () => {
             const sut = await Refresher.create(RefresherImpl, argsMock);
 
             let onErrorCalls = 0;
