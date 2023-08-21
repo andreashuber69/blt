@@ -16,8 +16,8 @@ export abstract class Refresher<Name extends string, Data> {
     public static async create<
         T extends Refresher<Name, Data>,
         Args extends { readonly lndArgs: AuthenticatedLightningArgs },
-        Name extends string,
-        Data,
+        Name extends string = T extends Refresher<infer N, unknown> ? N : never,
+        Data = T extends Refresher<Name, infer D> ? D : never,
     >(
         ctor: new (_args: Args) => T,
         args: Args,
