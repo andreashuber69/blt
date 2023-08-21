@@ -80,6 +80,8 @@ export class NodeInfo implements
         this.forEachRefresher((refresher) => refresher.removeAllListeners());
     }
 
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
     private constructor(
         public readonly identity: Identity,
         public readonly channels: IRefresher<"channels", Channel[]>,

@@ -53,6 +53,8 @@ export abstract class PartialRefresher<Name extends string, Element extends Time
         return deletedElements.length > 0 || newElements.length > 0;
     }
 
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
     private readonly days: number;
 
     private eliminateDuplicates(currentElements: readonly Element[], possiblyNewElements: readonly Element[]) {

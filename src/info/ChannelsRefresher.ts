@@ -18,6 +18,8 @@ export class ChannelsRefresher extends FullRefresher<"channels", Channel> {
         super({ ...args, name: "channels" });
     }
 
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
     protected override async getAllData(lndArgs: AuthenticatedLightningArgs) {
         // eslint-disable-next-line @typescript-eslint/naming-convention
         return await getChannels({ ...lndArgs, is_public: true });

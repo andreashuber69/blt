@@ -17,6 +17,8 @@ export class ForwardsRefresher extends PartialRefresher<"forwards", Forward> {
         super({ ...args, name: "forwards" });
     }
 
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
     protected override getDataRange(lndArgs: AuthenticatedLightningArgs, after: string, before: string) {
         return getForwards({ ...lndArgs, after, before });
     }

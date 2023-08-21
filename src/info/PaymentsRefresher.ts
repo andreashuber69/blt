@@ -17,6 +17,8 @@ export class PaymentsRefresher extends PartialRefresher<"payments", Payment> {
         super({ ...args, name: "payments" });
     }
 
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
     protected override getDataRange(lndArgs: AuthenticatedLightningArgs, after: string, before: string) {
         // eslint-disable-next-line @typescript-eslint/naming-convention
         return getPayments({ ...lndArgs, created_after: after, created_before: before });
