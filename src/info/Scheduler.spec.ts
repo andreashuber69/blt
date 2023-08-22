@@ -35,5 +35,29 @@ describe(Scheduler.name, () => {
             await delay(delayMilliseconds);
             assert(count as number === 2);
         });
+
+        it("should emit errors", async () => {
+            const executor = new Scheduler(delayMilliseconds);
+            const errorMessage = "oops!";
+
+            const errorTask = () => {
+                throw new Error(errorMessage);
+            };
+
+            executor.call(errorTask);
+
+            try {
+                await new Promise((resolve, reject) => {
+                    setTimeout(resolve, delayMilliseconds + 100);
+                    executor.onError(reject);
+                });
+
+                assert(false, "Unexpected success!");
+            } catch (error: unknown) {
+                assert(error instanceof Error && error.message === errorMessage);
+            } finally {
+                executor.removeAllListeners();
+            }
+        });
     });
 });

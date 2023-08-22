@@ -1,3 +1,5 @@
+import { EventEmitter } from "node:events";
+
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 export class Scheduler {
     public constructor(public readonly delayMilliseconds = 10_000) {}
@@ -17,9 +19,21 @@ export class Scheduler {
         }
     }
 
+    public onError(listener: (error: unknown) => void) {
+        this.errorEmitter.on(Scheduler.eventName, listener);
+    }
+
+    public removeAllListeners() {
+        this.errorEmitter.removeAllListeners();
+    }
+
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+    private static readonly eventName = "error";
+
     private idle = true;
+    // eslint-disable-next-line unicorn/prefer-event-target
+    private readonly errorEmitter = new EventEmitter();
 
     private async delay(func: () => unknown) {
         this.idle = false;
@@ -27,6 +41,8 @@ export class Scheduler {
         try {
             await new Promise((resolve) => setTimeout(resolve, this.delayMilliseconds));
             await func();
+        } catch (error: unknown) {
+            this.errorEmitter.emit(Scheduler.eventName, error);
         } finally {
             this.idle = true;
         }
