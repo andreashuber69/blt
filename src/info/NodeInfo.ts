@@ -19,10 +19,8 @@ type RefresherProperty<Name extends RefresherName, Data> = {
     readonly [name in Name]: IRefresher<Name, Data>;
 };
 
-type PropertyNames = "channels" | "forwards" | "identity" | "onChanged" | "onError" | "payments" | "removeAllListeners";
-
 /**
- * Provides various information about a node.
+ * Provides various information about a lightning node.
  * @description All time-bound data (like {@linkcode NodeInfo.forwards}) will be sorted earliest to latest. Apart
  * from being sorted, the data is provided as it came from LND. Further sanitation will be necessary, for example, a
  * forward may refer to a channel that is no longer open and will thus not appear in {@linkcode NodeInfo.channels}.
@@ -35,8 +33,8 @@ export class NodeInfo implements
      * Gets information about a node.
      * @param args See properties for details.
      * @param args.lndArgs The {@linkcode AuthenticatedLightningArgs} of the node the data should be retrieved from.
-     * @param args.delayMilliseconds The amount of time a refresh operation should be delayed after a change has been
-     * detected.
+     * @param args.delayMilliseconds The length of time each refresh and notify operation will be delayed after a change
+     * has been detected.
      * @param args.days The number of days in the past time-bound data should be retrieved.
      */
     public static async get(args: {
@@ -96,4 +94,5 @@ export class NodeInfo implements
 }
 
 /** See {@linkcode NodeInfo}. */
-export type INodeInfo = Pick<NodeInfo, PropertyNames>;
+export type INodeInfo =
+    Pick<NodeInfo, "channels" | "forwards" | "identity" | "onChanged" | "onError" | "payments" | "removeAllListeners">;

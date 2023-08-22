@@ -7,16 +7,26 @@ import type { Payment } from "../lightning/getPayments.js";
 import { getPayments } from "../lightning/getPayments.js";
 import { log } from "../Logger.js";
 import { PartialRefresher } from "./PartialRefresher.js";
+import type { IRefresher } from "./Refresher.js";
 import { Refresher } from "./Refresher.js";
 
-interface PaymentsRefresherArgs {
+export interface IPaymentsRefresherArgs {
+    /** The {@linkcode AuthenticatedLightningArgs} of the node the data should be retrieved from. */
     readonly lndArgs: AuthenticatedLightningArgs;
+
+    /** The length of time each refresh and notify operation will be delayed after a change has been detected. */
     readonly delayMilliseconds?: number;
+
+    /** The number of days in the past payments should be retrieved. */
     readonly days?: number;
 }
 
 export class PaymentsRefresher extends PartialRefresher<"payments", Payment> {
-    public static async create(args: PaymentsRefresherArgs) {
+    /**
+     * Creates a new object implementing {@linkcode IRefresher} for payments.
+     * @param args See {@linkcode IPaymentsRefresherArgs}.
+     */
+    public static async create(args: IPaymentsRefresherArgs) {
         return await Refresher.init(new PaymentsRefresher(args));
     }
 
@@ -44,7 +54,7 @@ export class PaymentsRefresher extends PartialRefresher<"payments", Payment> {
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    private constructor(args: PaymentsRefresherArgs) {
+    private constructor(args: IPaymentsRefresherArgs) {
         super({ ...args, name: "payments" });
     }
 }

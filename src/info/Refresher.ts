@@ -4,9 +4,13 @@ import type { AuthenticatedLightningArgs } from "lightning";
 
 import { Scheduler } from "./Scheduler.js";
 
-type PropertyNames = "data" | "onChanged" | "onError" | "removeAllListeners";
-
-/** Provides the base for all {@linkcode Refresher} implementations. */
+/**
+ * Provides the base for all {@linkcode IRefresher} implementations.
+ * @description Each object implementing the {@linkcode IRefresher} interface offers a {@linkcode IRefresher.data}
+ * property exposing a readonly copy of data retrieved from a lightning node. Clients requiring continuous update of
+ * {@linkcode IRefresher.data} and subsequent notification, must subscribe to the {@linkcode IRefresher.onChanged} and
+ * {@linkcode IRefresher.onError} events.
+ */
 export abstract class Refresher<Name extends string, Data> {
     /** The current state of the data. */
     public get data(): Readonly<Data> {
@@ -68,11 +72,11 @@ export abstract class Refresher<Name extends string, Data> {
      * private. All concrete subclasses must offer a static `create` method, which calls {@linkcode Refresher.init} with
      * a freshly created object of the subclass.
      * @param args See properties for details.
-     * @param args.lndArgs The authenticated lightning args.
+     * @param args.lndArgs The {@linkcode AuthenticatedLightningArgs} of the node the data should be retrieved from.
      * @param args.delayMilliseconds The length of time each refresh and notify operation will be delayed after a change
      * has been detected.
-     * @param args.name The name that will be passed to any listener added through {@linkcode IRefresher.onChanged}.
-     * @param args.empty The value {@linkcode IRefresher.data} will be initialized with.
+     * @param args.name The name that will be passed to any listener added through {@linkcode Refresher.onChanged}.
+     * @param args.empty The value {@linkcode Refresher.data} will be initialized with.
      */
     protected constructor(args: {
         readonly lndArgs: AuthenticatedLightningArgs;
@@ -93,7 +97,7 @@ export abstract class Refresher<Name extends string, Data> {
     }
 
     /**
-     * Refreshes {@linkcode IRefresher.data} to the current state.
+     * Refreshes {@linkcode Refresher.data} to the current state.
      * @param lndArgs The authenticated lightning args.
      * @param current The current state of the data. Overrides must modify this such that it represents the new state
      * after the returned promise fulfills.
@@ -102,15 +106,15 @@ export abstract class Refresher<Name extends string, Data> {
     protected abstract refresh(lndArgs: AuthenticatedLightningArgs, current: Data): Promise<boolean>;
 
     /**
-     * Subscribes `listener` to all `serverEmitter` events that might indicate {@linkcode IRefresher.data} needs to be
+     * Subscribes `listener` to all `serverEmitter` events that might indicate {@linkcode Refresher.data} needs to be
      * refreshed.
-     * @description Is called when the first listener is installed with a call to {@linkcode IRefresher.onChanged}.
+     * @description Is called when the first listener is installed with a call to {@linkcode Refresher.onChanged}.
      * @param serverEmitter `listener` will be added to one or more events of this emitter.
-     * @param listener Must be called whenever it has been detected that {@linkcode IRefresher.data} might need to
+     * @param listener Must be called whenever it has been detected that {@linkcode Refresher.data} might need to
      * be updated. Each call schedules a refresh and notify operation to occur after `delayMilliseconds`, if and only if
      * no other such operation is currently scheduled or in progress. The refresh and notify operation consists of
-     * calling {@linkcode IRefresher.refresh} which modifies {@linkcode IRefresher.data} to represent the new state and
-     * finally calling all listeners installed through {@linkcode IRefresher.onChanged}.
+     * calling {@linkcode Refresher.refresh} which modifies {@linkcode Refresher.data} to represent the new state and
+     * finally calling all listeners installed through {@linkcode Refresher.onChanged}.
      */
     protected abstract onServerChanged(serverEmitter: EventEmitter, listener: () => void): void;
 
@@ -134,4 +138,5 @@ export abstract class Refresher<Name extends string, Data> {
 }
 
 /** See {@linkcode Refresher}. */
-export type IRefresher<Name extends string, Data> = Pick<Refresher<Name, Data>, PropertyNames>;
+export type IRefresher<Name extends string, Data> =
+    Pick<Refresher<Name, Data>, "data" | "onChanged" | "onError" | "removeAllListeners">;

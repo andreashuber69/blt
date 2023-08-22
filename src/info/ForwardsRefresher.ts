@@ -7,16 +7,26 @@ import type { Forward } from "../lightning/getForwards.js";
 import { getForwards } from "../lightning/getForwards.js";
 import { log } from "../Logger.js";
 import { PartialRefresher } from "./PartialRefresher.js";
+import type { IRefresher } from "./Refresher.js";
 import { Refresher } from "./Refresher.js";
 
-interface ForwardsRefresherArgs {
+export interface IForwardsRefresherArgs {
+    /** The {@linkcode AuthenticatedLightningArgs} of the node the data should be retrieved from. */
     readonly lndArgs: AuthenticatedLightningArgs;
+
+    /** The length of time each refresh and notify operation will be delayed after a change has been detected. */
     readonly delayMilliseconds?: number;
+
+    /** The number of days in the past forwards should be retrieved. */
     readonly days?: number;
 }
 
 export class ForwardsRefresher extends PartialRefresher<"forwards", Forward> {
-    public static async create(args: ForwardsRefresherArgs) {
+    /**
+     * Creates a new object implementing {@linkcode IRefresher} for forwards.
+     * @param args See {@linkcode IForwardsRefresherArgs}.
+     */
+    public static async create(args: IForwardsRefresherArgs) {
         return await Refresher.init(new ForwardsRefresher(args));
     }
 
@@ -46,7 +56,7 @@ export class ForwardsRefresher extends PartialRefresher<"forwards", Forward> {
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    private constructor(args: ForwardsRefresherArgs) {
+    private constructor(args: IForwardsRefresherArgs) {
         super({ ...args, name: "forwards" });
     }
 }
