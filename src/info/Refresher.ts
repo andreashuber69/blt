@@ -8,25 +8,6 @@ type PropertyNames = "data" | "onChanged" | "onError" | "removeAllListeners";
 
 /** Provides the base for all {@linkcode Refresher} implementations. */
 export abstract class Refresher<Name extends string, Data> {
-    /**
-     * Creates a new {@linkcode Refresher} subclass object.
-     * @param ctor The constructor of the class an object should be created of.
-     * @param args The arguments to be passed to the constructor.
-     */
-    public static async create<
-        T extends Refresher<Name, Data>,
-        Args extends { readonly lndArgs: AuthenticatedLightningArgs },
-        Name extends string = T extends Refresher<infer N, unknown> ? N : never,
-        Data = T extends Refresher<Name, infer D> ? D : never,
-    >(
-        ctor: new (_args: Args) => T,
-        args: Args,
-    ): Promise<IRefresher<Name, Data>> {
-        const result = new ctor(args);
-        await result.refresh(args.lndArgs, result.dataImpl);
-        return result;
-    }
-
     /** The current state of the data. */
     public get data(): Readonly<Data> {
         return this.dataImpl;
@@ -68,7 +49,24 @@ export abstract class Refresher<Name extends string, Data> {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     /**
+     * Initializes the passed {@linkcode Refresher} subclass object, see {@linkcode Refresher.constructor} for more
+     * information.
+     * @param refresher The refresher to initialize.
+     */
+    protected static async init<
+        T extends Refresher<Name, Data>,
+        Name extends string = T extends Refresher<infer N, unknown> ? N : never,
+        Data = T extends Refresher<Name, infer D> ? D : never,
+    >(refresher: T): Promise<IRefresher<Name, Data>> {
+        await refresher.refresh(refresher.lndArgs, refresher.dataImpl);
+        return refresher;
+    }
+
+    /**
      * Initializes a new instance of {@linkcode Refresher}.
+     * @description The constructors of all abstract subclasses must be protected. Those of concrete subclasses must be
+     * private. All concrete subclasses must offer a static `create` method, which calls {@linkcode Refresher.init} with
+     * a freshly created object of the subclass.
      * @param args See properties for details.
      * @param args.lndArgs The authenticated lightning args.
      * @param args.delayMilliseconds The length of time each refresh and notify operation will be delayed after a change

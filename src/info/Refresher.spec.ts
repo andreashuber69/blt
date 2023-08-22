@@ -15,14 +15,21 @@ interface Data {
     value: string;
 }
 
+interface RefresherImplArgs {
+    lndArgs: AuthenticatedLightningArgs;
+    delayMilliseconds: number;
+}
+
 class RefresherImpl extends Refresher<typeof refresherName, Data> {
-    public constructor(args: { lndArgs: AuthenticatedLightningArgs; delayMilliseconds: number }) {
-        super({ ...args, name: refresherName, empty: { value: "" } });
+    public static async create(args: RefresherImplArgs) {
+        return await Refresher.init(new RefresherImpl(args));
     }
 
     public get currentServerEmitter() {
         return this.currentServerEmitterImpl;
     }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     protected override async refresh(_lndArgs: { lnd: AuthenticatedLnd }, current: Data): Promise<boolean> {
         current.value += "Z";
@@ -39,6 +46,12 @@ class RefresherImpl extends Refresher<typeof refresherName, Data> {
         return this.currentServerEmitterImpl;
     }
 
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    private constructor(args: RefresherImplArgs) {
+        super({ ...args, name: refresherName, empty: { value: "" } });
+    }
+
     private currentServerEmitterImpl: EventEmitter | undefined;
 }
 
@@ -53,12 +66,13 @@ describe(Refresher.name, () => {
     const errorEventName = "error";
 
     it("should only create a server emitter on demand", async () => {
-        const refresher = await Refresher.create(RefresherImpl, argsMock);
-        assert((refresher as RefresherImpl).currentServerEmitter === undefined);
+        const sut = await RefresherImpl.create(argsMock);
+
+        assert((sut as RefresherImpl).currentServerEmitter === undefined);
     });
 
     it("should keep the server emitter as necessary", async () => {
-        const sut = await Refresher.create(RefresherImpl, argsMock);
+        const sut = await RefresherImpl.create(argsMock);
 
         sut.onError(() => { /* intentionally empty */ });
         const serverEmitter = (sut as RefresherImpl).currentServerEmitter;
@@ -84,11 +98,12 @@ describe(Refresher.name, () => {
         assert((sut as RefresherImpl).currentServerEmitter !== serverEmitter);
     });
 
-    describe(Refresher.create.name, () => {
+    describe(RefresherImpl.create.name, () => {
         it("should throw for invalid delay", async () => {
             try {
-                const refresher = await Refresher.create(RefresherImpl, { ...argsMock, delayMilliseconds: -1 });
-                assert(false, `Unexpected success: ${refresher}`);
+                const sut = await RefresherImpl.create({ ...argsMock, delayMilliseconds: -1 });
+
+                assert(false, `Unexpected success: ${sut}`);
             } catch (error) {
                 assert(error instanceof Error && error.message === "args.delayMilliseconds is invalid: -1.");
             }
@@ -97,7 +112,7 @@ describe(Refresher.name, () => {
 
     describe("data", () => {
         it("should be initialized after creation", async () => {
-            const sut = await Refresher.create(RefresherImpl, argsMock);
+            const sut = await RefresherImpl.create(argsMock);
 
             assert(sut.data.value === "Z");
         });
@@ -105,7 +120,7 @@ describe(Refresher.name, () => {
 
     describe(Refresher.prototype.onChanged.name, () => {
         it("should delay refresh and notification", async () => {
-            const sut = await Refresher.create(RefresherImpl, argsMock);
+            const sut = await RefresherImpl.create(argsMock);
 
             let onChangedCalls = 0;
 
@@ -134,7 +149,7 @@ describe(Refresher.name, () => {
         const err = "oops!";
 
         it("should notify errors immediately", async () => {
-            const sut = await Refresher.create(RefresherImpl, argsMock);
+            const sut = await RefresherImpl.create(argsMock);
 
             let onErrorCalls = 0;
 

@@ -9,21 +9,24 @@ import type { Channel } from "../lightning/getChannels.js";
 import { getChannels } from "../lightning/getChannels.js";
 import { log } from "../Logger.js";
 import { FullRefresher } from "./FullRefresher.js";
+import { Refresher } from "./Refresher.js";
+
+interface ChannelsRefresherArgs {
+    readonly lndArgs: AuthenticatedLightningArgs;
+    readonly delayMilliseconds?: number;
+}
 
 export class ChannelsRefresher extends FullRefresher<"channels", Channel> {
-    public constructor(args: {
-        readonly lndArgs: AuthenticatedLightningArgs;
-        readonly delayMilliseconds?: number;
-    }) {
-        super({ ...args, name: "channels" });
+    public static async create(args: ChannelsRefresherArgs) {
+        return await Refresher.init(new ChannelsRefresher(args));
     }
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     protected override async getAllData(lndArgs: AuthenticatedLightningArgs) {
         // eslint-disable-next-line @typescript-eslint/naming-convention
         return await getChannels({ ...lndArgs, is_public: true });
     }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     protected override onServerChanged(serverEmitter: EventEmitter, listener: () => void) {
         const handler = (e: SubscribeToChannelsChannelClosedEvent | SubscribeToChannelsChannelOpenedEvent) => {
@@ -37,5 +40,11 @@ export class ChannelsRefresher extends FullRefresher<"channels", Channel> {
 
     protected override createServerEmitter(lndArgs: AuthenticatedLightningArgs) {
         return subscribeToChannels(lndArgs);
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    private constructor(args: ChannelsRefresherArgs) {
+        super({ ...args, name: "channels" });
     }
 }

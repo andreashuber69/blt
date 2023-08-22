@@ -7,14 +7,17 @@ import type { Payment } from "../lightning/getPayments.js";
 import { getPayments } from "../lightning/getPayments.js";
 import { log } from "../Logger.js";
 import { PartialRefresher } from "./PartialRefresher.js";
+import { Refresher } from "./Refresher.js";
+
+interface PaymentsRefresherArgs {
+    readonly lndArgs: AuthenticatedLightningArgs;
+    readonly delayMilliseconds?: number;
+    readonly days?: number;
+}
 
 export class PaymentsRefresher extends PartialRefresher<"payments", Payment> {
-    public constructor(args: {
-        readonly lndArgs: AuthenticatedLightningArgs;
-        readonly delayMilliseconds?: number;
-        readonly days?: number;
-    }) {
-        super({ ...args, name: "payments" });
+    public static async create(args: PaymentsRefresherArgs) {
+        return await Refresher.init(new PaymentsRefresher(args));
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -37,5 +40,11 @@ export class PaymentsRefresher extends PartialRefresher<"payments", Payment> {
 
     protected override createServerEmitter(lndArgs: AuthenticatedLightningArgs) {
         return subscribeToPayments(lndArgs);
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    private constructor(args: PaymentsRefresherArgs) {
+        super({ ...args, name: "payments" });
     }
 }

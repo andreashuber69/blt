@@ -7,14 +7,17 @@ import type { Forward } from "../lightning/getForwards.js";
 import { getForwards } from "../lightning/getForwards.js";
 import { log } from "../Logger.js";
 import { PartialRefresher } from "./PartialRefresher.js";
+import { Refresher } from "./Refresher.js";
+
+interface ForwardsRefresherArgs {
+    readonly lndArgs: AuthenticatedLightningArgs;
+    readonly delayMilliseconds?: number;
+    readonly days?: number;
+}
 
 export class ForwardsRefresher extends PartialRefresher<"forwards", Forward> {
-    public constructor(args: {
-        readonly lndArgs: AuthenticatedLightningArgs;
-        readonly delayMilliseconds?: number;
-        readonly days?: number;
-    }) {
-        super({ ...args, name: "forwards" });
+    public static async create(args: ForwardsRefresherArgs) {
+        return await Refresher.init(new ForwardsRefresher(args));
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -39,5 +42,11 @@ export class ForwardsRefresher extends PartialRefresher<"forwards", Forward> {
 
     protected override createServerEmitter(lndArgs: AuthenticatedLightningArgs) {
         return subscribeToForwards(lndArgs);
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    private constructor(args: ForwardsRefresherArgs) {
+        super({ ...args, name: "forwards" });
     }
 }

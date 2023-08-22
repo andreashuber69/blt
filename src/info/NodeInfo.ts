@@ -10,7 +10,6 @@ import { ChannelsRefresher } from "./ChannelsRefresher.js";
 import { ForwardsRefresher } from "./ForwardsRefresher.js";
 import { PaymentsRefresher } from "./PaymentsRefresher.js";
 import type { IRefresher } from "./Refresher.js";
-import { Refresher } from "./Refresher.js";
 
 const refresherNames = ["channels", "forwards", "payments"] as const;
 
@@ -47,9 +46,9 @@ export class NodeInfo implements
     }): Promise<INodeInfo> {
         return new NodeInfo(
             await getIdentity(args.lndArgs),
-            await Refresher.create(ChannelsRefresher, args),
-            await Refresher.create(ForwardsRefresher, args),
-            await Refresher.create(PaymentsRefresher, args),
+            await ChannelsRefresher.create(args),
+            await ForwardsRefresher.create(args),
+            await PaymentsRefresher.create(args),
         );
     }
 
