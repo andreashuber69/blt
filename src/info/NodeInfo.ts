@@ -8,6 +8,7 @@ import type { Payment } from "../lightning/getPayments.js";
 import type { Identity } from "../lightning/Identity.js";
 import { ChannelsRefresher } from "./ChannelsRefresher.js";
 import { ForwardsRefresher } from "./ForwardsRefresher.js";
+import type { IPartialRefresher } from "./PartialRefresher.js";
 import { PaymentsRefresher } from "./PaymentsRefresher.js";
 import type { IRefresher } from "./Refresher.js";
 
@@ -82,8 +83,8 @@ export class NodeInfo implements
     private constructor(
         public readonly identity: Identity,
         public readonly channels: IRefresher<"channels", Channel[]>,
-        public readonly forwards: IRefresher<"forwards", Forward[]>,
-        public readonly payments: IRefresher<"payments", Payment[]>,
+        public readonly forwards: IPartialRefresher<"forwards", Forward>,
+        public readonly payments: IPartialRefresher<"payments", Payment>,
     ) {}
 
     private forEachRefresher(callback: (refresher: NodeInfo[RefresherName]) => void) {

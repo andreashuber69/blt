@@ -10,7 +10,6 @@ import { getChannels } from "../lightning/getChannels.js";
 import { log } from "../Logger.js";
 import { FullRefresher } from "./FullRefresher.js";
 import type { IRefresher } from "./Refresher.js";
-import { Refresher } from "./Refresher.js";
 
 export interface IChannelsRefresherArgs {
     /** The {@linkcode AuthenticatedLightningArgs} of the node the data should be retrieved from. */
@@ -26,7 +25,7 @@ export class ChannelsRefresher extends FullRefresher<"channels", Channel> {
      * @param args See {@linkcode IChannelsRefresherArgs}.
      */
     public static async create(args: IChannelsRefresherArgs) {
-        return await Refresher.init(new ChannelsRefresher(args));
+        return await this.init(new ChannelsRefresher(args));
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

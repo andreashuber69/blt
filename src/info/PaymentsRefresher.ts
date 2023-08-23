@@ -7,8 +7,7 @@ import type { Payment } from "../lightning/getPayments.js";
 import { getPayments } from "../lightning/getPayments.js";
 import { log } from "../Logger.js";
 import { PartialRefresher } from "./PartialRefresher.js";
-import type { IRefresher } from "./Refresher.js";
-import { Refresher } from "./Refresher.js";
+import type { IPartialRefresher } from "./PartialRefresher.js";
 
 export interface IPaymentsRefresherArgs {
     /** The {@linkcode AuthenticatedLightningArgs} of the node the data should be retrieved from. */
@@ -23,11 +22,11 @@ export interface IPaymentsRefresherArgs {
 
 export class PaymentsRefresher extends PartialRefresher<"payments", Payment> {
     /**
-     * Creates a new object implementing {@linkcode IRefresher} for payments.
+     * Creates a new object implementing {@linkcode IPartialRefresher} for payments.
      * @param args See {@linkcode IPaymentsRefresherArgs}.
      */
     public static async create(args: IPaymentsRefresherArgs) {
-        return await Refresher.init(new PaymentsRefresher(args));
+        return await this.initPartial(new PaymentsRefresher(args));
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

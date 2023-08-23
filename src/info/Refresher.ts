@@ -9,9 +9,15 @@ import { Scheduler } from "./Scheduler.js";
  * @description Each object implementing the {@linkcode IRefresher} interface offers a {@linkcode IRefresher.data}
  * property exposing a readonly copy of data retrieved from a lightning node. Clients requiring continuous update of
  * {@linkcode IRefresher.data} and subsequent notification, must subscribe to the {@linkcode IRefresher.onChanged} and
- * {@linkcode IRefresher.onError} events.
+ * {@linkcode IRefresher.onError} events. Doing so will enable automatic refresh of {@linkcode IRefresher.data} and
+ * subsequent notification after the server has reported a change.
  */
 export abstract class Refresher<Name extends string, Data> {
+    /** The length of time each refresh and notify operation will be delayed after a change has been detected. */
+    public get delayMilliseconds() {
+        return this.scheduler.delayMilliseconds;
+    }
+
     /** The current state of the data. */
     public get data(): Readonly<Data> {
         return this.dataImpl;
@@ -34,7 +40,7 @@ export abstract class Refresher<Name extends string, Data> {
     }
 
     /**
-     * Adds the passed listener to the `"error"` event of the server emitter and subscribes to any exceptions that are
+     * Adds `listener` to the `"error"` event of the server emitter and subscribes to any exceptions that are
      * thrown during refresh.
      * @param listener The listener to add. If called, {@linkcode IRefresher.data} is no longer up to date.
      */
@@ -131,4 +137,4 @@ export abstract class Refresher<Name extends string, Data> {
 
 /** See {@linkcode Refresher}. */
 export type IRefresher<Name extends string, Data> =
-    Pick<Refresher<Name, Data>, "data" | "onChanged" | "onError" | "removeAllListeners">;
+    Pick<Refresher<Name, Data>, "data" | "delayMilliseconds" | "onChanged" | "onError" | "removeAllListeners">;

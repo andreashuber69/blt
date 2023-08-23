@@ -14,6 +14,25 @@ import { toSortedArray } from "./toSortedArray.js";
  */
 // eslint-disable-next-line max-len
 export abstract class PartialRefresher<Name extends string, Element extends TimeBoundElement> extends Refresher<Name, Element[]> {
+    /** The number of days in the past data should be retrieved. */
+    public readonly days: number;
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Initializes the passed {@linkcode PartialRefresher} subclass object, see
+     * {@linkcode PartialRefresher.constructor} for more information.
+     * @param refresher The refresher to initialize.
+     */
+    protected static async initPartial<
+        T extends PartialRefresher<Name, Element>,
+        Name extends string = T extends PartialRefresher<infer N, TimeBoundElement> ? N : never,
+        Element extends TimeBoundElement = T extends PartialRefresher<Name, infer E> ? E : never,
+    >(refresher: T): Promise<IPartialRefresher<Name, Element>> {
+        await Refresher.init<T, Name, Element[]>(refresher);
+        return refresher;
+    }
+
     protected constructor(args: {
         readonly lndArgs: AuthenticatedLightningArgs;
         readonly delayMilliseconds?: number;
@@ -55,8 +74,6 @@ export abstract class PartialRefresher<Name extends string, Element extends Time
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    private readonly days: number;
-
     private eliminateDuplicates(currentElements: readonly Element[], possiblyNewElements: readonly Element[]) {
         const result = new Array<Element>();
 
@@ -91,3 +108,9 @@ export abstract class PartialRefresher<Name extends string, Element extends Time
         return currentElements.slice(index + 1);
     }
 }
+
+
+/** See {@linkcode PartialRefresher}. */
+export type IPartialRefresher<Name extends string, Element extends TimeBoundElement> =
+    // eslint-disable-next-line max-len
+    Pick<PartialRefresher<Name, Element>, "data" | "days" | "delayMilliseconds" | "onChanged" | "onError" | "removeAllListeners">;

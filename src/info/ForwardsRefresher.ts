@@ -7,8 +7,7 @@ import type { Forward } from "../lightning/getForwards.js";
 import { getForwards } from "../lightning/getForwards.js";
 import { log } from "../Logger.js";
 import { PartialRefresher } from "./PartialRefresher.js";
-import type { IRefresher } from "./Refresher.js";
-import { Refresher } from "./Refresher.js";
+import type { IPartialRefresher } from "./PartialRefresher.js";
 
 export interface IForwardsRefresherArgs {
     /** The {@linkcode AuthenticatedLightningArgs} of the node the data should be retrieved from. */
@@ -23,11 +22,11 @@ export interface IForwardsRefresherArgs {
 
 export class ForwardsRefresher extends PartialRefresher<"forwards", Forward> {
     /**
-     * Creates a new object implementing {@linkcode IRefresher} for forwards.
+     * Creates a new object implementing {@linkcode IPartialRefresher} for forwards.
      * @param args See {@linkcode IForwardsRefresherArgs}.
      */
     public static async create(args: IForwardsRefresherArgs) {
-        return await Refresher.init(new ForwardsRefresher(args));
+        return await this.initPartial(new ForwardsRefresher(args));
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
