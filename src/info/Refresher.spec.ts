@@ -6,6 +6,7 @@ import { describe, it } from "node:test";
 import type { AuthenticatedLightningArgs, AuthenticatedLnd } from "lightning";
 import { Refresher } from "./Refresher.js";
 import { delay } from "./testHelpers/delay.js";
+import { Scheduler } from "./Scheduler.js";
 
 const refresherName = "test";
 const serverEventName = "changed";
@@ -120,6 +121,7 @@ describe(Refresher.name, () => {
         it("should apply default for delay", async () => {
             const { delayMilliseconds: _, ...noDelayArgs } = argsMock;
             const sut = await RefresherImpl.create(noDelayArgs);
+            assert(sut.delayMilliseconds === new Scheduler().delayMilliseconds);
 
             const name = await new Promise((resolve, reject) => {
                 sut.onChanged(resolve);
