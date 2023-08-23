@@ -25,9 +25,7 @@ export abstract class Refresher<Name extends string, Data> {
         this.clientEmitter.on(this.name, listener);
 
         if (this.clientEmitter.listenerCount(this.name) === 1) {
-            const scheduler = new Scheduler(this.delayMilliseconds);
-
-            this.onServerChanged(this.serverEmitter, () => scheduler.call(async () => {
+            this.onServerChanged(this.serverEmitter, () => this.scheduler.call(async () => {
                 if (await this.refresh(this.lndArgs, this.dataImpl)) {
                     this.clientEmitter.emit(this.name, this.name);
                 }
@@ -36,17 +34,19 @@ export abstract class Refresher<Name extends string, Data> {
     }
 
     /**
-     * Subscribes the passed listener to the `"error"` event of the server emitter, which signals that
-     * {@linkcode IRefresher.data} will no longer be updated.
-     * @param listener The listener to add.
+     * Adds the passed listener to the `"error"` event of the server emitter and subscribes to any exceptions that are
+     * thrown during refresh.
+     * @param listener The listener to add. If called, {@linkcode IRefresher.data} is no longer up to date.
      */
     public onError(listener: (error: unknown) => void) {
         this.serverEmitter.on("error", listener);
+        this.scheduler.onError(listener);
     }
 
     /** Removes all previously added listeners. */
     public removeAllListeners() {
         this.serverEmitter.removeAllListeners();
+        this.scheduler.removeAllListeners();
         this.serverEmitterImpl = undefined;
     }
 
@@ -84,16 +84,8 @@ export abstract class Refresher<Name extends string, Data> {
         readonly name: Name;
         readonly empty: Data;
     }) {
-        ({
-            lndArgs: this.lndArgs,
-            delayMilliseconds: this.delayMilliseconds = 10_000,
-            name: this.name,
-            empty: this.dataImpl,
-        } = args);
-
-        if (typeof this.delayMilliseconds !== "number" || this.delayMilliseconds <= 0) {
-            throw new Error(`args.delayMilliseconds is invalid: ${args.delayMilliseconds}.`);
-        }
+        ({ lndArgs: this.lndArgs, name: this.name, empty: this.dataImpl } = args);
+        this.scheduler = new Scheduler(args.delayMilliseconds);
     }
 
     /**
@@ -129,7 +121,7 @@ export abstract class Refresher<Name extends string, Data> {
     }
 
     private readonly lndArgs: AuthenticatedLightningArgs;
-    private readonly delayMilliseconds: number;
+    private readonly scheduler: Scheduler;
     private readonly name: Name;
     private readonly dataImpl: Data;
     // eslint-disable-next-line unicorn/prefer-event-target

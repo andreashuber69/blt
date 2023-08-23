@@ -16,8 +16,8 @@ interface Data {
 }
 
 interface RefresherImplArgs {
-    lndArgs: AuthenticatedLightningArgs;
-    delayMilliseconds: number;
+    readonly lndArgs: AuthenticatedLightningArgs;
+    readonly delayMilliseconds?: number;
 }
 
 class RefresherImpl extends Refresher<typeof refresherName, Data> {
@@ -105,8 +105,24 @@ describe(Refresher.name, () => {
 
                 assert(false, `Unexpected success: ${sut}`);
             } catch (error) {
-                assert(error instanceof Error && error.message === "args.delayMilliseconds is invalid: -1.");
+                assert(error instanceof Error && error.message === "delayMilliseconds is invalid: -1.");
             }
+        });
+
+        it("should apply default for delay", async () => {
+            const { delayMilliseconds: _, ...noDelayArgs } = argsMock;
+            const sut = await RefresherImpl.create(noDelayArgs);
+
+            const promise = new Promise((resolve, reject) => {
+                sut.onChanged(resolve);
+                sut.onError(reject);
+            });
+
+            const serverEmitter = (sut as RefresherImpl).currentServerEmitter;
+            assert(serverEmitter instanceof EventEmitter);
+
+            serverEmitter.emit(serverEventName);
+            assert(await promise === refresherName);
         });
     });
 
