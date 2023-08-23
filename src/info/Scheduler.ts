@@ -2,7 +2,11 @@ import { EventEmitter } from "node:events";
 
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 export class Scheduler {
-    public constructor(public readonly delayMilliseconds = 10_000) {}
+    public constructor(public readonly delayMilliseconds = 10_000) {
+        if (typeof this.delayMilliseconds !== "number" || this.delayMilliseconds <= 0) {
+            throw new Error(`delayMilliseconds is invalid: ${delayMilliseconds}.`);
+        }
+    }
 
     /**
      * If idle, schedules a call to the passed function.
