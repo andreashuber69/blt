@@ -5,8 +5,8 @@ import { describe, it } from "node:test";
 
 import type { AuthenticatedLightningArgs, AuthenticatedLnd } from "lightning";
 import { Refresher } from "./Refresher.js";
-import { delay } from "./testHelpers/delay.js";
 import { Scheduler } from "./Scheduler.js";
+import { delay } from "./testHelpers/delay.js";
 
 const refresherName = "test";
 const serverEventName = "changed";
