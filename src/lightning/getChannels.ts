@@ -8,4 +8,4 @@ export const getChannels = async (args: GetChannelsArgs) => await getArrayData(l
 
 export type Channel =
     // eslint-disable-next-line max-len
-    Readonly<Pick<Awaited<ReturnType<typeof getChannels>>[number], "capacity" | "id" | "local_balance" | "remote_balance">>;
+    Readonly<Pick<Awaited<ReturnType<typeof getChannels>>[number], "capacity" | "id" | "local_balance" | "partner_public_key" | "remote_balance">>;

@@ -7,9 +7,9 @@ export class NodeStats {
     public constructor({ channels: { data: channels }, forwards: { data: forwards } }: INodeInfo) {
         this.channelsImpl = Object.fromEntries(channels.map(
             // eslint-disable-next-line @typescript-eslint/naming-convention
-            ({ id, capacity, local_balance, remote_balance }) =>
+            ({ id, capacity, local_balance, partner_public_key, remote_balance }) =>
                 // eslint-disable-next-line @typescript-eslint/naming-convention
-                [id, getNewChannelStats({ capacity, local_balance, remote_balance })],
+                [id, getNewChannelStats({ capacity, local_balance, partner_public_key, remote_balance })],
         ));
 
         // eslint-disable-next-line @typescript-eslint/naming-convention
