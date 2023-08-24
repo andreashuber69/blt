@@ -4,7 +4,8 @@
     "andreas",
     "linkcode",
     "mtokens",
-    "utxos"
+    "utxos",
+    "vout"
   ],
   "dictionaries": [
     "bash",

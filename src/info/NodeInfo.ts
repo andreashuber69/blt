@@ -6,13 +6,15 @@ import type { Channel } from "../lightning/getChannels.js";
 import type { Forward } from "../lightning/getForwards.js";
 import type { Payment } from "../lightning/getPayments.js";
 import type { Identity } from "../lightning/Identity.js";
+import type { Node } from "../lightning/Node.js";
 import { ChannelsRefresher } from "./ChannelsRefresher.js";
 import { ForwardsRefresher } from "./ForwardsRefresher.js";
+import { NodesRefresher } from "./NodesRefresher.js";
 import type { IPartialRefresher } from "./PartialRefresher.js";
 import { PaymentsRefresher } from "./PaymentsRefresher.js";
 import type { IRefresher } from "./Refresher.js";
 
-const refresherNames = ["channels", "forwards", "payments"] as const;
+const refresherNames = ["channels", "nodes", "forwards", "payments"] as const;
 
 type RefresherName = (typeof refresherNames)[number];
 
@@ -28,6 +30,7 @@ type RefresherProperty<Name extends RefresherName, Data> = {
  */
 export class NodeInfo implements
     RefresherProperty<"channels", Channel[]>,
+    RefresherProperty<"nodes", Node[]>,
     RefresherProperty<"forwards", Forward[]>,
     RefresherProperty<"payments", Payment[]> {
     /**
@@ -46,6 +49,7 @@ export class NodeInfo implements
         return new NodeInfo(
             await getIdentity(args.lndArgs),
             await ChannelsRefresher.create(args),
+            await NodesRefresher.create(args),
             await ForwardsRefresher.create(args),
             await PaymentsRefresher.create(args),
         );
@@ -83,6 +87,7 @@ export class NodeInfo implements
     private constructor(
         public readonly identity: Identity,
         public readonly channels: IRefresher<"channels", Channel[]>,
+        public readonly nodes: IRefresher<"nodes", Node[]>,
         public readonly forwards: IPartialRefresher<"forwards", Forward>,
         public readonly payments: IPartialRefresher<"payments", Payment>,
     ) {}
@@ -96,4 +101,5 @@ export class NodeInfo implements
 
 /** See {@linkcode NodeInfo}. */
 export type INodeInfo =
-    Pick<NodeInfo, "channels" | "forwards" | "identity" | "onChanged" | "onError" | "payments" | "removeAllListeners">;
+    // eslint-disable-next-line max-len
+    Pick<NodeInfo, "channels" | "forwards" | "identity" | "nodes" | "onChanged" | "onError" | "payments" | "removeAllListeners">;

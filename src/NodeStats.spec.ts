@@ -21,15 +21,26 @@ const nodeInfo: INodeInfo = {
     channels: {
         data: [
             /* eslint-disable max-len */
-            { capacity: 1_000_000, id: "0x3609x2", local_balance: 400_000, partner_public_key: "", remote_balance: 600_000 },
-            { capacity: 1_000_000, id: "0x1657x1", local_balance: 400_000, partner_public_key: "", remote_balance: 600_000 },
-            { capacity: 1_000_000, id: "0x3609x1", local_balance: 400_000, partner_public_key: "", remote_balance: 600_000 },
-            { capacity: 1_000_000, id: "0x2091x1", local_balance: 400_000, partner_public_key: "", remote_balance: 600_000 },
-            { capacity: 1_000_000, id: "0x1657x0", local_balance: 400_000, partner_public_key: "", remote_balance: 600_000 },
-            { capacity: 1_000_000, id: "0x2916x2", local_balance: 400_000, partner_public_key: "", remote_balance: 600_000 },
+            { capacity: 1_000_000, id: "0x3609x2", local_balance: 400_000, partner_public_key: "03864ef025fde8fb587d989186ce6a4a186895ee44a926bfc370e2c366597a3f8f", remote_balance: 600_000 },
+            { capacity: 1_000_000, id: "0x1657x1", local_balance: 400_000, partner_public_key: "02abfbe63425b1ba4f245af72a0a85ba16cd13365704655b2abfc13e53ad338e02", remote_balance: 600_000 },
+            { capacity: 1_000_000, id: "0x3609x1", local_balance: 400_000, partner_public_key: "0326e692c455dd554c709bbb470b0ca7e0bb04152f777d1445fd0bf3709a2833a3", remote_balance: 600_000 },
+            { capacity: 1_000_000, id: "0x2091x1", local_balance: 400_000, partner_public_key: "03f5dcf253ca5ab4a8a0ad27bc5d8787ca920610902425b060311530cb511e9545", remote_balance: 600_000 },
+            { capacity: 1_000_000, id: "0x1657x0", local_balance: 400_000, partner_public_key: "029efe15ef5f0fcc2fdd6b910405e78056b28c9b64e1feff5f13b8dce307e67cad", remote_balance: 600_000 },
+            { capacity: 1_000_000, id: "0x2916x2", local_balance: 400_000, partner_public_key: "0276dfcb25dfd2f765cee20cef749479967aced11191c230e82efa1bda0ea3d355", remote_balance: 600_000 },
             /* eslint-enable max-len */
         ],
         ...getManagerMembers<"channels">(),
+    },
+    nodes: {
+        data: [
+            { alias: "Node 1", color: "", features: [], id: "0x3609x2", sockets: [] },
+            { alias: "Node 2", color: "", features: [], id: "0x1657x1", sockets: [] },
+            { alias: "Node 3", color: "", features: [], id: "0x3609x1", sockets: [] },
+            { alias: "Node 4", color: "", features: [], id: "0x2091x1", sockets: [] },
+            { alias: "Node 5", color: "", features: [], id: "0x1657x0", sockets: [] },
+            { alias: "Node 6", color: "", features: [], id: "0x2916x2", sockets: [] },
+        ],
+        ...getManagerMembers<"nodes">(),
     },
     forwards: {
         data: [
