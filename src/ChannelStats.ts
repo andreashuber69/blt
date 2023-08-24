@@ -3,11 +3,13 @@ import type { ForwardStats } from "./ForwardStats.js";
 import { getNewForwardStats } from "./ForwardStats.js";
 import type { Channel } from "./lightning/getChannels.js";
 
-export interface ChannelStats extends Omit<Channel, "id"> {
+type ChannelProperties = Omit<Channel, "id"> & { readonly partnerAlias?: string | undefined };
+
+export interface ChannelStats extends ChannelProperties {
     readonly forwards: ForwardStats;
 }
 
-export const getNewChannelStats = (props: Omit<Channel, "id">) => ({
+export const getNewChannelStats = (props: ChannelProperties) => ({
     ...props,
     forwards: getNewForwardStats(),
 });

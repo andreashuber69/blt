@@ -4,12 +4,27 @@ import { getNewChannelStats } from "./ChannelStats.js";
 import type { INodeInfo } from "./info/NodeInfo.js";
 
 export class NodeStats {
-    public constructor({ channels: { data: channels }, forwards: { data: forwards } }: INodeInfo) {
+    public constructor({
+        channels: { data: channels },
+        nodes: { data: nodes },
+        forwards: { data: forwards },
+    }: INodeInfo) {
+        const nodesMap = Object.fromEntries(nodes.map((n) => [n.id, n]));
+
         this.channelsImpl = Object.fromEntries(channels.map(
             // eslint-disable-next-line @typescript-eslint/naming-convention
-            ({ id, capacity, local_balance, partner_public_key, remote_balance }) =>
-                // eslint-disable-next-line @typescript-eslint/naming-convention
-                [id, getNewChannelStats({ capacity, local_balance, partner_public_key, remote_balance })],
+            ({ id, capacity, local_balance, partner_public_key, remote_balance }) => [
+                id,
+                getNewChannelStats({
+                    partnerAlias: nodesMap[id]?.alias,
+                    capacity,
+                    /* eslint-disable @typescript-eslint/naming-convention */
+                    local_balance,
+                    partner_public_key,
+                    remote_balance,
+                    /* eslint-enable @typescript-eslint/naming-convention */
+                }),
+            ],
         ));
 
         // eslint-disable-next-line @typescript-eslint/naming-convention
