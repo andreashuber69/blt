@@ -2,6 +2,7 @@
 import { EventEmitter } from "node:events";
 import type { AuthenticatedLightningArgs } from "lightning";
 
+import { log } from "../Logger.js";
 import { Scheduler } from "./Scheduler.js";
 
 /**
@@ -32,8 +33,12 @@ export abstract class Refresher<Name extends string, Data> {
 
         if (this.clientEmitter.listenerCount(this.name) === 1) {
             this.onServerChanged(this.serverEmitter, () => this.scheduler.call(async () => {
+                log(`Refreshing ${this.name}...`);
+
                 if (await this.refresh(this.lndArgs, this.dataImpl)) {
                     this.clientEmitter.emit(this.name, this.name);
+                } else {
+                    log(`${this.name} has NOT changed.`);
                 }
             }));
         }

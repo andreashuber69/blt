@@ -45,6 +45,14 @@ export class ForwardsRefresher extends PartialRefresher<"forwards", Forward> {
             if (e.is_confirmed) {
                 log(`forward ${e.at}: ${JSON.stringify(e, undefined, 2)}`);
                 listener();
+            } else {
+                ++this.unconfirmedForwards;
+                const currentHours = new Date(Date.now()).getHours();
+
+                if (this.loggedHours !== currentHours) {
+                    this.loggedHours = currentHours;
+                    log(`UNCONFIRMED forwards: ${this.unconfirmedForwards}`);
+                }
             }
         });
     }
@@ -58,4 +66,7 @@ export class ForwardsRefresher extends PartialRefresher<"forwards", Forward> {
     private constructor(args: IForwardsRefresherArgs) {
         super({ ...args, name: "forwards" });
     }
+
+    private unconfirmedForwards = 0;
+    private loggedHours = -1;
 }
