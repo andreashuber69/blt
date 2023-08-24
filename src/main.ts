@@ -16,7 +16,7 @@ interface PackageJson {
     readonly version: string;
 }
 
-const deleteOldFailedPayments = async (authenticatedLnd: AuthenticatedLightningArgs) => {
+const deleteOldFailedPayments = async (authenticatedLnd: AuthenticatedLightningArgs, days: number) => {
     log("Deleting old failed payments...");
 
     const getFailedPaymentArgs = {
@@ -24,7 +24,7 @@ const deleteOldFailedPayments = async (authenticatedLnd: AuthenticatedLightningA
         // eslint-disable-next-line @typescript-eslint/naming-convention
         created_after: new Date(2018, 0).toISOString(),
         // eslint-disable-next-line @typescript-eslint/naming-convention
-        created_before: new Date(Date.now() - (14 * 24 * 60 * 60 * 1000)).toISOString(),
+        created_before: new Date(Date.now() - (days * 24 * 60 * 60 * 1000)).toISOString(),
     };
 
     let count = 0;
@@ -78,8 +78,8 @@ while (true) {
     try {
         /* eslint-disable no-await-in-loop */
         const lnd = await connectLnd();
-        await deleteOldFailedPayments(lnd);
         const info = await getInfo(lnd);
+        await deleteOldFailedPayments(lnd, info.forwards.days);
 
         // eslint-disable-next-line no-constant-condition
         while (true) {

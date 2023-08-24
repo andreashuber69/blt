@@ -10,30 +10,54 @@ describe(Scheduler.name, () => {
         const delayMilliseconds = 1000;
 
         it("should delay execution", async () => {
-            const executor = new Scheduler(delayMilliseconds);
+            const scheduler = new Scheduler(delayMilliseconds);
             let done = false;
             const task = () => void (done = true);
-            executor.call(task);
+            scheduler.call(task);
             assert(!done);
             await delay(delayMilliseconds);
             assert(done);
         });
 
         it("should not make other calls while busy", async () => {
-            const executor = new Scheduler(delayMilliseconds);
+            const scheduler = new Scheduler(delayMilliseconds);
             let count = 0;
             const task = () => void (++count);
-            executor.call(task);
+            scheduler.call(task);
             await delay(delayMilliseconds / 10);
-            executor.call(task);
+            scheduler.call(task);
             await delay(delayMilliseconds / 10);
-            executor.call(task);
+            scheduler.call(task);
             assert(count === 0);
             await delay(delayMilliseconds * 3);
             assert(count as number === 1);
-            executor.call(task);
+            scheduler.call(task);
             await delay(delayMilliseconds);
             assert(count as number === 2);
+        });
+
+        it("should emit errors", async () => {
+            const scheduler = new Scheduler(delayMilliseconds);
+            const errorMessage = "oops!";
+
+            const errorTask = () => {
+                throw new Error(errorMessage);
+            };
+
+            scheduler.call(errorTask);
+
+            try {
+                await new Promise((resolve, reject) => {
+                    setTimeout(resolve, delayMilliseconds + 100);
+                    scheduler.onError(reject);
+                });
+
+                assert(false, "Unexpected success!");
+            } catch (error: unknown) {
+                assert(error instanceof Error && error.message === errorMessage);
+            } finally {
+                scheduler.removeAllListeners();
+            }
         });
     });
 });

@@ -6,7 +6,8 @@ import type { ChannelStats } from "./ChannelStats.js";
 import type { INodeInfo } from "./info/NodeInfo.js";
 import { NodeStats } from "./NodeStats.js";
 
-const getManagerMethods = <Name extends string>() => ({
+const getManagerMembers = <Name extends string>() => ({
+    delayMilliseconds: 10_000,
     onChanged: (_listener: (name: Name) => void) => { /* empty */ },
     onError: (_listener: (error: unknown) => void) => { /* empty */ },
     removeAllListeners: () => { /* empty */ },
@@ -26,7 +27,7 @@ const nodeInfo: INodeInfo = {
             { capacity: 1_000_000, id: "0x1657x0", local_balance: 400_000, remote_balance: 600_000 },
             { capacity: 1_000_000, id: "0x2916x2", local_balance: 400_000, remote_balance: 600_000 },
         ],
-        ...getManagerMethods<"channels">(),
+        ...getManagerMembers<"channels">(),
     },
     forwards: {
         data: [
@@ -108,14 +109,16 @@ const nodeInfo: INodeInfo = {
                 tokens: 100_000,
             },
         ],
-        ...getManagerMethods<"forwards">(),
+        days: 14,
+        ...getManagerMembers<"forwards">(),
     },
     /* eslint-enable @typescript-eslint/naming-convention */
     payments: {
         data: [],
-        ...getManagerMethods<"payments">(),
+        days: 14,
+        ...getManagerMembers<"payments">(),
     },
-    ...getManagerMethods<"channels" | "forwards" | "payments">(),
+    ...getManagerMembers<"channels" | "forwards" | "payments">(),
 };
 
 const verifyFlow = (

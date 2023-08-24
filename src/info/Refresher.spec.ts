@@ -1,141 +1,208 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import assert from "node:assert";
+import { EventEmitter } from "node:events";
 import { describe, it } from "node:test";
 
+import type { AuthenticatedLightningArgs, AuthenticatedLnd } from "lightning";
 import { Refresher } from "./Refresher.js";
-import type { IRefresherArgs } from "./RefresherArgs.js";
+import { Scheduler } from "./Scheduler.js";
 import { delay } from "./testHelpers/delay.js";
 
-const refresh = async (data?: string) => await Promise.resolve(`${data ?? ""}X`);
+const refresherName = "test";
+const serverEventName = "changed";
+const delayMilliseconds = 1000;
+const err = "oops!";
 
-class Subscriber {
-    public get changedListeners(): ReadonlyArray<() => void> {
-        return this.changedListenersImpl;
-    }
-
-    public get errorListeners(): ReadonlyArray<(error: unknown) => void> {
-        return this.errorListenersImpl;
-    }
-
-    public readonly onChanged = (listener: () => void) => {
-        this.changedListenersImpl.push(listener);
-    };
-
-    public readonly onError = (listener: (error: unknown) => void) => {
-        this.errorListenersImpl.push(listener);
-    };
-
-    public readonly removeAllListeners = () => {
-        this.changedListenersImpl.splice(0);
-        this.errorListenersImpl.splice(0);
-    };
-
-    private readonly changedListenersImpl = new Array<() => void>();
-    private readonly errorListenersImpl = new Array<(error: unknown) => void>();
+interface Data {
+    value: string;
 }
 
+interface RefresherImplArgs {
+    readonly lndArgs: AuthenticatedLightningArgs;
+    readonly delayMilliseconds?: number;
+}
+
+class RefresherImpl extends Refresher<typeof refresherName, Data> {
+    public static async create(args: RefresherImplArgs) {
+        return await Refresher.init(new RefresherImpl(args));
+    }
+
+    public get currentServerEmitter() {
+        return this.currentServerEmitterImpl;
+    }
+
+    public throwOnNextRefresh = false;
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    protected override async refresh(_lndArgs: AuthenticatedLightningArgs, current: Data) {
+        if (this.throwOnNextRefresh) {
+            this.throwOnNextRefresh = false;
+            return await Promise.reject(new Error(err));
+        }
+
+        current.value += "Z";
+        return await Promise.resolve(true);
+    }
+
+    protected override onServerChanged(serverEmitter: EventEmitter, listener: () => void) {
+        serverEmitter.on(serverEventName, listener);
+    }
+
+    protected override createServerEmitter(_lndArgs: { lnd: AuthenticatedLnd }) {
+        // eslint-disable-next-line unicorn/prefer-event-target
+        this.currentServerEmitterImpl = new EventEmitter();
+        return this.currentServerEmitterImpl;
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    private constructor(args: RefresherImplArgs) {
+        super({ ...args, name: refresherName, empty: { value: "" } });
+    }
+
+    private currentServerEmitterImpl: EventEmitter | undefined;
+}
+
+const argsMock = {
+    lndArgs: {
+        lnd: {} as unknown as AuthenticatedLnd,
+    },
+    delayMilliseconds,
+};
+
 describe(Refresher.name, () => {
-    describe(Refresher.create.name, () => {
-        it("should return a working refresher", async () => {
-            const subscriber = new Subscriber();
-            const { changedListeners, errorListeners, onChanged, onError, removeAllListeners } = subscriber;
+    const errorEventName = "error";
 
-            const args: IRefresherArgs<"tests", string> = {
-                name: "tests",
-                refresh,
-                delayMilliseconds: 50,
-                onChanged,
-                onError,
-                removeAllListeners,
-            };
+    it("should only create a server emitter on demand", async () => {
+        const sut = await RefresherImpl.create(argsMock);
 
-            const refresher = await Refresher.create(args);
-            assert(refresher.data === "X");
-            assert(changedListeners.length === 0);
+        assert((sut as RefresherImpl).currentServerEmitter === undefined);
+    });
 
-            let errorCount = 0;
+    it("should keep the server emitter as necessary", async () => {
+        const sut = await RefresherImpl.create(argsMock);
 
-            const errorListener = (error: unknown) => {
-                assert(error === "error");
-                ++errorCount;
-            };
+        sut.onError(() => { /* intentionally empty */ });
+        const serverEmitter = (sut as RefresherImpl).currentServerEmitter;
+        assert(serverEmitter instanceof EventEmitter);
+        assert(serverEmitter.listenerCount(errorEventName) === 1);
 
-            refresher.onError(errorListener);
-            assert(errorListeners.length === 1);
-            assert(errorCount === 0);
+        sut.onError(() => { /* intentionally empty */ });
+        assert((sut as RefresherImpl).currentServerEmitter === serverEmitter);
+        assert(serverEmitter.listenerCount(errorEventName) === 2);
 
-            let changedCount = 0;
+        sut.onChanged(() => { /* intentionally empty */ });
+        assert((sut as RefresherImpl).currentServerEmitter === serverEmitter);
+        assert(serverEmitter.listenerCount(serverEventName) === 1);
 
-            const changedListener = (eventName: string) => {
-                assert(eventName === "tests");
-                ++changedCount;
-            };
+        sut.onChanged(() => { /* intentionally empty */ });
+        assert((sut as RefresherImpl).currentServerEmitter === serverEmitter);
+        assert(serverEmitter.listenerCount(serverEventName) === 1);
 
-            refresher.onChanged(changedListener);
-            await delay(100);
-            assert(changedCount === 0);
-            assert(refresher.data as string === "X");
-            assert(changedListeners.length as number === 1);
-            changedListeners[0]?.();
-            await delay(100);
-            assert(changedCount as number === 1);
-            assert(refresher.data as string === "XX");
-            changedListeners[0]?.();
-            await delay(100);
-            assert(changedCount as number === 2);
-            assert(refresher.data as string === "XXX");
-            refresher.onChanged(changedListener);
-            await delay(100);
-            assert(changedCount as number === 2);
-            assert(refresher.data as string === "XXX");
-            changedListeners[0]?.();
-            await delay(100);
-            assert(changedCount as number === 4);
-            assert(refresher.data as string === "XXXX");
+        sut.removeAllListeners();
+        assert(serverEmitter.listenerCount(errorEventName) === 0);
+        assert(serverEmitter.listenerCount(serverEventName) === 0);
+        sut.onError(() => { /* intentionally empty */ });
+        assert((sut as RefresherImpl).currentServerEmitter !== serverEmitter);
+    });
 
-            errorListeners[0]?.("error");
-            assert(errorCount as number === 1);
+    describe(RefresherImpl.create.name, () => {
+        it("should throw for invalid delay", async () => {
+            try {
+                const sut = await RefresherImpl.create({ ...argsMock, delayMilliseconds: -1 });
 
-            refresher.removeAllListeners();
-            assert(changedListeners.length as number === 0);
-            assert(errorListeners.length as number === 0);
+                assert(false, `Unexpected success: ${sut}`);
+            } catch (error) {
+                assert(error instanceof Error && error.message === "delayMilliseconds is invalid: -1.");
+            }
         });
 
-        it("should delay refresh", async () => {
-            const subscriber = new Subscriber();
-            const { changedListeners: listeners, onChanged, onError, removeAllListeners } = subscriber;
+        it("should apply default for delay", async () => {
+            const { delayMilliseconds: _, ...noDelayArgs } = argsMock;
+            const sut = await RefresherImpl.create(noDelayArgs);
+            assert(sut.delayMilliseconds === new Scheduler().delayMilliseconds);
 
-            const args: IRefresherArgs<"tests", string> = {
-                name: "tests",
-                refresh,
-                delayMilliseconds: 1000,
-                onChanged,
-                onError,
-                removeAllListeners,
+            const name = await new Promise((resolve, reject) => {
+                sut.onChanged(resolve);
+                sut.onError(reject);
+                (sut as RefresherImpl).currentServerEmitter?.emit(serverEventName);
+            });
+
+            assert(name === refresherName);
+        });
+    });
+
+    describe("data", () => {
+        it("should be initialized after creation", async () => {
+            const sut = await RefresherImpl.create(argsMock);
+
+            assert(sut.data.value === "Z");
+        });
+    });
+
+    describe(Refresher.prototype.onChanged.name, () => {
+        it("should delay refresh and notification", async () => {
+            const sut = await RefresherImpl.create(argsMock);
+
+            let onChangedCalls = 0;
+
+            const onChangedListener = (name: string) => {
+                assert(name === refresherName);
+                ++onChangedCalls;
             };
 
-            const refresher = await Refresher.create(args);
-            assert(refresher.data === "X");
-            assert(listeners.length === 0);
-            let changedCount = 0;
+            assert(sut.data.value === "Z");
 
-            const changedListener = (eventName: string) => {
-                assert(eventName === "tests");
-                ++changedCount;
+            sut.onChanged(onChangedListener);
+            const serverEmitter = (sut as RefresherImpl).currentServerEmitter;
+            assert(serverEmitter instanceof EventEmitter);
+
+            assert(onChangedCalls === 0);
+            serverEmitter.emit(serverEventName);
+            assert(sut.data.value === "Z");
+            assert(onChangedCalls === 0);
+            await delay(delayMilliseconds + 100);
+            assert(sut.data.value as string === "ZZ");
+            assert(onChangedCalls as number === 1);
+        });
+    });
+
+    describe(Refresher.prototype.onError.name, () => {
+        it("should notify errors immediately", async () => {
+            const sut = await RefresherImpl.create(argsMock);
+
+            let onErrorCalls = 0;
+
+            const onErrorListener = (error: unknown) => {
+                assert(error === err);
+                ++onErrorCalls;
             };
 
-            refresher.onChanged(changedListener);
-            await delay(1100);
-            assert(changedCount === 0);
-            assert(refresher.data as string === "X");
-            assert(listeners.length as number === 1);
-            listeners[0]?.();
-            await delay(100);
-            assert(changedCount === 0);
-            assert(refresher.data as string === "X");
-            await delay(1000);
-            assert(changedCount as number === 1);
-            assert(refresher.data as string === "XX");
+            sut.onError(onErrorListener);
+            const serverEmitter = (sut as RefresherImpl).currentServerEmitter;
+            assert(serverEmitter instanceof EventEmitter);
+
+            assert(onErrorCalls === 0);
+            serverEmitter.emit(errorEventName, err);
+            assert(onErrorCalls as number === 1);
+        });
+
+        it("should notify refresh errors", async () => {
+            const sut = await RefresherImpl.create(argsMock);
+
+            try {
+                await new Promise((resolve, reject) => {
+                    sut.onChanged(resolve);
+                    sut.onError(reject);
+                    (sut as RefresherImpl).throwOnNextRefresh = true;
+                    (sut as RefresherImpl).currentServerEmitter?.emit(serverEventName);
+                });
+
+                assert(false, `Unexpected success: ${sut}`);
+            } catch (error: unknown) {
+                assert(error instanceof Error && error.message === err);
+            }
         });
     });
 });
