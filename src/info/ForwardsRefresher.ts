@@ -45,6 +45,8 @@ export class ForwardsRefresher extends PartialRefresher<"forwards", Forward> {
             if (e.is_confirmed) {
                 log(`forward ${e.at}: ${JSON.stringify(e, undefined, 2)}`);
                 listener();
+            } else {
+                log(`UNCONFIRMED forward ${e.at}: ${JSON.stringify(e, undefined, 2)}`);
             }
         });
     }
