@@ -2,7 +2,6 @@
 import { EventEmitter } from "node:events";
 import type { AuthenticatedLightningArgs } from "lightning";
 
-import { log } from "../Logger.js";
 import { Scheduler } from "./Scheduler.js";
 
 /**
