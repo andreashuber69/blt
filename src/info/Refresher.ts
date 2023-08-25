@@ -56,9 +56,10 @@ export abstract class Refresher<Name extends string, Data> {
 
     /** Removes all previously added listeners. */
     public removeAllListeners() {
+        this.clientEmitter.removeAllListeners();
         this.serverEmitter.removeAllListeners();
-        this.scheduler.removeAllListeners();
         this.serverEmitterImpl = undefined;
+        this.scheduler.removeAllListeners();
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
