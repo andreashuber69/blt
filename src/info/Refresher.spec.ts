@@ -49,7 +49,7 @@ class RefresherImpl extends Refresher<typeof refresherName, Data> {
         serverEmitter.on(serverEventName, listener);
     }
 
-    protected override createServerEmitter(_lndArgs: { lnd: AuthenticatedLnd }) {
+    protected override createServerEmitter(_lndArgs: AuthenticatedLightningArgs) {
         // eslint-disable-next-line unicorn/prefer-event-target
         this.currentServerEmitterImpl = new EventEmitter();
         return this.currentServerEmitterImpl;
