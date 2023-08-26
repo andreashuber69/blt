@@ -1,5 +1,4 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
-import type { EventEmitter } from "node:events";
 import type {
     AuthenticatedLightningArgs,
     SubscribeToChannelsChannelActiveChangedEvent,
@@ -12,7 +11,9 @@ import { getChannels } from "../lightning/getChannels.js";
 import type { Node } from "../lightning/Node.js";
 import { log } from "../Logger.js";
 import { FullRefresher } from "./FullRefresher.js";
-import type { IRefresher } from "./Refresher.js";
+import type { Emitters, IRefresher } from "./Refresher.js";
+
+type NodesEmitters = Emitters<"channels">;
 
 export interface INodesRefresherArgs {
     /** The {@linkcode AuthenticatedLightningArgs} of the node the data should be retrieved from. */
@@ -22,7 +23,7 @@ export interface INodesRefresherArgs {
     readonly delayMilliseconds?: number;
 }
 
-export class NodesRefresher extends FullRefresher<"nodes", Node> {
+export class NodesRefresher extends FullRefresher<"nodes", Node, NodesEmitters> {
     /**
      * Creates a new object implementing {@linkcode IRefresher} for partner nodes of public channels.
      * @param args See {@linkcode INodesRefresherArgs}.
@@ -42,7 +43,7 @@ export class NodesRefresher extends FullRefresher<"nodes", Node> {
         /* eslint-enable @typescript-eslint/naming-convention */
     }
 
-    protected override onServerChanged(serverEmitter: EventEmitter, listener: () => void) {
+    protected override onServerChanged(serverEmitters: NodesEmitters, listener: () => void) {
         const openClosedHandler = (
             e: SubscribeToChannelsChannelClosedEvent | SubscribeToChannelsChannelOpenedEvent,
         ) => {
@@ -50,19 +51,19 @@ export class NodesRefresher extends FullRefresher<"nodes", Node> {
             listener();
         };
 
-        serverEmitter.on("channel_opened", openClosedHandler);
-        serverEmitter.on("channel_closed", openClosedHandler);
+        serverEmitters.channels.on("channel_opened", openClosedHandler);
+        serverEmitters.channels.on("channel_closed", openClosedHandler);
 
         const isActiveHandler = (e: SubscribeToChannelsChannelActiveChangedEvent) => {
             log(`channel ${e.transaction_id}x${e.transaction_vout}: ${e.is_active}`);
             listener();
         };
 
-        serverEmitter.on("channel_active_changed", isActiveHandler);
+        serverEmitters.channels.on("channel_active_changed", isActiveHandler);
     }
 
-    protected override createServerEmitter(lndArgs: AuthenticatedLightningArgs) {
-        return subscribeToChannels(lndArgs);
+    protected override createServerEmitters(lndArgs: AuthenticatedLightningArgs) {
+        return { channels: subscribeToChannels(lndArgs) } as const;
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

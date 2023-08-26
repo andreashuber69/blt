@@ -3,7 +3,7 @@ import type { AuthenticatedLightningArgs } from "lightning";
 
 import type { TimeBoundElement } from "../TimeBoundElement.js";
 import { getRangeDays } from "./getRange.js";
-import type { IRefresher } from "./Refresher.js";
+import type { Emitters, IRefresher } from "./Refresher.js";
 import { Refresher } from "./Refresher.js";
 import { toSortedArray } from "./toSortedArray.js";
 
@@ -13,7 +13,7 @@ import { toSortedArray } from "./toSortedArray.js";
  * restricting the time period into which newly created elements can fall.
  */
 // eslint-disable-next-line max-len
-export abstract class PartialRefresher<Name extends string, Element extends TimeBoundElement> extends Refresher<Name, Element[]> {
+export abstract class PartialRefresher<Name extends string, Element extends TimeBoundElement, ServerEmitters extends Emitters<string>> extends Refresher<Name, Element[], ServerEmitters> {
     /** The number of days in the past data should be retrieved. */
     public readonly days: number;
 
@@ -25,11 +25,12 @@ export abstract class PartialRefresher<Name extends string, Element extends Time
      * @param refresher The refresher to initialize.
      */
     protected static async initPartial<
-        T extends PartialRefresher<Name, Element>,
-        Name extends string = T extends PartialRefresher<infer N, TimeBoundElement> ? N : never,
-        Element extends TimeBoundElement = T extends PartialRefresher<Name, infer E> ? E : never,
+        T extends PartialRefresher<Name, Element, ServerEmitters>,
+        Name extends string = T extends PartialRefresher<infer N, TimeBoundElement, Emitters<string>> ? N : never,
+        Element extends TimeBoundElement = T extends PartialRefresher<Name, infer E, Emitters<string>> ? E : never,
+        ServerEmitters extends Emitters<string> = T extends PartialRefresher<Name, Element, infer S> ? S : never,
     >(refresher: T): Promise<IPartialRefresher<Name, Element>> {
-        await Refresher.init<T, Name, Element[]>(refresher);
+        await Refresher.init<T, Name, Element[], ServerEmitters>(refresher);
         return refresher;
     }
 
@@ -113,4 +114,4 @@ export abstract class PartialRefresher<Name extends string, Element extends Time
 /** See {@linkcode PartialRefresher}. */
 export type IPartialRefresher<Name extends string, Element extends TimeBoundElement> =
     // eslint-disable-next-line max-len
-    Pick<PartialRefresher<Name, Element>, "data" | "days" | "delayMilliseconds" | "onChanged" | "onError" | "removeAllListeners">;
+    Pick<PartialRefresher<Name, Element, Emitters<string>>, "data" | "days" | "delayMilliseconds" | "onChanged" | "onError" | "removeAllListeners">;
