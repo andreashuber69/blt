@@ -42,8 +42,8 @@ export class PaymentsRefresher extends PartialRefresher<"payments", Payment, Pay
         return a.id === b.id;
     }
 
-    protected override onServerChanged(serverEmitters: PaymentsEmitters, listener: () => void) {
-        serverEmitters.payments.on("confirmed", (e: SubscribeToPaymentsPaymentEvent) => {
+    protected override onServerChanged({ payments }: PaymentsEmitters, listener: () => void) {
+        payments.on("confirmed", (e: SubscribeToPaymentsPaymentEvent) => {
             log(`payment ${e.created_at}: ${e.tokens}`);
             listener();
         });

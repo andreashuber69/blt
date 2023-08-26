@@ -36,14 +36,14 @@ export class ChannelsRefresher extends FullRefresher<"channels", Channel, Channe
         return await getChannels({ ...lndArgs, is_public: true });
     }
 
-    protected override onServerChanged(serverEmitters: ChannelsEmitters, listener: () => void) {
+    protected override onServerChanged({ channels }: ChannelsEmitters, listener: () => void) {
         const handler = (e: SubscribeToChannelsChannelClosedEvent | SubscribeToChannelsChannelOpenedEvent) => {
             log(`channel ${e.id}`);
             listener();
         };
 
-        serverEmitters.channels.on("channel_opened", handler);
-        serverEmitters.channels.on("channel_closed", handler);
+        channels.on("channel_opened", handler);
+        channels.on("channel_closed", handler);
     }
 
     protected override createServerEmitters(lndArgs: AuthenticatedLightningArgs) {

@@ -42,8 +42,8 @@ export class ForwardsRefresher extends PartialRefresher<"forwards", Forward, For
         a.incoming_channel === b.incoming_channel && a.outgoing_channel === b.outgoing_channel;
     }
 
-    protected override onServerChanged(serverEmitters: ForwardsEmitters, listener: () => void) {
-        serverEmitters.forwards.on("forward", (e: SubscribeToForwardsForwardEvent) => {
+    protected override onServerChanged({ forwards }: ForwardsEmitters, listener: () => void) {
+        forwards.on("forward", (e: SubscribeToForwardsForwardEvent) => {
             if (e.is_confirmed) {
                 log(`forward ${e.at}: ${JSON.stringify(e, undefined, 2)}`);
                 listener();

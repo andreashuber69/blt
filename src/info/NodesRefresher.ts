@@ -43,7 +43,7 @@ export class NodesRefresher extends FullRefresher<"nodes", Node, NodesEmitters> 
         /* eslint-enable @typescript-eslint/naming-convention */
     }
 
-    protected override onServerChanged(serverEmitters: NodesEmitters, listener: () => void) {
+    protected override onServerChanged({ channels }: NodesEmitters, listener: () => void) {
         const openClosedHandler = (
             e: SubscribeToChannelsChannelClosedEvent | SubscribeToChannelsChannelOpenedEvent,
         ) => {
@@ -51,15 +51,15 @@ export class NodesRefresher extends FullRefresher<"nodes", Node, NodesEmitters> 
             listener();
         };
 
-        serverEmitters.channels.on("channel_opened", openClosedHandler);
-        serverEmitters.channels.on("channel_closed", openClosedHandler);
+        channels.on("channel_opened", openClosedHandler);
+        channels.on("channel_closed", openClosedHandler);
 
         const isActiveHandler = (e: SubscribeToChannelsChannelActiveChangedEvent) => {
             log(`channel ${e.transaction_id}x${e.transaction_vout}: ${e.is_active}`);
             listener();
         };
 
-        serverEmitters.channels.on("channel_active_changed", isActiveHandler);
+        channels.on("channel_active_changed", isActiveHandler);
     }
 
     protected override createServerEmitters(lndArgs: AuthenticatedLightningArgs) {

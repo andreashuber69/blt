@@ -48,8 +48,8 @@ class RefresherImpl extends Refresher<typeof refresherName, Data, EmittersImpl> 
         return await Promise.resolve(true);
     }
 
-    protected override onServerChanged(serverEmitters: EmittersImpl, listener: () => void) {
-        serverEmitters.tests.on(serverEventName, listener);
+    protected override onServerChanged({ tests }: EmittersImpl, listener: () => void) {
+        tests.on(serverEventName, listener);
     }
 
     protected override createServerEmitters(_lndArgs: AuthenticatedLightningArgs) {
