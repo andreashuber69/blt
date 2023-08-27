@@ -8,10 +8,10 @@ export type Emitters<Names extends string> = Readonly<Record<Names, EventEmitter
 
 /**
  * Provides the base for all {@linkcode IRefresher} implementations.
- * @description Each object implementing the {@linkcode IRefresher} interface offers a {@linkcode IRefresher.data}
+ * @description Each object implementing the {@linkcode IRefresher} interface offers a {@linkcode Refresher.data}
  * property exposing a readonly copy of data retrieved from a lightning node. Clients requiring continuous update of
- * {@linkcode IRefresher.data} and subsequent notification, must subscribe to the {@linkcode IRefresher.onChanged} and
- * {@linkcode IRefresher.onError} events. Doing so will enable automatic refresh of {@linkcode IRefresher.data} and
+ * {@linkcode Refresher.data} and subsequent notification, must subscribe to the {@linkcode Refresher.onChanged} and
+ * {@linkcode Refresher.onError} events. Doing so will enable automatic refresh of {@linkcode Refresher.data} and
  * subsequent notification after the server has reported a change.
  */
 export abstract class Refresher<Name extends string, Data, ServerEmitters extends Emitters<string>> {
@@ -27,7 +27,7 @@ export abstract class Refresher<Name extends string, Data, ServerEmitters extend
 
     /**
      * Adds `listener` to the end of the listeners array.
-     * @param listener The listener to add. Is called whenever {@linkcode IRefresher.data} might have changed.
+     * @param listener The listener to add. Is called whenever {@linkcode Refresher.data} might have changed.
      */
     public onChanged(listener: (name: Name) => void) {
         this.clientEmitter.on(this.name, listener);
@@ -44,7 +44,7 @@ export abstract class Refresher<Name extends string, Data, ServerEmitters extend
     /**
      * Adds `listener` to the `"error"` events of all server emitters and subscribes to any exceptions that are
      * thrown during refresh.
-     * @param listener The listener to add. If called, {@linkcode IRefresher.data} is no longer up to date.
+     * @param listener The listener to add. If called, {@linkcode Refresher.data} is no longer up to date.
      */
     public onError(listener: (error: unknown) => void) {
         for (const emitter of Object.values(this.serverEmitters)) {

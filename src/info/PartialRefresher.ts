@@ -8,7 +8,7 @@ import { Refresher } from "./Refresher.js";
 import { toSortedArray } from "./toSortedArray.js";
 
 /**
- * Provides an {@linkcode IRefresher} implementation for use cases where {@linkcode IRefresher.data} is an
+ * Provides an {@linkcode IRefresher} implementation for use cases where {@linkcode Refresher.data} is an
  * array, the elements of which implement {@linkcode TimeBoundElement}. This enables refreshing data partially, by
  * restricting the time period into which newly created elements can fall.
  */

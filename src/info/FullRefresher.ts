@@ -5,7 +5,7 @@ import type { Emitters, IRefresher } from "./Refresher.js";
 import { Refresher } from "./Refresher.js";
 
 /**
- * Provides an {@linkcode IRefresher} implementation for use cases where {@linkcode IRefresher.data} is an
+ * Provides an {@linkcode IRefresher} implementation for use cases where {@linkcode Refresher.data} is an
  * array, the elements of which do not implement a particular interface.
  */
 export abstract class FullRefresher<
