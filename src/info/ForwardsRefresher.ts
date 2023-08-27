@@ -22,6 +22,7 @@ export interface IForwardsRefresherArgs {
     readonly days?: number;
 }
 
+/** Implements {@linkcode IPartialRefresher} for forwards. */
 export class ForwardsRefresher extends PartialRefresher<"forwards", Forward, ForwardsEmitters> {
     /**
      * Creates a new object implementing {@linkcode IPartialRefresher} for forwards.

@@ -22,6 +22,7 @@ export interface IPaymentsRefresherArgs {
     readonly days?: number;
 }
 
+/** Implements {@linkcode IPartialRefresher} for confirmed payments. */
 export class PaymentsRefresher extends PartialRefresher<"payments", Payment, PaymentsEmitters> {
     /**
      * Creates a new object implementing {@linkcode IPartialRefresher} for payments.

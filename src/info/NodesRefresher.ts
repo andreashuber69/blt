@@ -23,6 +23,7 @@ export interface INodesRefresherArgs {
     readonly delayMilliseconds?: number;
 }
 
+/** Implements {@linkcode IRefresher} for partner nodes. */
 export class NodesRefresher extends FullRefresher<"nodes", Node, NodesEmitters> {
     /**
      * Creates a new object implementing {@linkcode IRefresher} for partner nodes of public channels.

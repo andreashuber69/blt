@@ -20,6 +20,7 @@ export interface IChannelsRefresherArgs {
     readonly delayMilliseconds?: number;
 }
 
+/** Implements {@linkcode IRefresher} for public channels. */
 export class ChannelsRefresher extends FullRefresher<"channels", Channel, ChannelsEmitters> {
     /**
      * Creates a new object implementing {@linkcode IRefresher} for public channels.
