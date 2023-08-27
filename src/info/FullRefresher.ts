@@ -8,8 +8,11 @@ import { Refresher } from "./Refresher.js";
  * Provides an {@linkcode IRefresher} implementation for use cases where {@linkcode IRefresher.data} is an
  * array, the elements of which do not implement a particular interface.
  */
-// eslint-disable-next-line max-len
-export abstract class FullRefresher<Name extends string, Element, ServerEmitters extends Emitters<string>> extends Refresher<Name, Element[], ServerEmitters> {
+export abstract class FullRefresher<
+    Name extends string,
+    Element,
+    ServerEmitters extends Emitters<string>,
+> extends Refresher<Name, Element[], ServerEmitters> {
     protected constructor(args: {
         readonly lndArgs: AuthenticatedLightningArgs;
         readonly delayMilliseconds?: number;
