@@ -37,10 +37,12 @@ export class NodesRefresher extends FullRefresher<"nodes", Node, NodesEmitters> 
 
     protected override async getAllData(lndArgs: AuthenticatedLightningArgs) {
         /* eslint-disable @typescript-eslint/naming-convention */
-        return await Promise.all((await getChannels({ ...lndArgs, is_public: true })).map(async (c) => ({
-            id: c.id,
-            ...await getNode({ ...lndArgs, is_omitting_channels: true, public_key: c.partner_public_key }),
-        })));
+        const channels = await getChannels({ ...lndArgs, is_public: true });
+
+        const nodePromises =
+            channels.map(async (c) => ({ id: c.id, ...await this.getNode(lndArgs, c.partner_public_key) }));
+
+        return await Promise.all(nodePromises);
         /* eslint-enable @typescript-eslint/naming-convention */
     }
 
@@ -71,5 +73,10 @@ export class NodesRefresher extends FullRefresher<"nodes", Node, NodesEmitters> 
 
     private constructor(args: INodesRefresherArgs) {
         super({ ...args, name: "nodes" });
+    }
+
+    private async getNode(lndArgs: AuthenticatedLightningArgs, publicKey: string) {
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        return await getNode({ ...lndArgs, is_omitting_channels: true, public_key: publicKey });
     }
 }
