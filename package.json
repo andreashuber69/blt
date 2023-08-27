@@ -48,6 +48,7 @@
     "ci": "npm run build"
   },
   "dependencies": {
+    "capped-promise": "^1.0.3",
     "lightning": "^9.11.3",
     "tslib": "^2.6.2"
   },

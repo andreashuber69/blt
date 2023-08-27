@@ -1,4 +1,5 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
+import CappedPromise from "capped-promise";
 import type {
     AuthenticatedLightningArgs,
     SubscribeToChannelsChannelActiveChangedEvent,
@@ -36,14 +37,13 @@ export class NodesRefresher extends FullRefresher<"nodes", Node, NodesEmitters> 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     protected override async getAllData(lndArgs: AuthenticatedLightningArgs) {
-        /* eslint-disable @typescript-eslint/naming-convention */
+        // eslint-disable-next-line @typescript-eslint/naming-convention
         const channels = await getChannels({ ...lndArgs, is_public: true });
 
-        const nodePromises =
-            channels.map(async (c) => ({ id: c.id, ...await this.getNode(lndArgs, c.partner_public_key) }));
+        const createNodePromises =
+            channels.map((c) => async () => ({ id: c.id, ...await this.getNode(lndArgs, c.partner_public_key) }));
 
-        return await Promise.all(nodePromises);
-        /* eslint-enable @typescript-eslint/naming-convention */
+        return await CappedPromise.all(10, createNodePromises);
     }
 
     protected override onServerChanged({ channels }: NodesEmitters, listener: () => void) {
