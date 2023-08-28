@@ -1,13 +1,14 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
-import type { EventEmitter } from "node:events";
-import type { AuthenticatedLightningArgs, SubscribeToPaymentsPaymentEvent } from "lightning";
+import type { AuthenticatedLightningArgs } from "lightning";
 import { subscribeToPayments } from "lightning";
 
 import type { Payment } from "../lightning/getPayments.js";
 import { getPayments } from "../lightning/getPayments.js";
-import { log } from "../Logger.js";
 import { PartialRefresher } from "./PartialRefresher.js";
 import type { IPartialRefresher } from "./PartialRefresher.js";
+import type { Emitters } from "./Refresher.js";
+
+type PaymentsEmitters = Emitters<"payments">;
 
 export interface IPaymentsRefresherArgs {
     /** The {@linkcode AuthenticatedLightningArgs} of the node the data should be retrieved from. */
@@ -20,7 +21,8 @@ export interface IPaymentsRefresherArgs {
     readonly days?: number;
 }
 
-export class PaymentsRefresher extends PartialRefresher<"payments", Payment> {
+/** Implements {@linkcode IPartialRefresher} for confirmed payments. */
+export class PaymentsRefresher extends PartialRefresher<"payments", Payment, PaymentsEmitters> {
     /**
      * Creates a new object implementing {@linkcode IPartialRefresher} for payments.
      * @param args See {@linkcode IPaymentsRefresherArgs}.
@@ -40,15 +42,12 @@ export class PaymentsRefresher extends PartialRefresher<"payments", Payment> {
         return a.id === b.id;
     }
 
-    protected override onServerChanged(serverEmitter: EventEmitter, listener: () => void) {
-        serverEmitter.on("confirmed", (e: SubscribeToPaymentsPaymentEvent) => {
-            log(`payment ${e.created_at}: ${e.tokens}`);
-            listener();
-        });
+    protected override onServerChanged({ payments }: PaymentsEmitters, listener: () => void) {
+        payments.on("confirmed", listener);
     }
 
-    protected override createServerEmitter(lndArgs: AuthenticatedLightningArgs) {
-        return subscribeToPayments(lndArgs);
+    protected override createServerEmitters(lndArgs: AuthenticatedLightningArgs) {
+        return { payments: subscribeToPayments(lndArgs) } as const;
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

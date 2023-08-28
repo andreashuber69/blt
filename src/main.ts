@@ -4,7 +4,7 @@ import { createRequire } from "node:module";
 import type { AuthenticatedLightningArgs } from "lightning";
 import { deletePayment } from "lightning";
 
-import type { INodeInfo } from "./info/NodeInfo.js";
+import { Actions } from "./Actions..js";
 import { NodeInfo } from "./info/NodeInfo.js";
 import { connectLnd } from "./lightning/connectLnd.js";
 import { getFailedPayments } from "./lightning/getFailedPayments.js";
@@ -42,23 +42,6 @@ const getInfo = async (authenticatedLnd: AuthenticatedLightningArgs) => {
     return await NodeInfo.get({ lndArgs: authenticatedLnd });
 };
 
-const subscribeHandlers = (nodeInfo: INodeInfo) => {
-    const handler = (property: "channels") => log(`${property}: ${nodeInfo[property].data.length}`);
-
-    const timeBoundHandler = (property: "forwards" | "payments") => {
-        const { [property]: { data } } = nodeInfo;
-        const aux = data.at(-1)?.tokens;
-        log(`${property}: ${data.length} ${data.at(0)?.created_at} - ${data.at(-1)?.created_at} ${aux}`);
-    };
-
-    handler("channels");
-    nodeInfo.channels.onChanged(handler);
-    timeBoundHandler("forwards");
-    nodeInfo.forwards.onChanged(timeBoundHandler);
-    timeBoundHandler("payments");
-    nodeInfo.payments.onChanged(timeBoundHandler);
-};
-
 try {
     // Simple typescript alternatives to calling require below lead to the outDir containing the file package.json and
     // the directory src with all the code. This is due to how the ts compiler automatically determines the rootDir from
@@ -83,9 +66,11 @@ while (true) {
 
         // eslint-disable-next-line no-constant-condition
         while (true) {
-            subscribeHandlers(info);
-            const { channels } = new NodeStats(info);
-            log(JSON.stringify(channels, undefined, 2));
+            const stats = new NodeStats(info);
+            log(JSON.stringify(stats.channels, undefined, 2));
+            const config = { minChannelBalanceFraction: 0.25, maxDeviationFraction: 0.05, minChannelForwards: 10 };
+            const actions = Actions.get(stats, config);
+            log(JSON.stringify(actions, undefined, 2));
 
             try {
                 const changed = await new Promise<string>((resolve, reject) => {

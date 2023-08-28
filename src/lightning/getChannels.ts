@@ -6,6 +6,9 @@ import { getArrayData } from "./getArrayData.js";
 
 export const getChannels = async (args: GetChannelsArgs) => await getArrayData(lndGetChannels, args, "channels");
 
-export type Channel =
-    // eslint-disable-next-line max-len
-    Readonly<Pick<Awaited<ReturnType<typeof getChannels>>[number], "capacity" | "id" | "local_balance" | "partner_public_key" | "remote_balance">>;
+export type Channel = Readonly<
+    Pick<
+        Awaited<ReturnType<typeof getChannels>>[number],
+        "capacity" | "id" | "local_balance" | "partner_public_key" | "remote_balance"
+    >
+>;

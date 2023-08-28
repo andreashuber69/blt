@@ -1,13 +1,14 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
-import type { EventEmitter } from "node:events";
 import type { AuthenticatedLightningArgs, SubscribeToForwardsForwardEvent } from "lightning";
 import { subscribeToForwards } from "lightning";
 
 import type { Forward } from "../lightning/getForwards.js";
 import { getForwards } from "../lightning/getForwards.js";
-import { log } from "../Logger.js";
 import { PartialRefresher } from "./PartialRefresher.js";
 import type { IPartialRefresher } from "./PartialRefresher.js";
+import type { Emitters } from "./Refresher.js";
+
+type ForwardsEmitters = Emitters<"forwards">;
 
 export interface IForwardsRefresherArgs {
     /** The {@linkcode AuthenticatedLightningArgs} of the node the data should be retrieved from. */
@@ -20,7 +21,8 @@ export interface IForwardsRefresherArgs {
     readonly days?: number;
 }
 
-export class ForwardsRefresher extends PartialRefresher<"forwards", Forward> {
+/** Implements {@linkcode IPartialRefresher} for forwards. */
+export class ForwardsRefresher extends PartialRefresher<"forwards", Forward, ForwardsEmitters> {
     /**
      * Creates a new object implementing {@linkcode IPartialRefresher} for forwards.
      * @param args See {@linkcode IForwardsRefresherArgs}.
@@ -37,20 +39,19 @@ export class ForwardsRefresher extends PartialRefresher<"forwards", Forward> {
 
     protected override equals(a: Forward, b: Forward) {
         return a.created_at === b.created_at && a.fee === b.fee && a.tokens === b.tokens &&
-        a.incoming_channel === b.incoming_channel && a.outgoing_channel === b.outgoing_channel;
+            a.incoming_channel === b.incoming_channel && a.outgoing_channel === b.outgoing_channel;
     }
 
-    protected override onServerChanged(serverEmitter: EventEmitter, listener: () => void) {
-        serverEmitter.on("forward", (e: SubscribeToForwardsForwardEvent) => {
+    protected override onServerChanged({ forwards }: ForwardsEmitters, listener: () => void) {
+        forwards.on("forward", (e: SubscribeToForwardsForwardEvent) => {
             if (e.is_confirmed) {
-                log(`forward ${e.at}: ${JSON.stringify(e, undefined, 2)}`);
                 listener();
             }
         });
     }
 
-    protected override createServerEmitter(lndArgs: AuthenticatedLightningArgs) {
-        return subscribeToForwards(lndArgs);
+    protected override createServerEmitters(lndArgs: AuthenticatedLightningArgs) {
+        return { forwards: subscribeToForwards(lndArgs) } as const;
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

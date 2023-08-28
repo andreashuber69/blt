@@ -1,6 +1,6 @@
 {
   "name": "lightning-node-operator",
-  "version": "0.1.13",
+  "version": "0.1.14",
   "description": "Automates various aspects of the operation of an LND lightning node.",
   "keywords": [
     "bitcoin",
@@ -48,20 +48,21 @@
     "ci": "npm run build"
   },
   "dependencies": {
+    "capped-promise": "^1.0.3",
     "lightning": "^9.11.3",
     "tslib": "^2.6.2"
   },
   "devDependencies": {
-    "@andreashuber69/eslint-config": "^1.1.48",
+    "@andreashuber69/eslint-config": "^1.1.50",
     "@tsconfig/node-lts-strictest-esm": "^18.12.1",
-    "@types/node": "^18.17.11",
+    "@types/node": "^18.17.12",
     "c8": "^8.0.1",
     "coveralls": "^3.1.1",
     "cspell": "^7.0.1",
     "markdownlint-cli": "^0.35.0",
     "tsx": "^3.12.7",
-    "typedoc": "^0.24.8",
-    "typescript": "^5.1.6",
+    "typedoc": "^0.25.0",
+    "typescript": "^5.2.2",
     "vite": "^4.4.9"
   }
 }

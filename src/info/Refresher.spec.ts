@@ -4,6 +4,7 @@ import { EventEmitter } from "node:events";
 import { describe, it } from "node:test";
 
 import type { AuthenticatedLightningArgs, AuthenticatedLnd } from "lightning";
+import type { Emitters } from "./Refresher.js";
 import { Refresher } from "./Refresher.js";
 import { Scheduler } from "./Scheduler.js";
 import { delay } from "./testHelpers/delay.js";
@@ -22,7 +23,9 @@ interface RefresherImplArgs {
     readonly delayMilliseconds?: number;
 }
 
-class RefresherImpl extends Refresher<typeof refresherName, Data> {
+type EmittersImpl = Emitters<"tests">;
+
+class RefresherImpl extends Refresher<typeof refresherName, Data, EmittersImpl> {
     public static async create(args: RefresherImplArgs) {
         return await Refresher.init(new RefresherImpl(args));
     }
@@ -45,13 +48,13 @@ class RefresherImpl extends Refresher<typeof refresherName, Data> {
         return await Promise.resolve(true);
     }
 
-    protected override onServerChanged(serverEmitter: EventEmitter, listener: () => void) {
-        serverEmitter.on(serverEventName, listener);
+    protected override onServerChanged({ tests }: EmittersImpl, listener: () => void) {
+        tests.on(serverEventName, listener);
     }
 
-    protected override createServerEmitter(_lndArgs: { lnd: AuthenticatedLnd }) {
+    protected override createServerEmitters(_lndArgs: AuthenticatedLightningArgs) {
         // eslint-disable-next-line unicorn/prefer-event-target
-        this.currentServerEmitterImpl = new EventEmitter();
+        this.currentServerEmitterImpl = { tests: new EventEmitter() } as const;
         return this.currentServerEmitterImpl;
     }
 
@@ -61,7 +64,7 @@ class RefresherImpl extends Refresher<typeof refresherName, Data> {
         super({ ...args, name: refresherName, empty: { value: "" } });
     }
 
-    private currentServerEmitterImpl: EventEmitter | undefined;
+    private currentServerEmitterImpl: EmittersImpl | undefined;
 }
 
 const argsMock = {
@@ -84,27 +87,27 @@ describe(Refresher.name, () => {
         const sut = await RefresherImpl.create(argsMock);
 
         sut.onError(() => { /* intentionally empty */ });
-        const serverEmitter = (sut as RefresherImpl).currentServerEmitter;
+        const serverEmitter = (sut as RefresherImpl).currentServerEmitter?.tests;
         assert(serverEmitter instanceof EventEmitter);
         assert(serverEmitter.listenerCount(errorEventName) === 1);
 
         sut.onError(() => { /* intentionally empty */ });
-        assert((sut as RefresherImpl).currentServerEmitter === serverEmitter);
+        assert((sut as RefresherImpl).currentServerEmitter?.tests === serverEmitter);
         assert(serverEmitter.listenerCount(errorEventName) === 2);
 
         sut.onChanged(() => { /* intentionally empty */ });
-        assert((sut as RefresherImpl).currentServerEmitter === serverEmitter);
+        assert((sut as RefresherImpl).currentServerEmitter?.tests === serverEmitter);
         assert(serverEmitter.listenerCount(serverEventName) === 1);
 
         sut.onChanged(() => { /* intentionally empty */ });
-        assert((sut as RefresherImpl).currentServerEmitter === serverEmitter);
+        assert((sut as RefresherImpl).currentServerEmitter?.tests === serverEmitter);
         assert(serverEmitter.listenerCount(serverEventName) === 1);
 
         sut.removeAllListeners();
         assert(serverEmitter.listenerCount(errorEventName) === 0);
         assert(serverEmitter.listenerCount(serverEventName) === 0);
         sut.onError(() => { /* intentionally empty */ });
-        assert((sut as RefresherImpl).currentServerEmitter !== serverEmitter);
+        assert((sut as RefresherImpl).currentServerEmitter?.tests !== serverEmitter);
     });
 
     describe(RefresherImpl.create.name, () => {
@@ -126,7 +129,7 @@ describe(Refresher.name, () => {
             const name = await new Promise((resolve, reject) => {
                 sut.onChanged(resolve);
                 sut.onError(reject);
-                (sut as RefresherImpl).currentServerEmitter?.emit(serverEventName);
+                (sut as RefresherImpl).currentServerEmitter?.tests.emit(serverEventName);
             });
 
             assert(name === refresherName);
@@ -155,7 +158,7 @@ describe(Refresher.name, () => {
             assert(sut.data.value === "Z");
 
             sut.onChanged(onChangedListener);
-            const serverEmitter = (sut as RefresherImpl).currentServerEmitter;
+            const serverEmitter = (sut as RefresherImpl).currentServerEmitter?.tests;
             assert(serverEmitter instanceof EventEmitter);
 
             assert(onChangedCalls === 0);
@@ -180,7 +183,7 @@ describe(Refresher.name, () => {
             };
 
             sut.onError(onErrorListener);
-            const serverEmitter = (sut as RefresherImpl).currentServerEmitter;
+            const serverEmitter = (sut as RefresherImpl).currentServerEmitter?.tests;
             assert(serverEmitter instanceof EventEmitter);
 
             assert(onErrorCalls === 0);
@@ -196,7 +199,7 @@ describe(Refresher.name, () => {
                     sut.onChanged(resolve);
                     sut.onError(reject);
                     (sut as RefresherImpl).throwOnNextRefresh = true;
-                    (sut as RefresherImpl).currentServerEmitter?.emit(serverEventName);
+                    (sut as RefresherImpl).currentServerEmitter?.tests.emit(serverEventName);
                 });
 
                 assert(false, `Unexpected success: ${sut}`);

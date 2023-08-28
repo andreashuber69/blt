@@ -7,6 +7,9 @@ import type { YieldType } from "./YieldType.js";
 
 export const getForwards = (args: GetForwardsArgs) => getPaginatedArrayData(lndGetForwards, args, "forwards");
 
-export type Forward =
-    // eslint-disable-next-line max-len
-    Readonly<Pick<YieldType<ReturnType<typeof getForwards>>, "created_at" | "fee" | "incoming_channel" | "outgoing_channel" | "tokens">>;
+export type Forward = Readonly<
+    Pick<
+        YieldType<ReturnType<typeof getForwards>>,
+        "created_at" | "fee" | "incoming_channel" | "outgoing_channel" | "tokens"
+    >
+>;

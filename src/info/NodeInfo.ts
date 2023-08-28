@@ -12,7 +12,7 @@ import { ForwardsRefresher } from "./ForwardsRefresher.js";
 import { NodesRefresher } from "./NodesRefresher.js";
 import type { IPartialRefresher } from "./PartialRefresher.js";
 import { PaymentsRefresher } from "./PaymentsRefresher.js";
-import type { IRefresher } from "./Refresher.js";
+import type { IRefresher, Refresher } from "./Refresher.js";
 
 const refresherNames = ["channels", "nodes", "forwards", "payments"] as const;
 
@@ -56,9 +56,9 @@ export class NodeInfo implements
     }
 
     /**
-     * Calls {@linkcode IRefresher.onChanged} for all {@linkcode IRefresher} typed properties, forwarding
+     * Calls {@linkcode Refresher.onChanged} for all {@linkcode IRefresher} typed properties, forwarding
      * `listener`.
-     * @description When `listener` is called, {@linkcode IRefresher.data} of the {@linkcode IRefresher} named
+     * @description When `listener` is called, {@linkcode Refresher.data} of the {@linkcode IRefresher} named
      * `name` might have changed.
      * @param listener The listener to add.
      */
@@ -67,7 +67,7 @@ export class NodeInfo implements
     }
 
     /**
-     * Calls {@linkcode IRefresher.onError} for all {@linkcode IRefresher} typed properties, forwarding
+     * Calls {@linkcode Refresher.onError} for all {@linkcode IRefresher} typed properties, forwarding
      * `listener`.
      * @description When `listener` is called, client code dependent on being notified about changes should discard this
      * object and create a new one via {@linkcode NodeInfo.get}.
@@ -77,7 +77,7 @@ export class NodeInfo implements
         this.forEachRefresher((refresher) => refresher.onError(listener));
     }
 
-    /** Calls {@linkcode IRefresher.removeAllListeners} for all {@linkcode IRefresher} typed properties. */
+    /** Calls {@linkcode Refresher.removeAllListeners} for all {@linkcode IRefresher} typed properties. */
     public removeAllListeners() {
         this.forEachRefresher((refresher) => refresher.removeAllListeners());
     }
@@ -100,6 +100,7 @@ export class NodeInfo implements
 }
 
 /** See {@linkcode NodeInfo}. */
-export type INodeInfo =
-    // eslint-disable-next-line max-len
-    Pick<NodeInfo, "channels" | "forwards" | "identity" | "nodes" | "onChanged" | "onError" | "payments" | "removeAllListeners">;
+export type INodeInfo = Pick<
+    NodeInfo,
+    "channels" | "forwards" | "identity" | "nodes" | "onChanged" | "onError" | "payments" | "removeAllListeners"
+>;

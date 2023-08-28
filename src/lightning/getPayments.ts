@@ -7,6 +7,9 @@ import type { YieldType } from "./YieldType.js";
 
 export const getPayments = (args: GetPaymentsArgs) => getPaginatedArrayData(lndGetPayments, args, "payments");
 
-export type Payment =
-    // eslint-disable-next-line max-len
-    Readonly<Pick<YieldType<ReturnType<typeof getPayments>>, "created_at" | "destination" | "fee" | "id" | "is_confirmed" | "tokens">>;
+export type Payment = Readonly<
+    Pick<
+        YieldType<ReturnType<typeof getPayments>>,
+        "created_at" | "destination" | "fee" | "id" | "is_confirmed" | "tokens"
+    >
+>;

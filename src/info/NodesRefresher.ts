@@ -1,18 +1,14 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
-import type { EventEmitter } from "node:events";
-import type {
-    AuthenticatedLightningArgs,
-    SubscribeToChannelsChannelActiveChangedEvent,
-    SubscribeToChannelsChannelClosedEvent,
-    SubscribeToChannelsChannelOpenedEvent,
-} from "lightning";
+import CappedPromise from "capped-promise";
+import type { AuthenticatedLightningArgs } from "lightning";
 import { getNode, subscribeToChannels } from "lightning";
 
 import { getChannels } from "../lightning/getChannels.js";
 import type { Node } from "../lightning/Node.js";
-import { log } from "../Logger.js";
 import { FullRefresher } from "./FullRefresher.js";
-import type { IRefresher } from "./Refresher.js";
+import type { Emitters, IRefresher } from "./Refresher.js";
+
+type NodesEmitters = Emitters<"channels">;
 
 export interface INodesRefresherArgs {
     /** The {@linkcode AuthenticatedLightningArgs} of the node the data should be retrieved from. */
@@ -22,7 +18,8 @@ export interface INodesRefresherArgs {
     readonly delayMilliseconds?: number;
 }
 
-export class NodesRefresher extends FullRefresher<"nodes", Node> {
+/** Implements {@linkcode IRefresher} for partner nodes. */
+export class NodesRefresher extends FullRefresher<"nodes", Node, NodesEmitters> {
     /**
      * Creates a new object implementing {@linkcode IRefresher} for partner nodes of public channels.
      * @param args See {@linkcode INodesRefresherArgs}.
@@ -34,40 +31,33 @@ export class NodesRefresher extends FullRefresher<"nodes", Node> {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     protected override async getAllData(lndArgs: AuthenticatedLightningArgs) {
-        /* eslint-disable @typescript-eslint/naming-convention */
-        return await Promise.all((await getChannels({ ...lndArgs, is_public: true })).map(async (c) => ({
-            id: c.id,
-            ...await getNode({ ...lndArgs, is_omitting_channels: true, public_key: c.partner_public_key }),
-        })));
-        /* eslint-enable @typescript-eslint/naming-convention */
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        const channels = await getChannels({ ...lndArgs, is_public: true });
+
+        const createNodePromises =
+            channels.map((c) => async () => ({ id: c.id, ...await this.getNode(lndArgs, c.partner_public_key) }));
+
+        return await CappedPromise.all(10, createNodePromises);
     }
 
-    protected override onServerChanged(serverEmitter: EventEmitter, listener: () => void) {
-        const openClosedHandler = (
-            e: SubscribeToChannelsChannelClosedEvent | SubscribeToChannelsChannelOpenedEvent,
-        ) => {
-            log(`channel ${e.id}`);
-            listener();
-        };
-
-        serverEmitter.on("channel_opened", openClosedHandler);
-        serverEmitter.on("channel_closed", openClosedHandler);
-
-        const isActiveHandler = (e: SubscribeToChannelsChannelActiveChangedEvent) => {
-            log(`channel ${e.transaction_id}x${e.transaction_vout}: ${e.is_active}`);
-            listener();
-        };
-
-        serverEmitter.on("channel_active_changed", isActiveHandler);
+    protected override onServerChanged({ channels }: NodesEmitters, listener: () => void) {
+        channels.on("channel_opened", listener);
+        channels.on("channel_closed", listener);
+        channels.on("channel_active_changed", listener);
     }
 
-    protected override createServerEmitter(lndArgs: AuthenticatedLightningArgs) {
-        return subscribeToChannels(lndArgs);
+    protected override createServerEmitters(lndArgs: AuthenticatedLightningArgs) {
+        return { channels: subscribeToChannels(lndArgs) } as const;
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     private constructor(args: INodesRefresherArgs) {
         super({ ...args, name: "nodes" });
+    }
+
+    private async getNode(lndArgs: AuthenticatedLightningArgs, publicKey: string) {
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        return await getNode({ ...lndArgs, is_omitting_channels: true, public_key: publicKey });
     }
 }
