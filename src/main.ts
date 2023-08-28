@@ -4,6 +4,7 @@ import { createRequire } from "node:module";
 import type { AuthenticatedLightningArgs } from "lightning";
 import { deletePayment } from "lightning";
 
+import { Actions } from "./Actions..js";
 import { NodeInfo } from "./info/NodeInfo.js";
 import { connectLnd } from "./lightning/connectLnd.js";
 import { getFailedPayments } from "./lightning/getFailedPayments.js";
@@ -65,8 +66,11 @@ while (true) {
 
         // eslint-disable-next-line no-constant-condition
         while (true) {
-            const { channels } = new NodeStats(info);
-            log(JSON.stringify(channels, undefined, 2));
+            const stats = new NodeStats(info);
+            log(JSON.stringify(stats.channels, undefined, 2));
+            const config = { minChannelBalanceFraction: 0.25, maxDeviationFraction: 0.05, minChannelForwards: 10 };
+            const actions = Actions.get(stats, config);
+            log(JSON.stringify(actions, undefined, 2));
 
             try {
                 const changed = await new Promise<string>((resolve, reject) => {
