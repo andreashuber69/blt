@@ -100,6 +100,7 @@ export class NodeInfo implements
 }
 
 /** See {@linkcode NodeInfo}. */
-export type INodeInfo =
-    // eslint-disable-next-line max-len
-    Pick<NodeInfo, "channels" | "forwards" | "identity" | "nodes" | "onChanged" | "onError" | "payments" | "removeAllListeners">;
+export type INodeInfo = Pick<
+    NodeInfo,
+    "channels" | "forwards" | "identity" | "nodes" | "onChanged" | "onError" | "payments" | "removeAllListeners"
+>;

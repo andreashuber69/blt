@@ -147,6 +147,7 @@ export abstract class Refresher<Name extends string, Data, ServerEmitters extend
 }
 
 /** See {@linkcode Refresher}. */
-export type IRefresher<Name extends string, Data> =
-    // eslint-disable-next-line max-len
-    Pick<Refresher<Name, Data, Emitters<string>>, "data" | "delayMilliseconds" | "onChanged" | "onError" | "removeAllListeners">;
+export type IRefresher<Name extends string, Data> = Pick<
+    Refresher<Name, Data, Emitters<string>>,
+    "data" | "delayMilliseconds" | "onChanged" | "onError" | "removeAllListeners"
+>;

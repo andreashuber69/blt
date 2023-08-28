@@ -12,8 +12,11 @@ import { toSortedArray } from "./toSortedArray.js";
  * array, the elements of which implement {@linkcode TimeBoundElement}. This enables refreshing data partially, by
  * restricting the time period into which newly created elements can fall.
  */
-// eslint-disable-next-line max-len
-export abstract class PartialRefresher<Name extends string, Element extends TimeBoundElement, ServerEmitters extends Emitters<string>> extends Refresher<Name, Element[], ServerEmitters> {
+export abstract class PartialRefresher<
+    Name extends string,
+    Element extends TimeBoundElement,
+    ServerEmitters extends Emitters<string>,
+> extends Refresher<Name, Element[], ServerEmitters> {
     /** The number of days in the past data should be retrieved. */
     public readonly days: number;
 
@@ -112,6 +115,7 @@ export abstract class PartialRefresher<Name extends string, Element extends Time
 
 
 /** See {@linkcode PartialRefresher}. */
-export type IPartialRefresher<Name extends string, Element extends TimeBoundElement> =
-    // eslint-disable-next-line max-len
-    Pick<PartialRefresher<Name, Element, Emitters<string>>, "data" | "days" | "delayMilliseconds" | "onChanged" | "onError" | "removeAllListeners">;
+export type IPartialRefresher<Name extends string, Element extends TimeBoundElement> = Pick<
+    PartialRefresher<Name, Element, Emitters<string>>,
+    "data" | "days" | "delayMilliseconds" | "onChanged" | "onError" | "removeAllListeners"
+>;
