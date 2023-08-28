@@ -40,7 +40,7 @@ export class ForwardsRefresher extends PartialRefresher<"forwards", Forward, For
 
     protected override equals(a: Forward, b: Forward) {
         return a.created_at === b.created_at && a.fee === b.fee && a.tokens === b.tokens &&
-        a.incoming_channel === b.incoming_channel && a.outgoing_channel === b.outgoing_channel;
+            a.incoming_channel === b.incoming_channel && a.outgoing_channel === b.outgoing_channel;
     }
 
     protected override onServerChanged({ forwards }: ForwardsEmitters, listener: () => void) {
