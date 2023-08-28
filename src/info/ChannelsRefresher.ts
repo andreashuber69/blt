@@ -1,15 +1,9 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
-import type {
-    AuthenticatedLightningArgs,
-    SubscribeToChannelsChannelClosedEvent,
-    SubscribeToChannelsChannelOpenedEvent,
-    SubscribeToForwardsForwardEvent,
-} from "lightning";
+import type { AuthenticatedLightningArgs, SubscribeToForwardsForwardEvent } from "lightning";
 import { subscribeToChannels, subscribeToForwards, subscribeToPayments } from "lightning";
 
 import type { Channel } from "../lightning/getChannels.js";
 import { getChannels } from "../lightning/getChannels.js";
-import { log } from "../Logger.js";
 import { FullRefresher } from "./FullRefresher.js";
 import type { Emitters, IRefresher } from "./Refresher.js";
 
@@ -41,13 +35,8 @@ export class ChannelsRefresher extends FullRefresher<"channels", Channel, Channe
     }
 
     protected override onServerChanged({ channels, forwards, payments }: ChannelsEmitters, listener: () => void) {
-        const handler = (e: SubscribeToChannelsChannelClosedEvent | SubscribeToChannelsChannelOpenedEvent) => {
-            log(`channel ${e.id}`);
-            listener();
-        };
-
-        channels.on("channel_opened", handler);
-        channels.on("channel_closed", handler);
+        channels.on("channel_opened", listener);
+        channels.on("channel_closed", listener);
 
         // The Channel type also exposes the local and remote balance, which is why we need to refresh when a forward or
         // a payment has been made.

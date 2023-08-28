@@ -1,10 +1,9 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
-import type { AuthenticatedLightningArgs, SubscribeToPaymentsPaymentEvent } from "lightning";
+import type { AuthenticatedLightningArgs } from "lightning";
 import { subscribeToPayments } from "lightning";
 
 import type { Payment } from "../lightning/getPayments.js";
 import { getPayments } from "../lightning/getPayments.js";
-import { log } from "../Logger.js";
 import { PartialRefresher } from "./PartialRefresher.js";
 import type { IPartialRefresher } from "./PartialRefresher.js";
 import type { Emitters } from "./Refresher.js";
@@ -44,10 +43,7 @@ export class PaymentsRefresher extends PartialRefresher<"payments", Payment, Pay
     }
 
     protected override onServerChanged({ payments }: PaymentsEmitters, listener: () => void) {
-        payments.on("confirmed", (e: SubscribeToPaymentsPaymentEvent) => {
-            log(`payment ${e.created_at}: ${e.tokens}`);
-            listener();
-        });
+        payments.on("confirmed", listener);
     }
 
     protected override createServerEmitters(lndArgs: AuthenticatedLightningArgs) {

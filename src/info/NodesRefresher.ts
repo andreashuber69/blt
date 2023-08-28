@@ -1,16 +1,10 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import CappedPromise from "capped-promise";
-import type {
-    AuthenticatedLightningArgs,
-    SubscribeToChannelsChannelActiveChangedEvent,
-    SubscribeToChannelsChannelClosedEvent,
-    SubscribeToChannelsChannelOpenedEvent,
-} from "lightning";
+import type { AuthenticatedLightningArgs } from "lightning";
 import { getNode, subscribeToChannels } from "lightning";
 
 import { getChannels } from "../lightning/getChannels.js";
 import type { Node } from "../lightning/Node.js";
-import { log } from "../Logger.js";
 import { FullRefresher } from "./FullRefresher.js";
 import type { Emitters, IRefresher } from "./Refresher.js";
 
@@ -47,22 +41,9 @@ export class NodesRefresher extends FullRefresher<"nodes", Node, NodesEmitters> 
     }
 
     protected override onServerChanged({ channels }: NodesEmitters, listener: () => void) {
-        const openClosedHandler = (
-            e: SubscribeToChannelsChannelClosedEvent | SubscribeToChannelsChannelOpenedEvent,
-        ) => {
-            log(`channel ${e.id}`);
-            listener();
-        };
-
-        channels.on("channel_opened", openClosedHandler);
-        channels.on("channel_closed", openClosedHandler);
-
-        const isActiveHandler = (e: SubscribeToChannelsChannelActiveChangedEvent) => {
-            log(`channel ${e.transaction_id}x${e.transaction_vout}: ${e.is_active}`);
-            listener();
-        };
-
-        channels.on("channel_active_changed", isActiveHandler);
+        channels.on("channel_opened", listener);
+        channels.on("channel_closed", listener);
+        channels.on("channel_active_changed", listener);
     }
 
     protected override createServerEmitters(lndArgs: AuthenticatedLightningArgs) {

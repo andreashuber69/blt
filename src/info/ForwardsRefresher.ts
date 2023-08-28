@@ -4,7 +4,6 @@ import { subscribeToForwards } from "lightning";
 
 import type { Forward } from "../lightning/getForwards.js";
 import { getForwards } from "../lightning/getForwards.js";
-import { log } from "../Logger.js";
 import { PartialRefresher } from "./PartialRefresher.js";
 import type { IPartialRefresher } from "./PartialRefresher.js";
 import type { Emitters } from "./Refresher.js";
@@ -46,7 +45,6 @@ export class ForwardsRefresher extends PartialRefresher<"forwards", Forward, For
     protected override onServerChanged({ forwards }: ForwardsEmitters, listener: () => void) {
         forwards.on("forward", (e: SubscribeToForwardsForwardEvent) => {
             if (e.is_confirmed) {
-                log(`forward ${e.at}: ${JSON.stringify(e, undefined, 2)}`);
                 listener();
             }
         });
