@@ -78,16 +78,20 @@ export class Actions {
             return createAction(0.5, "Not enough forwards");
         }
 
-        const minFraction = minChannelBalanceFraction;
-
-        if (outgoingFraction < minFraction) {
-            return createAction(minFraction, "The outgoing percentage of the total flow is below the minimum");
+        if (outgoingFraction < minChannelBalanceFraction) {
+            return createAction(
+                minChannelBalanceFraction,
+                "The outgoing percentage of the total flow is below the minimum",
+            );
         }
 
-        const maxFraction = 1 - minChannelBalanceFraction;
+        const maxChannelBalanceFraction = 1 - minChannelBalanceFraction;
 
-        if (outgoingFraction > maxFraction) {
-            return createAction(maxFraction, "The outgoing percentage of the total flow is above the maximum");
+        if (outgoingFraction > maxChannelBalanceFraction) {
+            return createAction(
+                maxChannelBalanceFraction,
+                "The outgoing percentage of the total flow is above the maximum",
+            );
         }
 
         return createAction(outgoingFraction, "Outgoing percentage");
