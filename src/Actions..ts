@@ -67,7 +67,7 @@ export class Actions {
             id,
             variable: "balance",
             actual: local_balance,
-            target: targetFraction * capacity,
+            target: Math.round(targetFraction * capacity),
             max: capacity,
             reason: `${reasonPrefix}, set target to ${Math.round(targetFraction * 100)}%.`,
         } as const);
