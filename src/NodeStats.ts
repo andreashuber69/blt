@@ -34,10 +34,13 @@ export class NodeStats {
 
             // A forward should no longer appear in the statistics if one or both channels have been closed.
             if (incoming && outgoing) {
+                incoming.forwards.incomingMaxTokens = Math.max(incoming.forwards.incomingMaxTokens, tokens);
                 ++incoming.forwards.incomingCount;
-                incoming.forwards.incomingTokens += tokens;
+                incoming.forwards.incomingTotalTokens += tokens;
+
+                outgoing.forwards.outgoingMaxTokens = Math.max(outgoing.forwards.outgoingMaxTokens, tokens);
                 ++outgoing.forwards.outgoingCount;
-                outgoing.forwards.outgoingTokens += tokens;
+                outgoing.forwards.outgoingTotalTokens += tokens;
             }
         }
     }

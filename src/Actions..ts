@@ -55,7 +55,7 @@ export class Actions {
     private static getChannelAction(
         id: string,
         {
-            forwards: { incomingTokens, incomingCount, outgoingTokens, outgoingCount },
+            forwards: { incomingTotalTokens, incomingCount, outgoingTotalTokens, outgoingCount },
             capacity,
             // eslint-disable-next-line @typescript-eslint/naming-convention
             local_balance,
@@ -72,7 +72,7 @@ export class Actions {
             reason: `${reasonPrefix}, set target to ${Math.round(targetFraction * 100)}%.`,
         } as const);
 
-        const outgoingFraction = outgoingTokens / (incomingTokens + outgoingTokens);
+        const outgoingFraction = outgoingTotalTokens / (incomingTotalTokens + outgoingTotalTokens);
 
         if (Number.isNaN(outgoingFraction) || incomingCount + outgoingCount < minChannelForwards) {
             return createAction(0.5, "Not enough forwards");
