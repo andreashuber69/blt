@@ -139,6 +139,6 @@ export class Actions {
             );
         }
 
-        return createAction(outgoingFraction, "Outgoing percentage");
+        return createAction(outgoingFraction, "Balance");
     }
 }
