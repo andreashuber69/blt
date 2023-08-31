@@ -1,7 +1,7 @@
 import type { ChannelStats } from "./ChannelStats.js";
 import type { NodeStats } from "./NodeStats.js";
 
-interface ActionsConfig {
+export interface ActionsConfig {
     /**
      * The minimal balance a channel should have as a fraction of its capacity.
      * @description For example, 0.25 means that suggested actions will not let the local balance fall below 1/4 of the
@@ -17,9 +17,12 @@ interface ActionsConfig {
 
     /** The minimum number of past forwards routed through a channel to consider it as indicative for future flow. */
     readonly minChannelForwards: number;
+
+    /** The fraction to be added to the largest past forward to allow for even larger forwards in the future. */
+    readonly largestForwardMarginFraction: number;
 }
 
-interface Action {
+export interface Action {
     readonly entity: "channel" | "node";
     readonly id?: string;
     readonly variable: string;
@@ -34,15 +37,13 @@ export class Actions {
         const actions =
             Object.entries(channels).map(([id, stats]) => Actions.getChannelAction(id, stats, config));
 
-        const totalTarget = actions.reduce((p, { target }) => p + target, 0);
-
         actions.push({
             entity: "node",
             variable: "balance",
             actual: actions.reduce((p, { actual }) => p + actual, 0),
-            target: totalTarget,
+            target: actions.reduce((p, { target }) => p + target, 0),
             max: actions.reduce((p, { max }) => p + max, 0),
-            reason: `To reach optimal balance for all channels, the total balance should be ${totalTarget}.`,
+            reason: "This is the sum of the target balances of all channels.",
         });
 
         const fraction = config.maxDeviationFraction;
@@ -68,9 +69,9 @@ export class Actions {
                 outgoingCount,
             },
         }: ChannelStats,
-        { minChannelBalanceFraction, minChannelForwards }: ActionsConfig,
+        { minChannelBalanceFraction, minChannelForwards, largestForwardMarginFraction }: ActionsConfig,
     ): Action {
-        const createAction = (target: number, reasonPrefix: string) => {
+        const createAction = (target: number, reason: string) => {
             const roundedTarget = Math.round(target);
             return {
                 entity: "channel",
@@ -79,39 +80,48 @@ export class Actions {
                 actual: local_balance,
                 target: roundedTarget,
                 max: capacity,
-                reason: `${reasonPrefix}, set target to ${roundedTarget}.`,
+                reason,
             } as const;
         };
 
-        const optimalBalance = outgoingTotalTokens / (incomingTotalTokens + outgoingTotalTokens) * capacity;
+        const optimalBalance = Math.round(outgoingTotalTokens / (incomingTotalTokens + outgoingTotalTokens) * capacity);
 
         if (Number.isNaN(optimalBalance) || incomingCount + outgoingCount < minChannelForwards) {
-            return createAction(0.5 * capacity, "Not enough forwards");
-        }
-
-        // What minimum balance do we need to have in the channel to accommodate the largest single outgoing forward?
-        // To accommodate still larger future forwards, we add 10%.
-        const minForwardBalance = outgoingMaxTokens * 1.1;
-
-        // What maximum balance can we have in the channel to accommodate the largest single incoming forward? To
-        // accommodate still larger future forwards, we add 10%.
-        const maxForwardBalance = (capacity - (incomingMaxTokens * 1.1));
-
-        if (minForwardBalance > maxForwardBalance) {
-            // eslint-disable-next-line no-warning-comments
-            // TODO: "Increase" the channel capacity?
             return createAction(
-                (minForwardBalance + maxForwardBalance) / 2,
-                "The sum of the largest incoming and outgoing forwards + 10% exceeds the capacity",
+                0.5 * capacity,
+                `There are fewer forwards (${incomingCount + outgoingCount}) than required (${minChannelForwards}) ` +
+                "to predict future flow.",
             );
         }
 
-        const minBalance = minChannelBalanceFraction * capacity;
+        const largestForwardMarginMultiplier = (1 + largestForwardMarginFraction);
+
+        // What minimum balance do we need to have in the channel to accommodate the largest outgoing forward?
+        // To accommodate still larger future forwards, we apply the multiplier.
+        const minLargestForwardBalance = Math.round(outgoingMaxTokens * largestForwardMarginMultiplier);
+
+        // What maximum balance can we have in the channel to accommodate the largest incoming forward? To
+        // accommodate still larger future forwards, we apply the multiplier.
+        const maxLargestForwardBalance = Math.round(capacity - (incomingMaxTokens * largestForwardMarginMultiplier));
+
+        const marginPercent = Math.round(largestForwardMarginFraction * 100);
+
+        if (minLargestForwardBalance > maxLargestForwardBalance) {
+            // eslint-disable-next-line no-warning-comments
+            // TODO: "Increase" the channel capacity?
+            return createAction(
+                (minLargestForwardBalance + maxLargestForwardBalance) / 2,
+                `The sum of the largest incoming (${incomingMaxTokens}) and outgoing (${outgoingMaxTokens}) forwards ` +
+                `+ ${marginPercent}% exceeds the capacity of ${capacity}.`,
+            );
+        }
+
+        const minBalance = Math.round(minChannelBalanceFraction * capacity);
 
         if (optimalBalance < minBalance) {
             return createAction(
                 minBalance,
-                "The optimal balance according to flow is below the minimum balance",
+                `The optimal balance according to flow (${optimalBalance}) is below the minimum balance.`,
             );
         }
 
@@ -120,30 +130,30 @@ export class Actions {
         if (optimalBalance > maxBalance) {
             return createAction(
                 maxBalance,
-                "The optimal balance according to flow is above the maximum balance",
+                `The optimal balance according to flow (${optimalBalance}) is above the maximum balance.`,
             );
         }
 
-        if (optimalBalance < minForwardBalance) {
+        if (optimalBalance < minLargestForwardBalance) {
             // eslint-disable-next-line no-warning-comments
             // TODO: "Increase" the channel capacity?
             return createAction(
-                minForwardBalance,
-                "The optimal balance according to flow is below the minimum balance to accommodate " +
-                "the largest past outgoing forward + 10%",
+                minLargestForwardBalance,
+                `The optimal balance according to flow (${optimalBalance}) is below the minimum balance to route ` +
+                `the largest past outgoing forward of ${outgoingMaxTokens} + ${marginPercent}%.`,
             );
         }
 
-        if (optimalBalance > maxForwardBalance) {
+        if (optimalBalance > maxLargestForwardBalance) {
             // eslint-disable-next-line no-warning-comments
             // TODO: "Increase" the channel capacity?
             return createAction(
-                maxForwardBalance,
-                "The optimal balance according to flow is above the maximum balance to accommodate " +
-                "the largest past incoming forward + 10%",
+                maxLargestForwardBalance,
+                `The optimal balance according to flow (${optimalBalance}) is above the maximum balance to route ` +
+                `the largest past incoming forward of ${incomingMaxTokens} + ${marginPercent}%.`,
             );
         }
 
-        return createAction(optimalBalance, "Optimal balance according to flow");
+        return createAction(optimalBalance, "This is the optimal balance according to flow.");
     }
 }

@@ -4,6 +4,7 @@ import { createRequire } from "node:module";
 import type { AuthenticatedLightningArgs } from "lightning";
 import { deletePayment } from "lightning";
 
+import type { ActionsConfig } from "./Actions..js";
 import { Actions } from "./Actions..js";
 import { NodeInfo } from "./info/NodeInfo.js";
 import { connectLnd } from "./lightning/connectLnd.js";
@@ -39,7 +40,7 @@ const deleteOldFailedPayments = async (authenticatedLnd: AuthenticatedLightningA
 
 const getInfo = async (authenticatedLnd: AuthenticatedLightningArgs) => {
     log("Getting node info...");
-    return await NodeInfo.get({ lndArgs: authenticatedLnd });
+    return await NodeInfo.get({ lndArgs: authenticatedLnd, days: 30 });
 };
 
 try {
@@ -68,7 +69,14 @@ while (true) {
         while (true) {
             const stats = new NodeStats(info);
             log(JSON.stringify(stats.channels, undefined, 2));
-            const config = { minChannelBalanceFraction: 0.25, maxDeviationFraction: 0.05, minChannelForwards: 10 };
+
+            const config: ActionsConfig = {
+                minChannelBalanceFraction: 0.25,
+                maxDeviationFraction: 0.05,
+                minChannelForwards: 20,
+                largestForwardMarginFraction: 0.1,
+            };
+
             const actions = Actions.get(stats, config);
             log(JSON.stringify(actions, undefined, 2));
 
