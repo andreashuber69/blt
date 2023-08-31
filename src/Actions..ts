@@ -70,75 +70,80 @@ export class Actions {
         }: ChannelStats,
         { minChannelBalanceFraction, minChannelForwards }: ActionsConfig,
     ): Action {
-        const createAction = (targetFraction: number, reasonPrefix: string) => ({
-            entity: "channel",
-            id: `${id} (${partnerAlias})`,
-            variable: "balance",
-            actual: local_balance,
-            target: Math.round(targetFraction * capacity),
-            max: capacity,
-            reason: `${reasonPrefix}, set target to ${Math.round(targetFraction * 100)}%.`,
-        } as const);
+        const createAction = (target: number, reasonPrefix: string) => {
+            const roundedTarget = Math.round(target);
+            return {
+                entity: "channel",
+                id: `${id} (${partnerAlias})`,
+                variable: "balance",
+                actual: local_balance,
+                target: roundedTarget,
+                max: capacity,
+                reason: `${reasonPrefix}, set target to ${roundedTarget}.`,
+            } as const;
+        };
 
-        const outgoingFraction = outgoingTotalTokens / (incomingTotalTokens + outgoingTotalTokens);
+        const optimalBalance = outgoingTotalTokens / (incomingTotalTokens + outgoingTotalTokens) * capacity;
 
-        if (Number.isNaN(outgoingFraction) || incomingCount + outgoingCount < minChannelForwards) {
-            return createAction(0.5, "Not enough forwards");
+        if (Number.isNaN(optimalBalance) || incomingCount + outgoingCount < minChannelForwards) {
+            return createAction(0.5 * capacity, "Not enough forwards");
         }
 
-        // What minimum fraction do we need to have in the channel to accommodate the largest single outgoing forward?
+        // What minimum balance do we need to have in the channel to accommodate the largest single outgoing forward?
         // To accommodate still larger future forwards, we add 10%.
-        const minForwardFraction = outgoingMaxTokens * 1.1 / capacity;
+        const minForwardBalance = outgoingMaxTokens * 1.1;
 
-        // What maximum fraction can we have in the channel to accommodate the largest single incoming forward? To
+        // What maximum balance can we have in the channel to accommodate the largest single incoming forward? To
         // accommodate still larger future forwards, we add 10%.
-        const maxForwardFraction = (capacity - (incomingMaxTokens * 1.1)) / capacity;
+        const maxForwardBalance = (capacity - (incomingMaxTokens * 1.1));
 
-        if (minForwardFraction > maxForwardFraction) {
+        if (minForwardBalance > maxForwardBalance) {
             // eslint-disable-next-line no-warning-comments
             // TODO: "Increase" the channel capacity?
             return createAction(
-                (minForwardFraction + maxForwardFraction) / 2,
+                (minForwardBalance + maxForwardBalance) / 2,
                 "The sum of the largest incoming and outgoing forwards + 10% exceeds the capacity",
             );
         }
 
-        if (outgoingFraction < minChannelBalanceFraction) {
+        const minBalance = minChannelBalanceFraction * capacity;
+
+        if (optimalBalance < minBalance) {
             return createAction(
-                minChannelBalanceFraction,
-                "The outgoing percentage of the total flow is below the minimum",
+                minBalance,
+                "The optimal balance according to flow is below the minimum balance",
             );
         }
 
-        const maxChannelBalanceFraction = 1 - minChannelBalanceFraction;
+        const maxBalance = capacity - minBalance;
 
-        if (outgoingFraction > maxChannelBalanceFraction) {
+        if (optimalBalance > maxBalance) {
             return createAction(
-                maxChannelBalanceFraction,
-                "The outgoing percentage of the total flow is above the maximum",
+                maxBalance,
+                "The optimal balance according to flow is above the maximum balance",
             );
         }
 
-        if (outgoingFraction < minForwardFraction) {
+        if (optimalBalance < minForwardBalance) {
             // eslint-disable-next-line no-warning-comments
             // TODO: "Increase" the channel capacity?
             return createAction(
-                minForwardFraction,
-                "The minimum balance to accommodate the largest outgoing forward + 10% is larger than the " +
-                "outgoing percentage of the total flow",
+                minForwardBalance,
+                "The optimal balance according to flow is below the minimum balance to accommodate " +
+                "the largest past outgoing forward + 10%",
             );
         }
 
-        if (outgoingFraction > maxForwardFraction) {
+        if (optimalBalance > maxForwardBalance) {
             // eslint-disable-next-line no-warning-comments
             // TODO: "Increase" the channel capacity?
             return createAction(
-                maxForwardFraction,
-                "The maximum balance to accommodate the largest incoming forward + 10% is smaller than the " +
-                "outgoing percentage of the total flow",
+                maxForwardBalance,
+                "The optimal balance according to flow is above the maximum balance to accommodate " +
+                "the largest past incoming forward + 10%",
             );
         }
 
-        return createAction(outgoingFraction, "Balance");
+        return createAction(optimalBalance, "Optimal balance according to flow");
     }
 }
