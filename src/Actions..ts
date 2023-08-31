@@ -15,7 +15,7 @@ interface ActionsConfig {
      */
     readonly maxDeviationFraction: number;
 
-    /** The minimum number of past forwards rounded through a channel to consider it as indicative for future flow. */
+    /** The minimum number of past forwards routed through a channel to consider it as indicative for future flow. */
     readonly minChannelForwards: number;
 }
 
