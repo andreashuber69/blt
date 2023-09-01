@@ -49,18 +49,18 @@
   },
   "dependencies": {
     "capped-promise": "^1.0.3",
-    "lightning": "^9.12.0",
+    "lightning": "^9.13.0",
     "tslib": "^2.6.2"
   },
   "devDependencies": {
-    "@andreashuber69/eslint-config": "^1.1.51",
+    "@andreashuber69/eslint-config": "^1.1.52",
     "@tsconfig/node-lts-strictest-esm": "^18.12.1",
     "@types/node": "^18.17.12",
     "c8": "^8.0.1",
     "coveralls": "^3.1.1",
-    "cspell": "^7.1.1",
+    "cspell": "^7.3.2",
     "markdownlint-cli": "^0.35.0",
-    "tsx": "^3.12.7",
+    "tsx": "^3.12.8",
     "typedoc": "^0.25.0",
     "typescript": "^5.2.2",
     "vite": "^4.4.9"
