@@ -118,7 +118,7 @@ export class Actions {
             return createAction(
                 0.5 * capacity,
                 `There are fewer forwards (${incomingCount + outgoingCount}) than required (${minChannelForwards}) ` +
-                "to predict future flow.",
+                "to predict future flow, defaulting to half the capacity.",
             );
         }
 
@@ -138,9 +138,9 @@ export class Actions {
             // eslint-disable-next-line no-warning-comments
             // TODO: "Increase" the channel capacity?
             return createAction(
-                (minLargestForwardBalance + maxLargestForwardBalance) / 2,
+                0.5 * capacity,
                 `The sum of the largest incoming (${incomingMaxTokens}) and outgoing (${outgoingMaxTokens}) forwards ` +
-                `+ ${marginPercent}% exceeds the capacity of ${capacity}.`,
+                `+ ${marginPercent}% exceeds the capacity of ${capacity}, defaulting to half the capacity.`,
             );
         }
 
