@@ -43,7 +43,6 @@ export class NodesRefresher extends FullRefresher<"nodes", Node, NodesEmitters> 
     protected override onServerChanged({ channels }: NodesEmitters, listener: () => void) {
         channels.on("channel_opened", listener);
         channels.on("channel_closed", listener);
-        channels.on("channel_active_changed", listener);
     }
 
     protected override createServerEmitters(lndArgs: AuthenticatedLightningArgs) {
