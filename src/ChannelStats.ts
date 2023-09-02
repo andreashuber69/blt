@@ -8,6 +8,11 @@ type ChannelProperties = Omit<Channel, "id"> & { readonly partnerAlias?: string 
 export const getNewChannelStats = (props: ChannelProperties) => ({
     ...props,
     forwards: getNewForwardStats(),
+    history: new Array<{
+        time: string;
+        amount: number;
+        fee?: number;
+    }>(),
 });
 
 export type ChannelStats = DeepReadonly<ReturnType<typeof getNewChannelStats>>;
