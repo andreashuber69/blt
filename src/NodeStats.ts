@@ -28,7 +28,7 @@ export class NodeStats {
         ));
 
         // eslint-disable-next-line @typescript-eslint/naming-convention
-        for (const { incoming_channel, outgoing_channel, tokens } of forwards) {
+        for (const { incoming_channel, outgoing_channel, tokens } of [...forwards].reverse()) {
             const incoming = this.channelsImpl[incoming_channel];
             const outgoing = this.channelsImpl[outgoing_channel];
 
