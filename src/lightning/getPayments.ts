@@ -10,6 +10,6 @@ export const getPayments = (args: GetPaymentsArgs) => getPaginatedArrayData(lndG
 export type Payment = Readonly<
     Pick<
         YieldType<ReturnType<typeof getPayments>>,
-        "created_at" | "destination" | "fee" | "id" | "is_confirmed" | "tokens"
+        "attempts" | "created_at" | "destination" | "fee" | "id" | "is_confirmed" | "tokens"
     >
 >;
