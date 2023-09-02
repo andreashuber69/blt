@@ -8,5 +8,3 @@ export const getNewForwardStats = () => ({
     outgoingCount: 0,
     outgoingTotalTokens: 0,
 });
-
-export type ForwardStats = Readonly<ReturnType<typeof getNewForwardStats>>;
