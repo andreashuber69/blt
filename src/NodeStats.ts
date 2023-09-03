@@ -17,7 +17,7 @@ export class NodeStats {
     ): INodeStats {
         const nodesMap = Object.fromEntries(nodes.map((n) => [n.id, n]));
 
-        const channelStats = Object.fromEntries(channels.map(
+        const channelsImpl = Object.fromEntries(channels.map(
             // eslint-disable-next-line @typescript-eslint/naming-convention
             ({ id, capacity, local_balance, partner_public_key, remote_balance }) => [
                 id,
@@ -34,8 +34,8 @@ export class NodeStats {
         ));
 
         for (const forward of forwards) {
-            NodeStats.updateStats(channelStats, "incomingForwards", forward);
-            NodeStats.updateStats(channelStats, "outgoingForwards", forward);
+            NodeStats.updateStats(channelsImpl, "incomingForwards", forward);
+            NodeStats.updateStats(channelsImpl, "outgoingForwards", forward);
         }
 
         // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -47,13 +47,13 @@ export class NodeStats {
             if (confirmed?.confirmed_at) {
                 // eslint-disable-next-line @typescript-eslint/naming-convention
                 const { confirmed_at, route: { hops } } = confirmed;
-                const outgoing = channelStats[hops.at(0)?.channel ?? ""];
+                const outgoing = channelsImpl[hops.at(0)?.channel ?? ""];
 
                 if (outgoing) {
                     outgoing.history.push({ time: confirmed_at, amount: tokens + fee });
                 }
 
-                const incoming = channelStats[hops.at(-1)?.channel ?? ""];
+                const incoming = channelsImpl[hops.at(-1)?.channel ?? ""];
 
                 if (incoming) {
                     incoming.history.push({ time: confirmed_at, amount: -tokens });
@@ -61,11 +61,11 @@ export class NodeStats {
             }
         }
 
-        for (const channel of Object.values(channelStats)) {
+        for (const channel of Object.values(channelsImpl)) {
             channel.history.sort((a, b) => -a.time.localeCompare(b.time));
         }
 
-        return new NodeStats(channelStats);
+        return new NodeStats(channelsImpl);
     }
 
     private static updateStats(
