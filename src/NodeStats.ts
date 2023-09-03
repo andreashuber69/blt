@@ -9,6 +9,7 @@ export class NodeStats {
         channels: { data: channels },
         nodes: { data: nodes },
         forwards: { data: forwards },
+        payments: { data: payments },
     }: INodeInfo) {
         const nodesMap = Object.fromEntries(nodes.map((n) => [n.id, n]));
 
@@ -32,14 +33,34 @@ export class NodeStats {
             this.updateStats("incomingForwards", forward);
             this.updateStats("outgoingForwards", forward);
         }
+
+        for (const { attempts, tokens, fee } of payments) {
+            const confirmed = attempts.filter((a) => a.is_confirmed)?.at(0);
+
+            if (confirmed?.confirmed_at) {
+                // eslint-disable-next-line @typescript-eslint/naming-convention
+                const { confirmed_at, route: { hops } } = confirmed;
+                const outgoing = this.channelsImpl[hops.at(0)?.channel ?? ""];
+
+                if (outgoing) {
+                    outgoing.history.push({ time: confirmed_at, amount: tokens + fee });
+                }
+
+                const incoming = this.channelsImpl[hops.at(-1)?.channel ?? ""];
+
+                if (incoming) {
+                    incoming.history.push({ time: confirmed_at, amount: -tokens });
+                }
+            }
+        }
+
+        for (const channel of Object.values(this.channelsImpl)) {
+            channel.history.sort((a, b) => -a.time.localeCompare(b.time));
+        }
     }
 
     public get channels(): Readonly<Record<string, ChannelStats>> {
         return this.channelsImpl;
-    }
-
-    private static getAmounts(prop: "incomingForwards" | "outgoingForwards", tokens: number, fee: number) {
-        return prop === "incomingForwards" ? { amount: -tokens - fee, fee } : { amount: tokens };
     }
 
     private readonly channelsImpl: Readonly<Record<string, ReturnType<typeof getNewChannelStats>>>;
@@ -56,7 +77,8 @@ export class NodeStats {
             /* eslint-enable @typescript-eslint/naming-convention */
         }: Forward,
     ) {
-        const stats = this.channelsImpl[prop === "incomingForwards" ? incoming_channel : outgoing_channel];
+        const isOutgoing = prop === "outgoingForwards";
+        const stats = this.channelsImpl[isOutgoing ? outgoing_channel : incoming_channel];
         const forwardStats = stats?.[prop];
 
         if (forwardStats) {
@@ -64,7 +86,11 @@ export class NodeStats {
             ++forwardStats.count;
             forwardStats.totalTokens += tokens;
 
-            stats.history.push({ time: created_at, ...NodeStats.getAmounts(prop, tokens, fee) });
+            stats.history.push({
+                time: created_at,
+                amount: isOutgoing ? tokens : -tokens - fee,
+                ...(isOutgoing ? { fee } : {}),
+            });
         }
     }
 }
