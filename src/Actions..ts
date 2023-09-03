@@ -63,7 +63,7 @@ export interface Action {
 export class Actions {
     public static get({ channels }: INodeStats, config: ActionsConfig) {
         const actions =
-            Object.entries(channels).map(([id, stats]) => Actions.getChannelAction(id, stats, config));
+            [...channels.entries()].map(([id, stats]) => Actions.getChannelAction(id, stats, config));
 
         actions.push({
             entity: "node",

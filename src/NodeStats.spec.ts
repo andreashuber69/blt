@@ -135,7 +135,7 @@ const nodeInfo: INodeInfo = {
 };
 
 const verifyFlow = (
-    channels: Readonly<Record<string, Readonly<ChannelStats>>>,
+    channels: ReadonlyMap<string, Readonly<ChannelStats>>,
     channel: string,
     incomingMaxTokens: number,
     incomingCount: number,
@@ -145,7 +145,7 @@ const verifyFlow = (
     outgoingTotalTokens: number,
 ) => {
     it(channel, () => {
-        const channelStats = channels[channel];
+        const channelStats = channels.get(channel);
         assert(channelStats);
         const { incomingForwards: incoming, outgoingForwards: outgoing } = channelStats;
         assert(incoming.maxTokens === incomingMaxTokens);
@@ -162,7 +162,7 @@ describe(NodeStats.name, () => {
         describe("should contain the correct flows", () => {
             const { channels } = NodeStats.get(nodeInfo);
 
-            assert(Object.keys(channels).length === nodeInfo.channels.data.length);
+            assert([...channels.keys()].length === nodeInfo.channels.data.length);
             verifyFlow(channels, "0x3609x2", 43_497, 2, 79_446, 0, 0, 0);
             verifyFlow(channels, "0x1657x1", 0, 0, 0, 61_526, 7, 338_005);
             verifyFlow(channels, "0x3609x1", 61_526, 4, 198_243, 0, 0, 0);

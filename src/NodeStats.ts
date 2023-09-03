@@ -4,7 +4,7 @@ import { getNewChannelStats } from "./ChannelStats.js";
 import type { INodeInfo } from "./info/NodeInfo.js";
 import type { Forward } from "./lightning/getForwards.js";
 
-type ChannelsImpl = Readonly<Record<string, ReturnType<typeof getNewChannelStats>>>;
+type ChannelsImpl = Map<string, ReturnType<typeof getNewChannelStats>>;
 
 export class NodeStats {
     public static get(
@@ -15,14 +15,14 @@ export class NodeStats {
             payments: { data: payments },
         }: INodeInfo,
     ): INodeStats {
-        const nodesMap = Object.fromEntries(nodes.map((n) => [n.id, n]));
+        const nodesMap = new Map(nodes.map((n) => [n.id, n]));
 
-        const channelsImpl = Object.fromEntries(channels.map(
+        const channelsImpl = new Map(channels.map(
             // eslint-disable-next-line @typescript-eslint/naming-convention
             ({ id, capacity, local_balance, partner_public_key, remote_balance }) => [
                 id,
                 getNewChannelStats({
-                    partnerAlias: nodesMap[id]?.alias,
+                    partnerAlias: nodesMap.get(id)?.alias,
                     capacity,
                     /* eslint-disable @typescript-eslint/naming-convention */
                     local_balance,
@@ -47,13 +47,13 @@ export class NodeStats {
             if (confirmed?.confirmed_at) {
                 // eslint-disable-next-line @typescript-eslint/naming-convention
                 const { confirmed_at, route: { hops } } = confirmed;
-                const outgoing = channelsImpl[hops.at(0)?.channel ?? ""];
+                const outgoing = channelsImpl.get(hops.at(0)?.channel ?? "");
 
                 if (outgoing) {
                     outgoing.history.push({ time: confirmed_at, amount: tokens + fee });
                 }
 
-                const incoming = channelsImpl[hops.at(-1)?.channel ?? ""];
+                const incoming = channelsImpl.get(hops.at(-1)?.channel ?? "");
 
                 if (incoming) {
                     incoming.history.push({ time: confirmed_at, amount: -tokens });
@@ -61,7 +61,7 @@ export class NodeStats {
             }
         }
 
-        for (const channel of Object.values(channelsImpl)) {
+        for (const channel of channelsImpl.values()) {
             channel.history.sort((a, b) => -a.time.localeCompare(b.time));
         }
 
@@ -82,7 +82,7 @@ export class NodeStats {
         }: Forward,
     ) {
         const isOutgoing = prop === "outgoingForwards";
-        const stats = channelsImpl[isOutgoing ? outgoing_channel : incoming_channel];
+        const stats = channelsImpl.get(isOutgoing ? outgoing_channel : incoming_channel);
         const forwardStats = stats?.[prop];
 
         if (forwardStats) {
@@ -100,7 +100,7 @@ export class NodeStats {
         }
     }
 
-    private constructor(public readonly channels: Readonly<Record<string, ChannelStats>>) {}
+    private constructor(public readonly channels: ReadonlyMap<string, ChannelStats>) {}
 }
 
 export type INodeStats = Pick<NodeStats, "channels">;
