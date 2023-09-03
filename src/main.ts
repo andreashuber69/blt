@@ -67,7 +67,7 @@ while (true) {
 
         // eslint-disable-next-line no-constant-condition
         while (true) {
-            const stats = new NodeStats(info);
+            const stats = NodeStats.get(info);
             log(JSON.stringify(stats.channels, undefined, 2));
 
             const config: ActionsConfig = {

@@ -160,7 +160,7 @@ const verifyFlow = (
 describe(NodeStats.name, () => {
     describe("channels", () => {
         describe("should contain the correct flows", () => {
-            const { channels } = new NodeStats(nodeInfo);
+            const { channels } = NodeStats.get(nodeInfo);
 
             assert(Object.keys(channels).length === nodeInfo.channels.data.length);
             verifyFlow(channels, "0x3609x2", 43_497, 2, 79_446, 0, 0, 0);

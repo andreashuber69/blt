@@ -7,12 +7,12 @@ import type { Forward } from "./lightning/getForwards.js";
 type ChannelsImpl = Readonly<Record<string, ReturnType<typeof getNewChannelStats>>>;
 
 export class NodeStats {
-    public constructor({
+    public static get({
         channels: { data: channels },
         nodes: { data: nodes },
         forwards: { data: forwards },
         payments: { data: payments },
-    }: INodeInfo) {
+    }: INodeInfo): INodeStats {
         const nodesMap = Object.fromEntries(nodes.map((n) => [n.id, n]));
 
         const channelsImpl = Object.fromEntries(channels.map(
@@ -60,7 +60,7 @@ export class NodeStats {
             channel.history.sort((a, b) => -a.time.localeCompare(b.time));
         }
 
-        this.channelsImpl = channelsImpl;
+        return new NodeStats(channelsImpl);
     }
 
     public get channels(): Readonly<Record<string, ChannelStats>> {
@@ -97,5 +97,7 @@ export class NodeStats {
         }
     }
 
-    private readonly channelsImpl: ChannelsImpl;
+    private constructor(private readonly channelsImpl: ChannelsImpl) {}
 }
+
+export type INodeStats = Pick<NodeStats, "channels">;

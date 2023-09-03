@@ -1,5 +1,5 @@
 import type { ChannelStats } from "./ChannelStats.js";
-import type { NodeStats } from "./NodeStats.js";
+import type { INodeStats } from "./NodeStats.js";
 
 export interface ActionsConfig {
     /**
@@ -61,7 +61,7 @@ export interface Action {
  * should therefore define how these actions should be implemented.
  */
 export class Actions {
-    public static get({ channels }: NodeStats, config: ActionsConfig) {
+    public static get({ channels }: INodeStats, config: ActionsConfig) {
         const actions =
             Object.entries(channels).map(([id, stats]) => Actions.getChannelAction(id, stats, config));
 
