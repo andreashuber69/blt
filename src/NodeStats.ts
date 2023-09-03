@@ -2,6 +2,7 @@
 import type { ChannelStats } from "./ChannelStats.js";
 import { getNewChannelStats } from "./ChannelStats.js";
 import type { INodeInfo } from "./info/NodeInfo.js";
+import type { Forward } from "./lightning/getForwards.js";
 
 export class NodeStats {
     public constructor({
@@ -27,10 +28,9 @@ export class NodeStats {
             ],
         ));
 
-        // eslint-disable-next-line @typescript-eslint/naming-convention
-        for (const { incoming_channel, outgoing_channel, tokens } of [...forwards].reverse()) {
-            this.updateStats("incomingForwards", this.channelsImpl[incoming_channel] ?? {}, tokens);
-            this.updateStats("outgoingForwards", this.channelsImpl[outgoing_channel] ?? {}, tokens);
+        for (const forward of forwards) {
+            this.updateStats("incomingForwards", forward);
+            this.updateStats("outgoingForwards", forward);
         }
     }
 
@@ -38,17 +38,33 @@ export class NodeStats {
         return this.channelsImpl;
     }
 
+    private static getAmounts(prop: "incomingForwards" | "outgoingForwards", tokens: number, fee: number) {
+        return prop === "incomingForwards" ? { amount: -tokens - fee, fee } : { amount: tokens };
+    }
+
     private readonly channelsImpl: Readonly<Record<string, ReturnType<typeof getNewChannelStats>>>;
 
     private updateStats(
         prop: "incomingForwards" | "outgoingForwards",
-        { [prop]: stats }: Partial<(typeof this.channelsImpl)[string]>,
-        tokens: number,
+        {
+            /* eslint-disable @typescript-eslint/naming-convention */
+            created_at,
+            fee,
+            incoming_channel,
+            outgoing_channel,
+            tokens,
+            /* eslint-enable @typescript-eslint/naming-convention */
+        }: Forward,
     ) {
-        if (stats) {
-            stats.maxTokens = Math.max(stats.maxTokens, tokens);
-            ++stats.count;
-            stats.totalTokens += tokens;
+        const stats = this.channelsImpl[prop === "incomingForwards" ? incoming_channel : outgoing_channel];
+        const forwardStats = stats?.[prop];
+
+        if (forwardStats) {
+            forwardStats.maxTokens = Math.max(forwardStats.maxTokens, tokens);
+            ++forwardStats.count;
+            forwardStats.totalTokens += tokens;
+
+            stats.history.push({ time: created_at, ...NodeStats.getAmounts(prop, tokens, fee) });
         }
     }
 }
