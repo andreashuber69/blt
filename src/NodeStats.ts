@@ -4,6 +4,8 @@ import { getNewChannelStats } from "./ChannelStats.js";
 import type { INodeInfo } from "./info/NodeInfo.js";
 import type { Forward } from "./lightning/getForwards.js";
 
+type ChannelsImpl = Readonly<Record<string, ReturnType<typeof getNewChannelStats>>>;
+
 export class NodeStats {
     public constructor({
         channels: { data: channels },
@@ -13,7 +15,7 @@ export class NodeStats {
     }: INodeInfo) {
         const nodesMap = Object.fromEntries(nodes.map((n) => [n.id, n]));
 
-        this.channelsImpl = Object.fromEntries(channels.map(
+        const channelsImpl = Object.fromEntries(channels.map(
             // eslint-disable-next-line @typescript-eslint/naming-convention
             ({ id, capacity, local_balance, partner_public_key, remote_balance }) => [
                 id,
@@ -30,8 +32,8 @@ export class NodeStats {
         ));
 
         for (const forward of forwards) {
-            this.updateStats("incomingForwards", forward);
-            this.updateStats("outgoingForwards", forward);
+            NodeStats.updateStats(channelsImpl, "incomingForwards", forward);
+            NodeStats.updateStats(channelsImpl, "outgoingForwards", forward);
         }
 
         for (const { attempts, tokens, fee } of payments) {
@@ -40,13 +42,13 @@ export class NodeStats {
             if (confirmed?.confirmed_at) {
                 // eslint-disable-next-line @typescript-eslint/naming-convention
                 const { confirmed_at, route: { hops } } = confirmed;
-                const outgoing = this.channelsImpl[hops.at(0)?.channel ?? ""];
+                const outgoing = channelsImpl[hops.at(0)?.channel ?? ""];
 
                 if (outgoing) {
                     outgoing.history.push({ time: confirmed_at, amount: tokens + fee });
                 }
 
-                const incoming = this.channelsImpl[hops.at(-1)?.channel ?? ""];
+                const incoming = channelsImpl[hops.at(-1)?.channel ?? ""];
 
                 if (incoming) {
                     incoming.history.push({ time: confirmed_at, amount: -tokens });
@@ -54,18 +56,19 @@ export class NodeStats {
             }
         }
 
-        for (const channel of Object.values(this.channelsImpl)) {
+        for (const channel of Object.values(channelsImpl)) {
             channel.history.sort((a, b) => -a.time.localeCompare(b.time));
         }
+
+        this.channelsImpl = channelsImpl;
     }
 
     public get channels(): Readonly<Record<string, ChannelStats>> {
         return this.channelsImpl;
     }
 
-    private readonly channelsImpl: Readonly<Record<string, ReturnType<typeof getNewChannelStats>>>;
-
-    private updateStats(
+    private static updateStats(
+        channelsImpl: ChannelsImpl,
         prop: "incomingForwards" | "outgoingForwards",
         {
             /* eslint-disable @typescript-eslint/naming-convention */
@@ -78,7 +81,7 @@ export class NodeStats {
         }: Forward,
     ) {
         const isOutgoing = prop === "outgoingForwards";
-        const stats = this.channelsImpl[isOutgoing ? outgoing_channel : incoming_channel];
+        const stats = channelsImpl[isOutgoing ? outgoing_channel : incoming_channel];
         const forwardStats = stats?.[prop];
 
         if (forwardStats) {
@@ -93,4 +96,6 @@ export class NodeStats {
             });
         }
     }
+
+    private readonly channelsImpl: ChannelsImpl;
 }
