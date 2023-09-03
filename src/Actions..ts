@@ -88,14 +88,8 @@ export class Actions {
             capacity,
             // eslint-disable-next-line @typescript-eslint/naming-convention
             local_balance,
-            forwards: {
-                incomingMaxTokens,
-                incomingTotalTokens,
-                incomingCount,
-                outgoingMaxTokens,
-                outgoingTotalTokens,
-                outgoingCount,
-            },
+            incomingForwards: incoming,
+            outgoingForwards: outgoing,
         }: ChannelStats,
         { minChannelBalanceFraction, minChannelForwards, largestForwardMarginFraction }: ActionsConfig,
     ): Action {
@@ -112,12 +106,13 @@ export class Actions {
             } as const;
         };
 
-        const optimalBalance = Math.round(outgoingTotalTokens / (incomingTotalTokens + outgoingTotalTokens) * capacity);
+        const optimalBalance =
+            Math.round(outgoing.totalTokens / (incoming.totalTokens + outgoing.totalTokens) * capacity);
 
-        if (Number.isNaN(optimalBalance) || incomingCount + outgoingCount < minChannelForwards) {
+        if (Number.isNaN(optimalBalance) || incoming.count + outgoing.count < minChannelForwards) {
             return createAction(
                 0.5 * capacity,
-                `There are fewer forwards (${incomingCount + outgoingCount}) than required (${minChannelForwards}) ` +
+                `There are fewer forwards (${incoming.count + outgoing.count}) than required (${minChannelForwards}) ` +
                 "to predict future flow, defaulting to half the capacity.",
             );
         }
@@ -126,11 +121,11 @@ export class Actions {
 
         // What minimum balance do we need to have in the channel to accommodate the largest outgoing forward?
         // To accommodate still larger future forwards, we apply the multiplier.
-        const minLargestForwardBalance = Math.round(outgoingMaxTokens * largestForwardMarginMultiplier);
+        const minLargestForwardBalance = Math.round(outgoing.maxTokens * largestForwardMarginMultiplier);
 
         // What maximum balance can we have in the channel to accommodate the largest incoming forward? To
         // accommodate still larger future forwards, we apply the multiplier.
-        const maxLargestForwardBalance = Math.round(capacity - (incomingMaxTokens * largestForwardMarginMultiplier));
+        const maxLargestForwardBalance = Math.round(capacity - (incoming.maxTokens * largestForwardMarginMultiplier));
 
         const marginPercent = Math.round(largestForwardMarginFraction * 100);
 
@@ -139,8 +134,8 @@ export class Actions {
             // TODO: "Increase" the channel capacity?
             return createAction(
                 0.5 * capacity,
-                `The sum of the largest incoming (${incomingMaxTokens}) and outgoing (${outgoingMaxTokens}) forwards ` +
-                `+ ${marginPercent}% exceeds the capacity of ${capacity}, defaulting to half the capacity.`,
+                `The sum of the largest incoming (${incoming.maxTokens}) and outgoing (${outgoing.maxTokens}) ` +
+                `forwards + ${marginPercent}% exceeds the capacity of ${capacity}, defaulting to half the capacity.`,
             );
         }
 
@@ -168,7 +163,7 @@ export class Actions {
             return createAction(
                 minLargestForwardBalance,
                 `The optimal balance according to flow (${optimalBalance}) is below the minimum balance to route ` +
-                `the largest past outgoing forward of ${outgoingMaxTokens} + ${marginPercent}%.`,
+                `the largest past outgoing forward of ${outgoing.maxTokens} + ${marginPercent}%.`,
             );
         }
 
@@ -178,7 +173,7 @@ export class Actions {
             return createAction(
                 maxLargestForwardBalance,
                 `The optimal balance according to flow (${optimalBalance}) is above the maximum balance to route ` +
-                `the largest past incoming forward of ${incomingMaxTokens} + ${marginPercent}%.`,
+                `the largest past incoming forward of ${incoming.maxTokens} + ${marginPercent}%.`,
             );
         }
 

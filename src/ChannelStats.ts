@@ -7,7 +7,8 @@ type ChannelProperties = Omit<Channel, "id"> & { readonly partnerAlias?: string 
 
 export const getNewChannelStats = (props: ChannelProperties) => ({
     ...props,
-    forwards: getNewForwardStats(),
+    incomingForwards: getNewForwardStats(),
+    outgoingForwards: getNewForwardStats(),
     history: new Array<{
         time: string;
         amount: number;

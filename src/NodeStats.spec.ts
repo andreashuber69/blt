@@ -147,13 +147,13 @@ const verifyFlow = (
     it(channel, () => {
         const channelStats = channels[channel];
         assert(channelStats);
-        const { forwards } = channelStats;
-        assert(forwards.incomingMaxTokens === incomingMaxTokens);
-        assert(forwards.incomingCount === incomingCount);
-        assert(forwards.incomingTotalTokens === incomingTotalTokens);
-        assert(forwards.outgoingMaxTokens === outgoingMaxTokens);
-        assert(forwards.outgoingCount === outgoingCount);
-        assert(forwards.outgoingTotalTokens === outgoingTotalTokens);
+        const { incomingForwards: incoming, outgoingForwards: outgoing } = channelStats;
+        assert(incoming.maxTokens === incomingMaxTokens);
+        assert(incoming.count === incomingCount);
+        assert(incoming.totalTokens === incomingTotalTokens);
+        assert(outgoing.maxTokens === outgoingMaxTokens);
+        assert(outgoing.count === outgoingCount);
+        assert(outgoing.totalTokens === outgoingTotalTokens);
     });
 };
 
