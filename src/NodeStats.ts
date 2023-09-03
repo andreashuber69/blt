@@ -29,19 +29,8 @@ export class NodeStats {
 
         // eslint-disable-next-line @typescript-eslint/naming-convention
         for (const { incoming_channel, outgoing_channel, tokens } of [...forwards].reverse()) {
-            const incoming = this.channelsImpl[incoming_channel];
-            const outgoing = this.channelsImpl[outgoing_channel];
-
-            // A forward should no longer appear in the statistics if one or both channels have been closed.
-            if (incoming && outgoing) {
-                incoming.incomingForwards.maxTokens = Math.max(incoming.incomingForwards.maxTokens, tokens);
-                ++incoming.incomingForwards.count;
-                incoming.incomingForwards.totalTokens += tokens;
-
-                outgoing.outgoingForwards.maxTokens = Math.max(outgoing.outgoingForwards.maxTokens, tokens);
-                ++outgoing.outgoingForwards.count;
-                outgoing.outgoingForwards.totalTokens += tokens;
-            }
+            this.updateStats("incomingForwards", this.channelsImpl[incoming_channel] ?? {}, tokens);
+            this.updateStats("outgoingForwards", this.channelsImpl[outgoing_channel] ?? {}, tokens);
         }
     }
 
@@ -50,4 +39,16 @@ export class NodeStats {
     }
 
     private readonly channelsImpl: Readonly<Record<string, ReturnType<typeof getNewChannelStats>>>;
+
+    private updateStats(
+        prop: "incomingForwards" | "outgoingForwards",
+        { [prop]: stats }: Partial<(typeof this.channelsImpl)[string]>,
+        tokens: number,
+    ) {
+        if (stats) {
+            stats.maxTokens = Math.max(stats.maxTokens, tokens);
+            ++stats.count;
+            stats.totalTokens += tokens;
+        }
+    }
 }

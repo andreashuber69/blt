@@ -1,7 +1,12 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import type { DeepReadonly } from "./DeepReadonly.js";
-import { getNewForwardStats } from "./ForwardStats.js";
 import type { Channel } from "./lightning/getChannels.js";
+
+const getNewForwardStats = () => ({
+    maxTokens: 0,
+    count: 0,
+    totalTokens: 0,
+});
 
 type ChannelProperties = Omit<Channel, "id"> & { readonly partnerAlias?: string | undefined };
 
