@@ -10,6 +10,6 @@ export const getForwards = (args: GetForwardsArgs) => getPaginatedArrayData(lndG
 export type Forward = Readonly<
     Pick<
         YieldType<ReturnType<typeof getForwards>>,
-        "created_at" | "fee" | "incoming_channel" | "outgoing_channel" | "tokens"
+        "created_at" | "fee_mtokens" | "incoming_channel" | "mtokens" | "outgoing_channel"
     >
 >;

@@ -38,7 +38,7 @@ export class ForwardsRefresher extends PartialRefresher<"forwards", Forward, For
     }
 
     protected override equals(a: Forward, b: Forward) {
-        return a.created_at === b.created_at && a.fee === b.fee && a.tokens === b.tokens &&
+        return a.created_at === b.created_at && a.fee_mtokens === b.fee_mtokens && a.mtokens === b.mtokens &&
             a.incoming_channel === b.incoming_channel && a.outgoing_channel === b.outgoing_channel;
     }
 

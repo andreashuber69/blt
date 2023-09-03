@@ -38,8 +38,11 @@ export class NodeStats {
             NodeStats.updateStats(channelStats, "outgoingForwards", forward);
         }
 
-        for (const { attempts, tokens, fee } of payments) {
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        for (const { attempts, mtokens, fee_mtokens } of payments) {
             const confirmed = attempts.filter((a) => a.is_confirmed)?.at(0);
+            const tokens = Number(mtokens) / 1000;
+            const fee = Number(fee_mtokens) / 1000;
 
             if (confirmed?.confirmed_at) {
                 // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -71,10 +74,10 @@ export class NodeStats {
         {
             /* eslint-disable @typescript-eslint/naming-convention */
             created_at,
-            fee,
+            fee_mtokens,
             incoming_channel,
+            mtokens,
             outgoing_channel,
-            tokens,
             /* eslint-enable @typescript-eslint/naming-convention */
         }: Forward,
     ) {
@@ -83,6 +86,8 @@ export class NodeStats {
         const forwardStats = stats?.[prop];
 
         if (forwardStats) {
+            const tokens = Number(mtokens) / 1000;
+            const fee = Number(fee_mtokens) / 1000;
             forwardStats.maxTokens = Math.max(forwardStats.maxTokens, tokens);
             ++forwardStats.count;
             forwardStats.totalTokens += tokens;
