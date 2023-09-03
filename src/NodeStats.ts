@@ -63,10 +63,6 @@ export class NodeStats {
         return new NodeStats(channelsImpl);
     }
 
-    public get channels(): Readonly<Record<string, ChannelStats>> {
-        return this.channelsImpl;
-    }
-
     private static updateStats(
         channelsImpl: ChannelsImpl,
         prop: "incomingForwards" | "outgoingForwards",
@@ -97,7 +93,7 @@ export class NodeStats {
         }
     }
 
-    private constructor(private readonly channelsImpl: ChannelsImpl) {}
+    private constructor(public readonly channels: Readonly<Record<string, ChannelStats>>) {}
 }
 
 export type INodeStats = Pick<NodeStats, "channels">;
