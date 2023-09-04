@@ -50,19 +50,19 @@ export class NodeStats {
                 const outgoing = channelsImpl.get(hops.at(0)?.channel ?? "");
 
                 if (outgoing) {
-                    outgoing.history.push({ time: confirmed_at, amount: tokens + fee });
+                    outgoing.history.set(confirmed_at, { amount: tokens + fee });
                 }
 
                 const incoming = channelsImpl.get(hops.at(-1)?.channel ?? "");
 
                 if (incoming) {
-                    incoming.history.push({ time: confirmed_at, amount: -tokens });
+                    incoming.history.set(confirmed_at, { amount: -tokens });
                 }
             }
         }
 
         for (const channel of channelsImpl.values()) {
-            channel.history.sort((a, b) => -a.time.localeCompare(b.time));
+            channel.history = new Map([...channel.history].sort((a, b) => -a[0].localeCompare(b[0])));
         }
 
         return new NodeStats(channelsImpl);
@@ -92,11 +92,10 @@ export class NodeStats {
             ++forwardStats.count;
             forwardStats.totalTokens += tokens;
 
-            stats.history.push({
-                time: created_at,
-                amount: isOutgoing ? tokens : -tokens - fee,
-                ...(isOutgoing ? { fee } : {}),
-            });
+            stats.history.set(
+                created_at,
+                { amount: isOutgoing ? tokens : -tokens - fee, ...(isOutgoing ? { fee } : {}) },
+            );
         }
     }
 
