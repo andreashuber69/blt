@@ -40,23 +40,23 @@ export class NodeStats {
 
         // eslint-disable-next-line @typescript-eslint/naming-convention
         for (const { attempts, mtokens, fee_mtokens } of payments) {
-            const confirmed = attempts.filter((a) => a.is_confirmed)?.at(0);
             const tokens = Number(mtokens) / 1000;
             const fee = Number(fee_mtokens) / 1000;
 
-            if (confirmed?.confirmed_at) {
-                // eslint-disable-next-line @typescript-eslint/naming-convention
-                const { confirmed_at, route: { hops } } = confirmed;
-                const outgoing = channelsImpl.get(hops.at(0)?.channel ?? "");
+            // eslint-disable-next-line @typescript-eslint/naming-convention
+            for (const { is_confirmed, confirmed_at, route: { hops } } of attempts) {
+                if (is_confirmed && confirmed_at) {
+                    const outgoing = channelsImpl.get(hops.at(0)?.channel ?? "");
 
-                if (outgoing) {
-                    outgoing.history.set(confirmed_at, { amount: tokens + fee });
-                }
+                    if (outgoing) {
+                        outgoing.history.set(confirmed_at, { amount: tokens + fee });
+                    }
 
-                const incoming = channelsImpl.get(hops.at(-1)?.channel ?? "");
+                    const incoming = channelsImpl.get(hops.at(-1)?.channel ?? "");
 
-                if (incoming) {
-                    incoming.history.set(confirmed_at, { amount: -tokens });
+                    if (incoming) {
+                        incoming.history.set(confirmed_at, { amount: -tokens });
+                    }
                 }
             }
         }
