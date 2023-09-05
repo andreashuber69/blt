@@ -100,12 +100,10 @@ export class NodeStats {
         }
     }
 
-    private static add(history: Map<string, HistoryValue>, key: string, value: HistoryValue) {
-        if (history.has(key)) {
-            throw new Error(`Duplicate key ${key} in history.`);
+    private static add(history: Map<string, HistoryValue[]>, key: string, value: HistoryValue) {
+        if (!history.get(key)?.push(value)) {
+            history.set(key, [value]);
         }
-
-        history.set(key, value);
     }
 
     private constructor(public readonly channels: ReadonlyMap<string, ChannelStats>) {}

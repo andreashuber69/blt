@@ -34,7 +34,7 @@ export const getNewChannelStats = (props: ChannelProperties) => ({
      * channel, an algorithm can iterate through the history and just add {@linkcode HistoryValue.amount} to get the
      * balance before the point in time of the current history element being iterated over.
      */
-    history: new Map<string, HistoryValue>(),
+    history: new Map<string, HistoryValue[]>(),
 });
 
 export type ChannelStats = DeepReadonly<ReturnType<typeof getNewChannelStats>>;
