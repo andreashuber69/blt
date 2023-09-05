@@ -1,5 +1,5 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
-import type { ChannelStats } from "./ChannelStats.js";
+import type { ChannelStats, HistoryValue } from "./ChannelStats.js";
 import { getNewChannelStats } from "./ChannelStats.js";
 import type { INodeInfo } from "./info/NodeInfo.js";
 import type { Forward } from "./lightning/getForwards.js";
@@ -49,13 +49,13 @@ export class NodeStats {
                     const outgoing = channelsImpl.get(hops.at(0)?.channel ?? "");
 
                     if (outgoing) {
-                        outgoing.history.set(confirmed_at, { amount: tokens + fee });
+                        this.add(outgoing.history, confirmed_at, { amount: tokens + fee });
                     }
 
                     const incoming = channelsImpl.get(hops.at(-1)?.channel ?? "");
 
                     if (incoming) {
-                        incoming.history.set(confirmed_at, { amount: -tokens });
+                        this.add(incoming.history, confirmed_at, { amount: -tokens });
                     }
                 }
             }
@@ -92,11 +92,20 @@ export class NodeStats {
             ++forwardStats.count;
             forwardStats.totalTokens += tokens;
 
-            stats.history.set(
+            this.add(
+                stats.history,
                 created_at,
                 { amount: isOutgoing ? tokens : -tokens - fee, ...(isOutgoing ? { fee } : {}) },
             );
         }
+    }
+
+    private static add(history: Map<string, HistoryValue>, key: string, value: HistoryValue) {
+        if (history.has(key)) {
+            throw new Error(`Duplicate key ${key} in history.`);
+        }
+
+        history.set(key, value);
     }
 
     private constructor(public readonly channels: ReadonlyMap<string, ChannelStats>) {}
