@@ -88,14 +88,15 @@ export class NodeStats {
         if (forwardStats) {
             const tokens = Number(mtokens) / 1000;
             const fee = Number(fee_mtokens) / 1000;
-            forwardStats.maxTokens = Math.max(forwardStats.maxTokens, tokens);
+            const realTokens = isOutgoing ? tokens : tokens + fee;
+            forwardStats.maxTokens = Math.max(forwardStats.maxTokens, realTokens);
             ++forwardStats.count;
-            forwardStats.totalTokens += tokens;
+            forwardStats.totalTokens += realTokens;
 
             this.add(
                 stats.history,
                 created_at,
-                { amount: isOutgoing ? tokens : -tokens - fee, ...(isOutgoing ? { fee } : {}) },
+                { amount: isOutgoing ? realTokens : -realTokens, ...(isOutgoing ? { fee } : {}) },
             );
         }
     }
