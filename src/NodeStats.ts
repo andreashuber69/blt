@@ -96,7 +96,7 @@ export class NodeStats {
             this.add(
                 stats.history,
                 created_at,
-                { amount: isOutgoing ? realTokens : -realTokens, ...(isOutgoing ? { fee } : {}) },
+                isOutgoing ? { amount: realTokens, fee } : { amount: -realTokens },
             );
         }
     }
