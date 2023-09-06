@@ -77,7 +77,7 @@ while (true) {
                 largestForwardMarginFraction: 0.1,
             };
 
-            const actions = Actions.get(stats, config);
+            const actions = [...Actions.get(stats, config)];
             log(JSON.stringify(actions, undefined, 2));
 
             try {

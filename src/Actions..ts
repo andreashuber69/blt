@@ -1,3 +1,4 @@
+// https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import type { ChannelStats } from "./ChannelStats.js";
 import type { INodeStats } from "./NodeStats.js";
 
@@ -62,24 +63,25 @@ export interface Action {
  * should therefore define how these actions should be implemented.
  */
 export class Actions {
-    public static get({ channels }: INodeStats, config: ActionsConfig) {
-        const actions =
-            [...channels.entries()].map(([id, stats]) => Actions.getChannelBalanceAction(id, stats, config));
-
-        actions.push({
+    public static *get({ channels }: INodeStats, config: ActionsConfig) {
+        const nodeBalanceAction = {
             entity: "node",
             variable: "balance",
-            actual: actions.reduce((p, { actual }) => p + actual, 0),
-            target: actions.reduce((p, { target }) => p + target, 0),
-            max: actions.reduce((p, { max }) => p + max, 0),
+            actual: 0,
+            target: 0,
+            max: 0,
             reason: "This is the sum of the target balances of all channels.",
-        });
+        } satisfies Action;
 
-        const fraction = config.maxDeviationFraction;
+        for (const [id, stats] of channels.entries()) {
+            const channelBalanceAction = Actions.getChannelBalanceAction(id, stats, config);
+            nodeBalanceAction.actual += channelBalanceAction.actual;
+            nodeBalanceAction.target += channelBalanceAction.target;
+            nodeBalanceAction.max += channelBalanceAction.max;
+            yield* this.check(channelBalanceAction, config.maxDeviationFraction);
+        }
 
-        return actions.filter(
-            ({ actual, target, max }) => actual < target - (max * fraction) || actual > target + (max * fraction),
-        );
+        yield* this.check(nodeBalanceAction, config.maxDeviationFraction);
     }
 
     private static getChannelBalanceAction(
@@ -180,6 +182,14 @@ export class Actions {
         }
 
         return createAction(optimalBalance, "This is the optimal balance according to flow.");
+    }
+
+    private static *check(action: Action, fraction: number) {
+        const { actual, target, max } = action;
+
+        if (actual < target - (max * fraction) || actual > target + (max * fraction)) {
+            yield action;
+        }
     }
 
     private constructor() { /* Intentionally empty */ }
