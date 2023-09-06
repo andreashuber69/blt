@@ -25,6 +25,7 @@ export interface ActionsConfig {
 export interface Action {
     readonly entity: "channel" | "node";
     readonly id?: string;
+    readonly alias?: string | undefined;
     readonly variable: string;
     readonly actual: number;
     readonly target: number;
@@ -96,7 +97,8 @@ export class Actions {
             const roundedTarget = Math.round(target);
             return {
                 entity: "channel",
-                id: `${id} (${partnerAlias})`,
+                id,
+                alias: partnerAlias,
                 variable: "balance",
                 actual: local_balance,
                 target: roundedTarget,
