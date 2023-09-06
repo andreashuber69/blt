@@ -1,6 +1,6 @@
+// https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import { EventEmitter } from "node:events";
 
-// https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 /** Schedules calls to occur after a given delay. */
 export class Scheduler {
     public constructor(public readonly delayMilliseconds = 10_000) {

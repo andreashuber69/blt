@@ -1,3 +1,4 @@
+// https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 const getCurrentTime = () => `${new Date(Date.now()).toLocaleTimeString(undefined, { hour12: false })}`;
 
 export const log = (message?: unknown) => {
