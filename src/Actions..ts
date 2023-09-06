@@ -63,7 +63,8 @@ export interface Action {
  */
 export class Actions {
     public static get({ channels }: INodeStats, config: ActionsConfig) {
-        const actions = [...channels.entries()].map(([id, stats]) => Actions.getChannelAction(id, stats, config));
+        const actions =
+            [...channels.entries()].map(([id, stats]) => Actions.getChannelBalanceAction(id, stats, config));
 
         actions.push({
             entity: "node",
@@ -81,7 +82,7 @@ export class Actions {
         );
     }
 
-    private static getChannelAction(
+    private static getChannelBalanceAction(
         id: string,
         {
             partnerAlias,
