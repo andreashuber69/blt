@@ -10,16 +10,46 @@ const getNewForwardStats = () => ({
 
 type ChannelProperties = Omit<Channel, "id"> & { readonly partnerAlias?: string | undefined };
 
-/** Contains information about what happened at a point in time in a channel. */
-export interface HistoryValue {
+/** Contains information about a balance change in a channel. */
+export abstract class BalanceChange {
     /**
-     * By what amount did the channel balance change?
-     * @description A positive value means that the channel balance decreased; a negative value means that it increased.
+     * Initializes a new instance.
+     * @param amount By what amount did the channel balance change? A positive value means that the channel balance
+     * decreased; a negative value means that it increased.
      */
-    readonly amount: number;
+    protected constructor(public readonly amount: number) {}
 
-    /** If the the balance change was due to an outgoing forward, contains the fee that was paid. */
-    readonly fee?: number;
+    // https://stackoverflow.com/questions/48829743/why-duck-typing-is-allowed-for-classes-in-typescript
+    // @ts-expect-error TS6133
+    private readonly preventDuckTyping: undefined;
+}
+
+export class Payment extends BalanceChange {
+    public constructor(amount: number) {
+        super(amount);
+    }
+}
+
+export class IncomingForward extends BalanceChange {
+    /**
+     * Initializes a new instance.
+     * @param amount See {@linkcode BalanceChange.constructor}.
+     * @param outgoingChannel The id of the channel the amount was forwarded to.
+     */
+    public constructor(amount: number, public readonly outgoingChannel: string) {
+        super(amount);
+    }
+}
+
+export class OutgoingForward extends BalanceChange {
+    /**
+     * Initializes a new instance.
+     * @param amount See {@linkcode BalanceChange.constructor}.
+     * @param fee The fee that was paid for the forward.
+     */
+    public constructor(amount: number, public readonly fee: number) {
+        super(amount);
+    }
 }
 
 export const getNewChannelStats = (props: ChannelProperties) => ({
@@ -29,12 +59,12 @@ export const getNewChannelStats = (props: ChannelProperties) => ({
 
     /**
      * Contains the balance history of the channel, sorted from latest to earliest. The key is the ISO 8601 date & time.
-     * @description The sort order as well as the fact that {@linkcode HistoryValue.amount} is positive when the
+     * @description The sort order as well as the fact that {@linkcode BalanceChange.amount} is positive when the
      * balance decreased makes balance history reconstruction straight-forward. Starting with the current balance of a
-     * channel, an algorithm can iterate through the history and just add {@linkcode HistoryValue.amount} to get the
+     * channel, an algorithm can iterate through the history and just add {@linkcode BalanceChange.amount} to get the
      * balance before the point in time of the current history element being iterated over.
      */
-    history: new Map<string, HistoryValue[]>(),
+    history: new Map<string, BalanceChange[]>(),
 });
 
 export type ChannelStats = DeepReadonly<ReturnType<typeof getNewChannelStats>>;

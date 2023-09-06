@@ -1,6 +1,6 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
-import type { ChannelStats, HistoryValue } from "./ChannelStats.js";
-import { getNewChannelStats } from "./ChannelStats.js";
+import type { BalanceChange, ChannelStats } from "./ChannelStats.js";
+import { getNewChannelStats, IncomingForward, OutgoingForward, Payment } from "./ChannelStats.js";
 import type { INodeInfo } from "./info/NodeInfo.js";
 import type { Forward } from "./lightning/getForwards.js";
 
@@ -49,13 +49,13 @@ export class NodeStats {
                     const outgoing = channelsImpl.get(hops.at(0)?.channel ?? "");
 
                     if (outgoing) {
-                        this.add(outgoing.history, confirmed_at, { amount: tokens + fee });
+                        this.add(outgoing.history, confirmed_at, new Payment(tokens + fee));
                     }
 
                     const incoming = channelsImpl.get(hops.at(-1)?.channel ?? "");
 
                     if (incoming) {
-                        this.add(incoming.history, confirmed_at, { amount: -tokens });
+                        this.add(incoming.history, confirmed_at, new Payment(-tokens));
                     }
                 }
             }
@@ -96,12 +96,12 @@ export class NodeStats {
             this.add(
                 stats.history,
                 created_at,
-                isOutgoing ? { amount: realTokens, fee } : { amount: -realTokens },
+                isOutgoing ? new OutgoingForward(realTokens, fee) : new IncomingForward(-realTokens, outgoing_channel),
             );
         }
     }
 
-    private static add(history: Map<string, HistoryValue[]>, key: string, value: HistoryValue) {
+    private static add(history: Map<string, BalanceChange[]>, key: string, value: BalanceChange) {
         if (!history.get(key)?.push(value)) {
             history.set(key, [value]);
         }
