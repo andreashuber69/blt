@@ -1,8 +1,8 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import type { BalanceChange, ChannelStats } from "./ChannelStats.js";
 import { getNewChannelStats, IncomingForward, OutgoingForward, Payment } from "./ChannelStats.js";
+import type { ForwardsElement } from "./info/ForwardsRefresher.js";
 import type { INodeInfo } from "./info/NodeInfo.js";
-import type { Forward } from "./lightning/getForwards.js";
 
 type ChannelsImpl = Map<string, ReturnType<typeof getNewChannelStats>>;
 
@@ -94,7 +94,7 @@ export class NodeStats {
             mtokens,
             outgoing_channel,
             /* eslint-enable @typescript-eslint/naming-convention */
-        }: Forward,
+        }: ForwardsElement,
     ) {
         const isOutgoing = prop === "outgoingForwards";
         const stats = channelsImpl.get(isOutgoing ? outgoing_channel : incoming_channel);

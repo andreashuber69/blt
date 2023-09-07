@@ -21,8 +21,10 @@ export interface IForwardsRefresherArgs {
     readonly days?: number;
 }
 
+export type ForwardsElement = Forward;
+
 /** Implements {@linkcode IPartialRefresher} for forwards. */
-export class ForwardsRefresher extends PartialRefresher<"forwards", Forward, ForwardsEmitters> {
+export class ForwardsRefresher extends PartialRefresher<"forwards", ForwardsElement, ForwardsEmitters> {
     /**
      * Creates a new object implementing {@linkcode IPartialRefresher} for forwards.
      * @param args See {@linkcode IForwardsRefresherArgs}.
@@ -37,7 +39,7 @@ export class ForwardsRefresher extends PartialRefresher<"forwards", Forward, For
         return getForwards({ ...lndArgs, after, before });
     }
 
-    protected override equals(a: Forward, b: Forward) {
+    protected override equals(a: ForwardsElement, b: ForwardsElement) {
         return a.created_at === b.created_at && a.fee_mtokens === b.fee_mtokens && a.mtokens === b.mtokens &&
             a.incoming_channel === b.incoming_channel && a.outgoing_channel === b.outgoing_channel;
     }
