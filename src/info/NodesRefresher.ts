@@ -18,8 +18,10 @@ export interface INodesRefresherArgs {
     readonly delayMilliseconds?: number;
 }
 
+export type NodesElement = Node;
+
 /** Implements {@linkcode IRefresher} for partner nodes. */
-export class NodesRefresher extends FullRefresher<"nodes", Node, NodesEmitters> {
+export class NodesRefresher extends FullRefresher<"nodes", NodesElement, NodesEmitters> {
     /**
      * Creates a new object implementing {@linkcode IRefresher} for partner nodes of public channels.
      * @param args See {@linkcode INodesRefresherArgs}.

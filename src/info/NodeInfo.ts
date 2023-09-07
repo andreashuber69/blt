@@ -4,11 +4,11 @@ import { getIdentity } from "lightning";
 
 import type { Payment } from "../lightning/getPayments.js";
 import type { Identity } from "../lightning/Identity.js";
-import type { Node } from "../lightning/Node.js";
 import type { ChannelsElement } from "./ChannelsRefresher.js";
 import { ChannelsRefresher } from "./ChannelsRefresher.js";
 import type { ForwardsElement } from "./ForwardsRefresher.js";
 import { ForwardsRefresher } from "./ForwardsRefresher.js";
+import type { NodesElement } from "./NodesRefresher.js";
 import { NodesRefresher } from "./NodesRefresher.js";
 import type { IPartialRefresher } from "./PartialRefresher.js";
 import { PaymentsRefresher } from "./PaymentsRefresher.js";
@@ -30,7 +30,7 @@ type RefresherProperty<Name extends RefresherName, Data> = {
  */
 export class NodeInfo implements
     RefresherProperty<"channels", ChannelsElement[]>,
-    RefresherProperty<"nodes", Node[]>,
+    RefresherProperty<"nodes", NodesElement[]>,
     RefresherProperty<"forwards", ForwardsElement[]>,
     RefresherProperty<"payments", Payment[]> {
     /**
@@ -87,7 +87,7 @@ export class NodeInfo implements
     private constructor(
         public readonly identity: Identity,
         public readonly channels: IRefresher<"channels", ChannelsElement[]>,
-        public readonly nodes: IRefresher<"nodes", Node[]>,
+        public readonly nodes: IRefresher<"nodes", NodesElement[]>,
         public readonly forwards: IPartialRefresher<"forwards", ForwardsElement>,
         public readonly payments: IPartialRefresher<"payments", Payment>,
     ) {}
