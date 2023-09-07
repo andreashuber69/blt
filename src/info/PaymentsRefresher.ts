@@ -21,8 +21,10 @@ export interface IPaymentsRefresherArgs {
     readonly days?: number;
 }
 
+export type PaymentsElement = Payment;
+
 /** Implements {@linkcode IPartialRefresher} for confirmed payments. */
-export class PaymentsRefresher extends PartialRefresher<"payments", Payment, PaymentsEmitters> {
+export class PaymentsRefresher extends PartialRefresher<"payments", PaymentsElement, PaymentsEmitters> {
     /**
      * Creates a new object implementing {@linkcode IPartialRefresher} for payments.
      * @param args See {@linkcode IPaymentsRefresherArgs}.
@@ -38,7 +40,7 @@ export class PaymentsRefresher extends PartialRefresher<"payments", Payment, Pay
         return getPayments({ ...lndArgs, created_after: after, created_before: before });
     }
 
-    protected override equals(a: Payment, b: Payment) {
+    protected override equals(a: PaymentsElement, b: PaymentsElement) {
         return a.id === b.id;
     }
 

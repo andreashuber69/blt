@@ -2,7 +2,6 @@
 import type { AuthenticatedLightningArgs } from "lightning";
 import { getIdentity } from "lightning";
 
-import type { Payment } from "../lightning/getPayments.js";
 import type { Identity } from "../lightning/Identity.js";
 import type { ChannelsElement } from "./ChannelsRefresher.js";
 import { ChannelsRefresher } from "./ChannelsRefresher.js";
@@ -11,6 +10,7 @@ import { ForwardsRefresher } from "./ForwardsRefresher.js";
 import type { NodesElement } from "./NodesRefresher.js";
 import { NodesRefresher } from "./NodesRefresher.js";
 import type { IPartialRefresher } from "./PartialRefresher.js";
+import type { PaymentsElement } from "./PaymentsRefresher.js";
 import { PaymentsRefresher } from "./PaymentsRefresher.js";
 import type { IRefresher, Refresher } from "./Refresher.js";
 
@@ -32,7 +32,7 @@ export class NodeInfo implements
     RefresherProperty<"channels", ChannelsElement[]>,
     RefresherProperty<"nodes", NodesElement[]>,
     RefresherProperty<"forwards", ForwardsElement[]>,
-    RefresherProperty<"payments", Payment[]> {
+    RefresherProperty<"payments", PaymentsElement[]> {
     /**
      * Gets information about a node.
      * @param args See properties for details.
@@ -89,7 +89,7 @@ export class NodeInfo implements
         public readonly channels: IRefresher<"channels", ChannelsElement[]>,
         public readonly nodes: IRefresher<"nodes", NodesElement[]>,
         public readonly forwards: IPartialRefresher<"forwards", ForwardsElement>,
-        public readonly payments: IPartialRefresher<"payments", Payment>,
+        public readonly payments: IPartialRefresher<"payments", PaymentsElement>,
     ) {}
 
     private forEachRefresher(callback: (refresher: NodeInfo[RefresherName]) => void) {
