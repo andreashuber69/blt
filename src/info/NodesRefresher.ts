@@ -1,10 +1,11 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import CappedPromise from "capped-promise";
 import type { AuthenticatedLightningArgs } from "lightning";
-import { getNode, subscribeToChannels } from "lightning";
+import { subscribeToChannels } from "lightning";
 
 import { getChannels } from "../lightning/getChannels.js";
-import type { Node } from "../lightning/Node.js";
+import type { Node } from "../lightning/getNode.js";
+import { getNode } from "../lightning/getNode.js";
 import { FullRefresher } from "./FullRefresher.js";
 import type { Emitters, IRefresher } from "./Refresher.js";
 
@@ -18,7 +19,7 @@ export interface INodesRefresherArgs {
     readonly delayMilliseconds?: number;
 }
 
-export type NodesElement = Node;
+export type NodesElement = Node & { readonly id: string };
 
 /** Implements {@linkcode IRefresher} for partner nodes. */
 export class NodesRefresher extends FullRefresher<"nodes", NodesElement, NodesEmitters> {
