@@ -2,12 +2,12 @@
 import type { AuthenticatedLightningArgs } from "lightning";
 import { getFeeRates as lndGetFeeRates } from "lightning";
 
+import { arrayPick } from "./arrayPick.js";
 import { getArrayData } from "./getArrayData.js";
 
-export const getFeeRates = async (args: AuthenticatedLightningArgs) =>
-    await getArrayData(lndGetFeeRates, args, "channels");
+const properties = ["base_fee", "fee_rate", "id", "transaction_id", "transaction_vout"] as const;
 
-export type FeeRate = Readonly<Pick<
-    Awaited<ReturnType<typeof getFeeRates>>[number],
-    "base_fee" | "fee_rate" | "id" | "transaction_id" | "transaction_vout"
->>;
+export const getFeeRates = async (args: AuthenticatedLightningArgs) =>
+    arrayPick(await getArrayData(lndGetFeeRates, args, "channels"), properties);
+
+export type FeeRate = Awaited<ReturnType<typeof getFeeRates>>[number];

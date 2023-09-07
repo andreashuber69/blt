@@ -2,14 +2,13 @@
 import type { GetForwardsArgs } from "lightning";
 import { getForwards as lndGetForwards } from "lightning";
 
+import { generatorPick } from "./generatorPick.js";
 import { getPaginatedArrayData } from "./getPaginatedArrayData.js";
 import type { YieldType } from "./YieldType.js";
 
-export const getForwards = (args: GetForwardsArgs) => getPaginatedArrayData(lndGetForwards, args, "forwards");
+const properties = ["created_at", "fee_mtokens", "incoming_channel", "mtokens", "outgoing_channel"] as const;
 
-export type Forward = Readonly<
-    Pick<
-        YieldType<ReturnType<typeof getForwards>>,
-        "created_at" | "fee_mtokens" | "incoming_channel" | "mtokens" | "outgoing_channel"
-    >
->;
+export const getForwards = (args: GetForwardsArgs) =>
+    generatorPick(getPaginatedArrayData(lndGetForwards, args, "forwards"), properties);
+
+export type Forward = YieldType<ReturnType<typeof getForwards>>;

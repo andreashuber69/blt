@@ -2,7 +2,13 @@
 import type { GetFailedPaymentsArgs } from "lightning";
 import { getFailedPayments as lndGetFailedPayments } from "lightning";
 
+import { generatorPick } from "./generatorPick.js";
 import { getPaginatedArrayData } from "./getPaginatedArrayData.js";
+import type { YieldType } from "./YieldType.js";
+
+const properties = ["created_at", "id"] as const;
 
 export const getFailedPayments = (args: GetFailedPaymentsArgs) =>
-    getPaginatedArrayData(lndGetFailedPayments, args, "payments");
+    generatorPick(getPaginatedArrayData(lndGetFailedPayments, args, "payments"), properties);
+
+export type FailedPayment = YieldType<ReturnType<typeof getFailedPayments>>;

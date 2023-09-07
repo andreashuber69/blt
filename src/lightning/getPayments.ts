@@ -2,14 +2,13 @@
 import type { GetPaymentsArgs } from "lightning";
 import { getPayments as lndGetPayments } from "lightning";
 
+import { generatorPick } from "./generatorPick.js";
 import { getPaginatedArrayData } from "./getPaginatedArrayData.js";
 import type { YieldType } from "./YieldType.js";
 
-export const getPayments = (args: GetPaymentsArgs) => getPaginatedArrayData(lndGetPayments, args, "payments");
+const properties = ["attempts", "created_at", "destination", "fee_mtokens", "id", "is_confirmed", "mtokens"] as const;
 
-export type Payment = Readonly<
-    Pick<
-        YieldType<ReturnType<typeof getPayments>>,
-        "attempts" | "created_at" | "destination" | "fee_mtokens" | "id" | "is_confirmed" | "mtokens"
-    >
->;
+export const getPayments = (args: GetPaymentsArgs) =>
+    generatorPick(getPaginatedArrayData(lndGetPayments, args, "payments"), properties);
+
+export type Payment = YieldType<ReturnType<typeof getPayments>>;
