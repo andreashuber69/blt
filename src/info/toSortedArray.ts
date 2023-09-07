@@ -1,7 +1,7 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import type { TimeBoundElement } from "../TimeBoundElement.js";
 
-export const toSortedArray = async <Element extends TimeBoundElement>(generator: AsyncGenerator<Element>) => {
+export const toSortedArray = async <Element extends TimeBoundElement>(generator: AsyncGenerator<Element, void>) => {
     const result = new Array<Element>();
 
     for await (const element of generator) {

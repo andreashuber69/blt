@@ -11,7 +11,7 @@ export const testPaginatedArrayResultFunction = <
     After extends string,
     Before extends string,
 >(
-    func: (args: AuthenticatedLightningArgs<PaginationArgs>) => AsyncGenerator<Element, void, void>,
+    func: (args: AuthenticatedLightningArgs<PaginationArgs>) => AsyncGenerator<Element, void>,
     after: After,
     before: Before,
 ) => {

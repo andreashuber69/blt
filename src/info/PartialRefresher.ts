@@ -56,7 +56,7 @@ export abstract class PartialRefresher<
         lndArgs: AuthenticatedLightningArgs,
         after: string,
         before: string,
-    ): AsyncGenerator<Element>;
+    ): AsyncGenerator<Element, void>;
 
     /** Returns `true` when both elements are equal, otherwise `false`. */
     protected abstract equals(a: Element, b: Element): boolean;
