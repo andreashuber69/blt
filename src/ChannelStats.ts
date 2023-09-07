@@ -1,14 +1,12 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import type { DeepReadonly } from "./DeepReadonly.js";
-import type { Channel } from "./lightning/getChannels.js";
+import type { ChannelProperties } from "./info/ChannelsRefresher.js";
 
 const getNewForwardStats = () => ({
     maxTokens: 0,
     count: 0,
     totalTokens: 0,
 });
-
-type ChannelProperties = Omit<Channel, "id"> & { readonly partnerAlias?: string | undefined };
 
 /** Contains information about a balance change in a channel. */
 export abstract class BalanceChange {
@@ -52,7 +50,9 @@ export class OutgoingForward extends BalanceChange {
     }
 }
 
-export const getNewChannelStats = (props: ChannelProperties) => ({
+export const getNewChannelStats = (
+    props: Omit<ChannelProperties, "id"> & { readonly partnerAlias?: string | undefined },
+) => ({
     ...props,
     incomingForwards: getNewForwardStats(),
     outgoingForwards: getNewForwardStats(),

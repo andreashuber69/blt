@@ -4,6 +4,8 @@ import { subscribeToChannels, subscribeToForwards, subscribeToPayments } from "l
 
 import type { Channel } from "../lightning/getChannels.js";
 import { getChannels } from "../lightning/getChannels.js";
+import type { FeeRate } from "../lightning/getFeeRates.js";
+import { getFeeRates } from "../lightning/getFeeRates.js";
 import { FullRefresher } from "./FullRefresher.js";
 import type { Emitters, IRefresher } from "./Refresher.js";
 
@@ -17,8 +19,10 @@ export interface IChannelsRefresherArgs {
     readonly delayMilliseconds?: number;
 }
 
+export type ChannelProperties = Channel & FeeRate;
+
 /** Implements {@linkcode IRefresher} for public channels. */
-export class ChannelsRefresher extends FullRefresher<"channels", Channel, ChannelsEmitters> {
+export class ChannelsRefresher extends FullRefresher<"channels", ChannelProperties, ChannelsEmitters> {
     /**
      * Creates a new object implementing {@linkcode IRefresher} for public channels.
      * @param args See {@linkcode IChannelsRefresherArgs}.
@@ -30,8 +34,21 @@ export class ChannelsRefresher extends FullRefresher<"channels", Channel, Channe
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     protected override async getAllData(lndArgs: AuthenticatedLightningArgs) {
+        const result = new Array<ChannelProperties>();
+        const feeRates = new Map((await getFeeRates(lndArgs)).map(({ id, ...rest }) => [id, rest]));
+
         // eslint-disable-next-line @typescript-eslint/naming-convention
-        return await getChannels({ ...lndArgs, is_public: true });
+        for (const channel of await getChannels({ ...lndArgs, is_public: true })) {
+            const feeRate = feeRates.get(channel.id);
+
+            if (!feeRate) {
+                throw new Error(`Fee rate missing for channel ${channel.id}.`);
+            }
+
+            result.push({ ...channel, ...feeRate });
+        }
+
+        return result;
     }
 
     protected override onServerChanged({ channels, forwards, payments }: ChannelsEmitters, listener: () => void) {

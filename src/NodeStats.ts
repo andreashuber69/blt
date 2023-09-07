@@ -18,8 +18,19 @@ export class NodeStats {
         const nodesMap = new Map(nodes.map((n) => [n.id, n]));
 
         const channelsImpl = new Map(channels.map(
-            // eslint-disable-next-line @typescript-eslint/naming-convention
-            ({ id, capacity, local_balance, partner_public_key, remote_balance }) => [
+            ({
+                id,
+                capacity,
+                /* eslint-disable @typescript-eslint/naming-convention */
+                local_balance,
+                partner_public_key,
+                remote_balance,
+                base_fee,
+                fee_rate,
+                transaction_id,
+                transaction_vout,
+                /* eslint-enable @typescript-eslint/naming-convention */
+            }) => [
                 id,
                 getNewChannelStats({
                     partnerAlias: nodesMap.get(id)?.alias,
@@ -28,6 +39,10 @@ export class NodeStats {
                     local_balance,
                     partner_public_key,
                     remote_balance,
+                    base_fee,
+                    fee_rate,
+                    transaction_id,
+                    transaction_vout,
                     /* eslint-enable @typescript-eslint/naming-convention */
                 }),
             ],
