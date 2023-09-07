@@ -6,7 +6,7 @@ import type { Forward } from "../lightning/getForwards.js";
 import type { Payment } from "../lightning/getPayments.js";
 import type { Identity } from "../lightning/Identity.js";
 import type { Node } from "../lightning/Node.js";
-import type { ChannelProperties } from "./ChannelsRefresher.js";
+import type { ChannelsElement } from "./ChannelsRefresher.js";
 import { ChannelsRefresher } from "./ChannelsRefresher.js";
 import { ForwardsRefresher } from "./ForwardsRefresher.js";
 import { NodesRefresher } from "./NodesRefresher.js";
@@ -29,7 +29,7 @@ type RefresherProperty<Name extends RefresherName, Data> = {
  * forward may refer to a channel that is no longer open and will thus not appear in {@linkcode NodeInfo.channels}.
  */
 export class NodeInfo implements
-    RefresherProperty<"channels", ChannelProperties[]>,
+    RefresherProperty<"channels", ChannelsElement[]>,
     RefresherProperty<"nodes", Node[]>,
     RefresherProperty<"forwards", Forward[]>,
     RefresherProperty<"payments", Payment[]> {
@@ -86,7 +86,7 @@ export class NodeInfo implements
 
     private constructor(
         public readonly identity: Identity,
-        public readonly channels: IRefresher<"channels", ChannelProperties[]>,
+        public readonly channels: IRefresher<"channels", ChannelsElement[]>,
         public readonly nodes: IRefresher<"nodes", Node[]>,
         public readonly forwards: IPartialRefresher<"forwards", Forward>,
         public readonly payments: IPartialRefresher<"payments", Payment>,

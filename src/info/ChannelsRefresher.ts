@@ -19,10 +19,10 @@ export interface IChannelsRefresherArgs {
     readonly delayMilliseconds?: number;
 }
 
-export type ChannelProperties = Channel & FeeRate;
+export type ChannelsElement = Channel & FeeRate;
 
 /** Implements {@linkcode IRefresher} for public channels. */
-export class ChannelsRefresher extends FullRefresher<"channels", ChannelProperties, ChannelsEmitters> {
+export class ChannelsRefresher extends FullRefresher<"channels", ChannelsElement, ChannelsEmitters> {
     /**
      * Creates a new object implementing {@linkcode IRefresher} for public channels.
      * @param args See {@linkcode IChannelsRefresherArgs}.
@@ -34,7 +34,7 @@ export class ChannelsRefresher extends FullRefresher<"channels", ChannelProperti
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     protected override async getAllData(lndArgs: AuthenticatedLightningArgs) {
-        const result = new Array<ChannelProperties>();
+        const result = new Array<ChannelsElement>();
         const feeRates = new Map((await getFeeRates(lndArgs)).map(({ id, ...rest }) => [id, rest]));
 
         // eslint-disable-next-line @typescript-eslint/naming-convention

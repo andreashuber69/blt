@@ -1,6 +1,6 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import type { DeepReadonly } from "./DeepReadonly.js";
-import type { ChannelProperties } from "./info/ChannelsRefresher.js";
+import type { ChannelsElement } from "./info/ChannelsRefresher.js";
 
 const getNewForwardStats = () => ({
     maxTokens: 0,
@@ -51,7 +51,7 @@ export class OutgoingForward extends BalanceChange {
 }
 
 export const getNewChannelStats = (
-    props: Omit<ChannelProperties, "id"> & { readonly partnerAlias?: string | undefined },
+    props: Omit<ChannelsElement, "id"> & { readonly partnerAlias?: string | undefined },
 ) => ({
     ...props,
     incomingForwards: getNewForwardStats(),
