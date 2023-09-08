@@ -26,16 +26,14 @@ export class NodeStats {
             NodeStats.updateStats(channelsImpl.get(forward.outgoing_channel), true, forward);
         }
 
-        for (const payment of payments) {
-            const { tokens, fee } = this.getTokens(payment);
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        for (const { attempts, confirmed_at } of payments) {
             // eslint-disable-next-line @typescript-eslint/naming-convention
-            const { attempts, confirmed_at } = payment;
-
-            // eslint-disable-next-line @typescript-eslint/naming-convention
-            for (const { is_confirmed, route: { hops } } of attempts) {
+            for (const { is_confirmed, route } of attempts) {
                 if (is_confirmed) {
-                    this.add(this.getHistory(channelsImpl, hops.at(0)), confirmed_at, new Payment(tokens + fee));
-                    this.add(this.getHistory(channelsImpl, hops.at(-1)), confirmed_at, new Payment(-tokens));
+                    const { tokens, fee } = this.getTokens(route);
+                    this.add(this.getHistory(channelsImpl, route.hops.at(0)), confirmed_at, new Payment(tokens + fee));
+                    this.add(this.getHistory(channelsImpl, route.hops.at(-1)), confirmed_at, new Payment(-tokens));
                 }
             }
         }
