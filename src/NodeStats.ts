@@ -34,17 +34,8 @@ export class NodeStats {
             // eslint-disable-next-line @typescript-eslint/naming-convention
             for (const { is_confirmed, confirmed_at, route: { hops } } of attempts) {
                 if (is_confirmed && confirmed_at) {
-                    const outgoing = channelsImpl.get(hops.at(0)?.channel ?? "");
-
-                    if (outgoing) {
-                        this.add(outgoing.history, confirmed_at, new Payment(tokens + fee));
-                    }
-
-                    const incoming = channelsImpl.get(hops.at(-1)?.channel ?? "");
-
-                    if (incoming) {
-                        this.add(incoming.history, confirmed_at, new Payment(-tokens));
-                    }
+                    this.add(this.getHistory(channelsImpl, hops.at(0)), confirmed_at, new Payment(tokens + fee));
+                    this.add(this.getHistory(channelsImpl, hops.at(-1)), confirmed_at, new Payment(-tokens));
                 }
             }
         }
@@ -69,28 +60,31 @@ export class NodeStats {
             /* eslint-enable @typescript-eslint/naming-convention */
         }: ForwardsElement,
     ) {
-        const isOutgoing = prop === "outgoingForwards";
-        const stats = channelsImpl.get(isOutgoing ? outgoing_channel : incoming_channel);
-        const forwardStats = stats?.[prop];
+        const isOut = prop === "outgoingForwards";
+        const { [prop]: stats, history } = channelsImpl.get(isOut ? outgoing_channel : incoming_channel) ?? {};
 
-        if (forwardStats) {
+        if (stats) {
             const tokens = Number(mtokens) / 1000;
             const fee = Number(fee_mtokens) / 1000;
-            const realTokens = isOutgoing ? tokens : tokens + fee;
-            forwardStats.maxTokens = Math.max(forwardStats.maxTokens, realTokens);
-            ++forwardStats.count;
-            forwardStats.totalTokens += realTokens;
+            const realTokens = isOut ? tokens : tokens + fee;
+            stats.maxTokens = Math.max(stats.maxTokens, realTokens);
+            ++stats.count;
+            stats.totalTokens += realTokens;
 
             this.add(
-                stats.history,
+                history,
                 created_at,
-                isOutgoing ? new OutgoingForward(realTokens, fee) : new IncomingForward(-realTokens, outgoing_channel),
+                isOut ? new OutgoingForward(realTokens, fee) : new IncomingForward(-realTokens, outgoing_channel),
             );
         }
     }
 
-    private static add(history: Map<string, BalanceChange[]>, key: string, value: BalanceChange) {
-        if (!history.get(key)?.push(value)) {
+    private static getHistory(channelsImpl: ChannelsImpl, hop: { readonly channel: string } | undefined) {
+        return channelsImpl.get(hop?.channel ?? "")?.history;
+    }
+
+    private static add(history: Map<string, BalanceChange[]> | undefined, key: string, value: BalanceChange) {
+        if (history && !history.get(key)?.push(value)) {
             history.set(key, [value]);
         }
     }
