@@ -32,8 +32,9 @@ export class NodeStats {
             for (const { is_confirmed, route } of attempts) {
                 if (is_confirmed) {
                     const { tokens, fee } = this.getTokens(route);
-                    this.add(this.getHistory(channelsImpl, route.hops.at(0)), confirmed_at, new Payment(tokens + fee));
-                    this.add(this.getHistory(channelsImpl, route.hops.at(-1)), confirmed_at, new Payment(-tokens));
+                    this.add(this.getHistory(channelsImpl, route.hops.at(0)), confirmed_at, new Payment(tokens));
+                    // eslint-disable-next-line max-len
+                    this.add(this.getHistory(channelsImpl, route.hops.at(-1)), confirmed_at, new Payment(-tokens + fee));
                 }
             }
         }
