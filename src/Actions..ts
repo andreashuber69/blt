@@ -78,10 +78,10 @@ export class Actions {
             nodeBalanceAction.actual += channelBalanceAction.actual;
             nodeBalanceAction.target += channelBalanceAction.target;
             nodeBalanceAction.max += channelBalanceAction.max;
-            yield* this.check(channelBalanceAction, config.maxDeviationFraction);
+            yield* this.filterBalanceAction(channelBalanceAction, config.maxDeviationFraction);
         }
 
-        yield* this.check(nodeBalanceAction, config.maxDeviationFraction);
+        yield* this.filterBalanceAction(nodeBalanceAction, config.maxDeviationFraction);
     }
 
     private static getChannelBalanceAction(
@@ -184,7 +184,7 @@ export class Actions {
         return createAction(optimalBalance, "This is the optimal balance according to flow.");
     }
 
-    private static *check(action: Action, fraction: number) {
+    private static *filterBalanceAction(action: Action, fraction: number) {
         const { actual, target, max } = action;
 
         if (actual < target - (max * fraction) || actual > target + (max * fraction)) {
