@@ -26,7 +26,6 @@ export class NodeStats {
             NodeStats.updateStats(channelsImpl.get(forward.outgoing_channel), true, forward);
         }
 
-        // eslint-disable-next-line @typescript-eslint/naming-convention
         for (const payment of payments) {
             const { tokens, fee } = this.getTokens(payment);
 
