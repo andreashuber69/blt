@@ -72,7 +72,7 @@ while (true) {
 
             const config: ActionsConfig = {
                 minChannelBalanceFraction: 0.25,
-                maxDeviationFraction: 0.05,
+                maxBalanceDeviationFraction: 0.05,
                 minChannelForwards: 20,
                 largestForwardMarginFraction: 0.1,
             };

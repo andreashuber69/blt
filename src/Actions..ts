@@ -11,10 +11,10 @@ export interface ActionsConfig {
     readonly minChannelBalanceFraction: number;
 
     /**
-     * The maximum deviation from the target a variable can have as a fraction of its maximum value before corrective\
-     * actions are suggested.
+     * The maximum deviation from the target a channel or node balance can have as a fraction of its maximum value
+     * before corrective actions are suggested.
      */
-    readonly maxDeviationFraction: number;
+    readonly maxBalanceDeviationFraction: number;
 
     /** The minimum number of past forwards routed through a channel to consider it as indicative for future flow. */
     readonly minChannelForwards: number;
@@ -27,6 +27,7 @@ export interface Action {
     readonly entity: "channel" | "node";
     readonly id?: string;
     readonly alias?: string | undefined;
+    readonly priority: number;
     readonly variable: string;
     readonly actual: number;
     readonly target: number;
@@ -64,24 +65,29 @@ export interface Action {
  */
 export class Actions {
     public static *get({ channels }: INodeStats, config: ActionsConfig) {
-        const nodeBalanceAction = {
-            entity: "node",
-            variable: "balance",
-            actual: 0,
-            target: 0,
-            max: 0,
-            reason: "This is the sum of the target balances of all channels.",
-        } satisfies Action;
+        let actual = 0;
+        let target = 0;
+        let max = 0;
 
         for (const [id, stats] of channels.entries()) {
             const channelBalanceAction = Actions.getChannelBalanceAction(id, stats, config);
-            nodeBalanceAction.actual += channelBalanceAction.actual;
-            nodeBalanceAction.target += channelBalanceAction.target;
-            nodeBalanceAction.max += channelBalanceAction.max;
-            yield* this.filterBalanceAction(channelBalanceAction, config);
+            actual += channelBalanceAction.actual;
+            target += channelBalanceAction.target;
+            max += channelBalanceAction.max;
+            yield* this.filterBalanceAction(channelBalanceAction);
         }
 
-        yield* this.filterBalanceAction(nodeBalanceAction, config);
+        const nodeBalanceAction = {
+            entity: "node",
+            variable: "balance",
+            priority: this.getPriority(4, actual, target, config.maxBalanceDeviationFraction * max),
+            actual,
+            target,
+            max,
+            reason: "This is the sum of the target balances of all channels.",
+        } satisfies Action;
+
+        yield* this.filterBalanceAction(nodeBalanceAction);
     }
 
     private static getChannelBalanceAction(
@@ -94,14 +100,22 @@ export class Actions {
             incomingForwards: incoming,
             outgoingForwards: outgoing,
         }: ChannelStats,
-        { minChannelBalanceFraction, minChannelForwards, largestForwardMarginFraction }: ActionsConfig,
+        {
+            minChannelBalanceFraction,
+            maxBalanceDeviationFraction,
+            minChannelForwards,
+            largestForwardMarginFraction,
+        }: ActionsConfig,
     ): Action {
         const createAction = (target: number, reason: string) => {
             const roundedTarget = Math.round(target);
+            const maxBalanceDeviation = maxBalanceDeviationFraction * capacity;
+
             return {
                 entity: "channel",
                 id,
                 alias: partnerAlias,
+                priority: this.getPriority(2, local_balance, roundedTarget, maxBalanceDeviation),
                 variable: "balance",
                 actual: local_balance,
                 target: roundedTarget,
@@ -184,10 +198,12 @@ export class Actions {
         return createAction(optimalBalance, "This is the optimal balance according to flow.");
     }
 
-    private static *filterBalanceAction(action: Action, { maxDeviationFraction: fraction }: ActionsConfig) {
-        const { actual, target, max } = action;
+    private static getPriority(base: number, actual: number, target: number, deviation: number) {
+        return base ** Math.floor(Math.abs(actual - target) / deviation);
+    }
 
-        if (actual < target - (max * fraction) || actual > target + (max * fraction)) {
+    private static *filterBalanceAction(action: Action) {
+        if (action.priority > 1) {
             yield action;
         }
     }
