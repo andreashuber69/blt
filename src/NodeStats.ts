@@ -22,8 +22,8 @@ export class NodeStats {
         ));
 
         for (const forward of forwards) {
-            NodeStats.updateStats(channelsImpl, "incomingForwards", forward);
-            NodeStats.updateStats(channelsImpl, "outgoingForwards", forward);
+            NodeStats.updateStats(channelsImpl.get(forward.incoming_channel), false, forward);
+            NodeStats.updateStats(channelsImpl.get(forward.outgoing_channel), true, forward);
         }
 
         // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -48,34 +48,21 @@ export class NodeStats {
     }
 
     private static updateStats(
-        channelsImpl: ChannelsImpl,
-        prop: "incomingForwards" | "outgoingForwards",
-        {
-            /* eslint-disable @typescript-eslint/naming-convention */
-            created_at,
-            fee_mtokens,
-            incoming_channel,
-            mtokens,
-            outgoing_channel,
-            /* eslint-enable @typescript-eslint/naming-convention */
-        }: ForwardsElement,
+        channelStats: ReturnType<typeof getNewChannelStats> | undefined,
+        isOut: boolean,
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        { created_at, fee_mtokens, mtokens, outgoing_channel }: ForwardsElement,
     ) {
-        const isOut = prop === "outgoingForwards";
-        const { [prop]: stats, history } = channelsImpl.get(isOut ? outgoing_channel : incoming_channel) ?? {};
-
-        if (stats) {
+        if (channelStats) {
+            const { [isOut ? "outgoingForwards" : "incomingForwards"]: forwardStats, history } = channelStats;
             const tokens = Number(mtokens) / 1000;
             const fee = Number(fee_mtokens) / 1000;
-            const realTokens = isOut ? tokens : tokens + fee;
-            stats.maxTokens = Math.max(stats.maxTokens, realTokens);
-            ++stats.count;
-            stats.totalTokens += realTokens;
-
-            this.add(
-                history,
-                created_at,
-                isOut ? new OutgoingForward(realTokens, fee) : new IncomingForward(-realTokens, outgoing_channel),
-            );
+            const real = isOut ? tokens : tokens + fee;
+            forwardStats.maxTokens = Math.max(forwardStats.maxTokens, real);
+            ++forwardStats.count;
+            forwardStats.totalTokens += real;
+            const change = isOut ? new OutgoingForward(real, fee) : new IncomingForward(-real, outgoing_channel);
+            this.add(history, created_at, change);
         }
     }
 
