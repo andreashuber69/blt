@@ -6,7 +6,10 @@ import { generatorPick } from "./generatorPick.js";
 import { getPaginatedArrayData } from "./getPaginatedArrayData.js";
 import type { YieldType } from "./YieldType.js";
 
-const properties = ["attempts", "created_at", "destination", "fee_mtokens", "id", "is_confirmed", "mtokens"] as const;
+const properties =
+    // "created_at" is necessary for partial update (the current getPayments interface only allows to limit the time
+    // span of the creation date). confirmed_at is necessary to establish an accurate balance history of a channel.
+    ["attempts", "confirmed_at", "created_at", "destination", "fee_mtokens", "id", "is_confirmed", "mtokens"] as const;
 
 export const getPayments = (args: GetPaymentsArgs) =>
     generatorPick(getPaginatedArrayData(lndGetPayments, args, "payments"), properties);
