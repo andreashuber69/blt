@@ -107,18 +107,18 @@ export class Actions {
             largestForwardMarginFraction,
         }: ActionsConfig,
     ): Action {
-        const createAction = (target: number, reason: string) => {
-            const roundedTarget = Math.round(target);
+        const createAction = (targetBalance: number, reason: string) => {
+            const target = Math.round(targetBalance);
             const maxBalanceDeviation = maxBalanceDeviationFraction * capacity;
 
             return {
                 entity: "channel",
                 id,
                 alias: partnerAlias,
-                priority: this.getPriority(2, local_balance, roundedTarget, maxBalanceDeviation),
+                priority: this.getPriority(2, local_balance, target, maxBalanceDeviation),
                 variable: "balance",
                 actual: local_balance,
-                target: roundedTarget,
+                target,
                 max: capacity,
                 reason,
             } as const;
