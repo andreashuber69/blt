@@ -109,13 +109,12 @@ export class Actions {
     ): Action {
         const createAction = (targetBalance: number, reason: string) => {
             const target = Math.round(targetBalance);
-            const maxBalanceDeviation = maxBalanceDeviationFraction * capacity;
 
             return {
                 entity: "channel",
                 id,
                 alias: partnerAlias,
-                priority: this.getPriority(2, local_balance, target, maxBalanceDeviation),
+                priority: this.getPriority(2, local_balance, target, maxBalanceDeviationFraction * capacity),
                 variable: "balance",
                 actual: local_balance,
                 target,
