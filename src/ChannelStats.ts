@@ -1,5 +1,4 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
-import type { DeepReadonly } from "./DeepReadonly.js";
 import type { ChannelsElement } from "./info/ChannelsRefresher.js";
 
 const getNewForwardStats = () => ({
@@ -67,4 +66,4 @@ export const getNewChannelStats = (
     history: new Map<string, BalanceChange[]>(),
 });
 
-export type ChannelStats = DeepReadonly<ReturnType<typeof getNewChannelStats>>;
+export type ChannelStats = Readonly<ReturnType<typeof getNewChannelStats>>;
