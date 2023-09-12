@@ -11,4 +11,4 @@ const properties = ["created_at", "fee_mtokens", "incoming_channel", "mtokens", 
 export const getForwards = (args: GetForwardsArgs) =>
     generatorPick(getPaginatedArrayData(lndGetForwards, args, "forwards"), properties);
 
-export type Forward = YieldType<ReturnType<typeof getForwards>>;
+export type Forward = YieldType<typeof getForwards>;

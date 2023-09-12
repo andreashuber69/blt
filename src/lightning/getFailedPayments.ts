@@ -11,4 +11,4 @@ const properties = ["created_at", "id"] as const;
 export const getFailedPayments = (args: GetFailedPaymentsArgs) =>
     generatorPick(getPaginatedArrayData(lndGetFailedPayments, args, "payments"), properties);
 
-export type FailedPayment = YieldType<ReturnType<typeof getFailedPayments>>;
+export type FailedPayment = YieldType<typeof getFailedPayments>;

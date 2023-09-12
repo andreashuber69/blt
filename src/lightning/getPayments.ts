@@ -14,4 +14,4 @@ const properties =
 export const getPayments = (args: GetPaymentsArgs) =>
     generatorPick(getPaginatedArrayData(lndGetPayments, args, "payments"), properties);
 
-export type Payment = YieldType<ReturnType<typeof getPayments>>;
+export type Payment = YieldType<typeof getPayments>;
