@@ -60,7 +60,7 @@ export class NodeStats {
             forwardStats.totalTokens += real;
             // eslint-disable-next-line @typescript-eslint/naming-convention
             const { created_at, outgoing_channel } = forward;
-            const change = isOut ? new OutgoingForward(real, fee) : new IncomingForward(-real, outgoing_channel);
+            const change = isOut ? new OutgoingForward(real, fee) : new IncomingForward(-real, fee, outgoing_channel);
             this.add(history, created_at, change);
         }
     }

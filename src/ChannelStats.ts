@@ -31,9 +31,10 @@ export class IncomingForward extends BalanceChange {
     /**
      * Initializes a new instance.
      * @param amount See {@linkcode BalanceChange.constructor}.
-     * @param outgoingChannel The id of the channel the amount was forwarded to.
+     * @param fee The fee that was paid for the forward.
+     * @param outgoingChannelId The id of the channel the amount was forwarded to.
      */
-    public constructor(amount: number, public readonly outgoingChannel: string) {
+    public constructor(amount: number, public readonly fee: number, public readonly outgoingChannelId: string) {
         super(amount);
     }
 }
