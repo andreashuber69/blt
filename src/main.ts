@@ -75,6 +75,7 @@ while (true) {
                 maxBalanceDeviationFraction: 0.05,
                 minChannelForwards: 20,
                 largestForwardMarginFraction: 0.1,
+                maxFeeRate: 2500,
             };
 
             const actions = [...Actions.get(stats, config)];

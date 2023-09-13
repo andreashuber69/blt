@@ -1,5 +1,7 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import type { ChannelStats } from "./ChannelStats.js";
+import { IncomingForward, OutgoingForward } from "./ChannelStats.js";
+import type { YieldType } from "./lightning/YieldType.js";
 import type { INodeStats } from "./NodeStats.js";
 
 export interface ActionsConfig {
@@ -21,6 +23,9 @@ export interface ActionsConfig {
 
     /** The fraction to be added to the largest past forward to allow for even larger forwards in the future. */
     readonly largestForwardMarginFraction: number;
+
+    /** The maximum fee rate on a channel in PPM. */
+    readonly maxFeeRate: number;
 }
 
 export interface Action {
@@ -36,15 +41,58 @@ export interface Action {
 }
 
 /**
- * Suggests actions for a routing lightning node to get closer to profitability and avoid situations of low liquidity.
- * @description The actions are calculated as outlined below:
+ * Suggests actions for a routing LND node to get closer to profitability and avoid situations of low liquidity.
+ * @description
+ * The actions suggested by this class are made under the following <b>assumptions</b>:
+ * <ul>
+ * <li>No external data logging or storage is necessary, which means that actions are only ever calculated based on
+ * historical data that can be retrieved from the node. For example, forwards and payments that happened in the last 30
+ * days can be retrieved from LND via associated RPC functions. However, it is currently not possible to get an accurate
+ * log of the fee rate on a given channel. Historical fee rates could be calculated from the fees that have been paid by
+ * outgoing forwards, but doing so only works reliably when the base fee is constant, forwards never overpay fees and
+ * the fee rate is never set externally. Obviously, especially the last condition is rarely met in reality, which is why
+ * historical fee rates can only ever be <b>estimated</b>. For example, imagine a channel that has seen regular outgoing
+ * forwards at a rate of 100ppm. At some point the human operator decides to raise the rate to 1000ppm, which will
+ * obviously lead to an immediate drop of outgoing forwards. A week later the operator drops the fee rate back to 100ppm
+ * and then looks at the actions proposed by {@linkcode Actions.get}. Since the code has no way of knowing that the rate
+ * was much too high over the last 7 days, it will inevitably conclude that the sudden drop of outgoing flow calls for a
+ * lower fee rate.</li>
+ * <li>Actions are proposed based on long term data and on very recent events. For the former category,
+ * this class produces consistent results even when consulted intermittently (e.g. once a day). Actions of the latter
+ * category are only suggested if they happened in the last few minutes. For these immediate actions, it is thus
+ * expected that {@linkcode Actions.get} is run with updated statistics immediately after each change and that the
+ * actions are then executed immediately. Obviously, for this to work correctly, the clocks of the lightning node and
+ * the computer calling {@linkcode Actions.get} must be in sync.</li>
+ * <li>Base fees on all channels are assumed to remain constant. The currently set base fee is used to calculate the
+ * rate paid by past forwards.</li>
+ * <li>If there are past outgoing forwards for a channel, the fee rate paid by the last forward is assumed to have
+ * been in effect up to the point when {@linkcode Actions.get} is run. If no outgoing forwards were made in the past
+ * 30 days and the channel has been open for that length of time, this class can only suggest to drop the fee rate to
+ * zero, due to the fact that there is no way to determine whether the fee has been lowered before, see above.</li>
+ * <li>Payments sent to or received from other nodes are neither expected to occur regularly nor is any attempt made to
+ * anticipate them. While a single payment can skew fee calculation only in the short to medium term, regular
+ * substantial payments will probably lower the profitability of the node.</li>
+ * <li>With the exception of channels that did not ever see any outgoing forwards (see above), fees are always increased
+ * or decreased relative to the fee rate paid by the last outgoing forward. For a fee increase, if the new fee target
+ * happens to lie below the currently set fee rate, it is assumed that there is a good reason for the higher rate and
+ * no action will be suggested. The opposite happens for fee decreases. These rules allow for human intervention and
+ * also ensure that actions based on long term data will not interfere with immediate actions.</li>
+ * <li>There is an ongoing effort to adjust channel balances to the given targets. Therefore, if a channel balance
+ * stays below the minimum balance for long periods of time, this is taken as an indicator that the fee rate on the
+ * channel itself is too low for rebalancing to succeed. It is thus raised depending on how long the balance has been
+ * staying below the minimum. On the other hand, if a channel balance stays above the maximum for long, this means that
+ * incoming flow was forwarded to channels with fees set too low. In order for rebalancing to work in the opposite
+ * direction the fees on those channels should therefore be raised depending on how long the balance has been staying
+ * above the maximum.</li>
+ * </ul>
+ * The actions are calculated as outlined below:
  * <ul>
  * <li>Observe incoming and outgoing flow of each channel and set the local balance target to optimize liquidity.
  * For example, very few channels have a good balance between incoming and outgoing forwards. It's much more likely for
- * a channel to have &gt;95% of its routing flow going out or coming in. For these channels it makes little sense to set
+ * a channel to have &gt;90% of its routing flow going out or coming in. For these channels it makes little sense to set
  * the balance target to half their capacity. On the other hand, it neither makes sense to target a local balance of
- * &gt;95% or &lt;5% (depending on flow direction), as doing so would preclude most routing in the other direction. Such
- * bidirectional routing is highly desirable (because it reduces rebalancing) and should therefore not be made
+ * &gt;90% or &lt;10% (depending on flow direction), as doing so would preclude most routing in the other direction.
+ * Such bidirectional routing is highly desirable (because it reduces rebalancing) and should therefore not be made
  * impossible by low liquidity. This is why the suggested actions will not let channel balance go below or above a given
  * limit (e.g. 25% and 75%).</li>
  * <li>Set the target of the total local balance of the node to the sum of the target balances of all channels.</li>
@@ -70,7 +118,8 @@ export class Actions {
         let max = 0;
 
         for (const [id, stats] of channels.entries()) {
-            const channelBalanceAction = Actions.getChannelBalanceAction(id, stats, config);
+            yield* this.getFeeActions(id, channels, config);
+            const channelBalanceAction = this.getChannelBalanceAction(id, stats, config);
             actual += channelBalanceAction.actual;
             target += channelBalanceAction.target;
             max += channelBalanceAction.max;
@@ -88,6 +137,21 @@ export class Actions {
         } satisfies Action;
 
         yield* this.filterBalanceAction(nodeBalanceAction);
+    }
+
+    private static *getFeeActions(id: string, channels: ReadonlyMap<string, ChannelStats>, config: ActionsConfig) {
+        const channel = channels.get(id);
+
+        if (!channel) {
+            throw new Error("Channel statistics not found!");
+        }
+
+        for (const historyEntry of this.getHistory(channel, config)) {
+            if (yield* this.getFeeAction(id, channel, historyEntry, channels, config)) {
+                break;
+                // TODO no outgoing forwards in the last 30 days
+            }
+        }
     }
 
     private static getChannelBalanceAction(
@@ -197,14 +261,195 @@ export class Actions {
         return createAction(optimalBalance, "This is the optimal balance according to flow.");
     }
 
-    private static getPriority(base: number, actual: number, target: number, deviation: number) {
-        return base ** Math.floor(Math.abs(actual - target) / deviation);
-    }
-
     private static *filterBalanceAction(action: Action) {
         if (action.priority > 1) {
             yield action;
         }
+    }
+
+    private static getPriority(base: number, actual: number, target: number, deviation: number) {
+        return base ** Math.floor(Math.abs(actual - target) / deviation);
+    }
+
+    private static *getFeeAction(
+        id: string,
+        channel: ChannelStats,
+        { time, change, balance, fraction }: YieldType<typeof this.getHistory>,
+        channels: ReadonlyMap<string, ChannelStats>,
+        config: ActionsConfig,
+    ) {
+        const elapsedMilliseconds = Date.now() - new Date(time).valueOf();
+
+        if (fraction) {
+            const isRecent = elapsedMilliseconds < 5 * 60 * 1000;
+            // For recent changes we depend on the fraction only, for older changes we also consider how long we were
+            // out of bounds.
+            const addFraction = isRecent ? 0.5 * fraction : fraction; // TODO longterm fee increase
+
+            // For all changes that pushed the local balance below the minimum or above the maximum, we calculate the
+            // resulting fee increase. In the end we choose the highest fee increase for each channel. This approach
+            // guarantees that we do the "right thing", even when there are conflicting increases from "emergency"
+            // measures and long term measures. For example, a channel could have had a balance slightly below the
+            // minimum for two weeks when another outgoing forward reduces the balance slightly more. When this code is
+            // run immediately afterwards, it will produce two fee increases. An "emergency" one (designed to curb
+            // further outflow) and a long term one, which is designed to slowly raise the fee to the point where
+            // rebalances are able to increase outgoing liquidity. In this case it is likely that the long term fee
+            // increase is higher than the immediate one. On the other hand, when the time span between the two outgoing
+            // forwards is much shorter, it is likely that the immediate fee increase is higher.
+            if (change instanceof OutgoingForward) {
+                yield* this.getIncreaseFeeAction(
+                    id,
+                    channel,
+                    config,
+                    this.increaseFeeRate(change.amount, change.fee, channel.base_fee, addFraction),
+                    `The most recent outgoing forward took the balance to ${balance}.`, // TODO message
+                );
+            } else if (change instanceof IncomingForward) {
+                const { amount, fee, outgoingChannelId } = change;
+                const outgoingChannel = channels.get(outgoingChannelId);
+
+                if (!outgoingChannel) {
+                    throw new Error("Outgoing channel statistics not found!");
+                }
+
+                yield* this.getIncreaseFeeAction(
+                    outgoingChannelId,
+                    outgoingChannel,
+                    config,
+                    this.increaseFeeRate(-amount - fee, fee, outgoingChannel.base_fee, addFraction),
+                    `An incoming forward in channel ${id} (${channel.partnerAlias}) took its balance ` +
+                    `to ${balance} and was routed out through this channel.`, // TODO message
+                );
+            }
+        } else if (change instanceof OutgoingForward) {
+            const subtractFraction = elapsedMilliseconds / 30 / 24 / 60 / 60 / 1000; // TODO: take days from settings
+
+            yield* this.getDecreaseFeeAction(
+                id,
+                channel,
+                config,
+                this.decreaseFeeRate(change.amount, change.fee, channel.base_fee, subtractFraction),
+                `The most recent outgoing forward took place on ${time}.`,
+            );
+
+            return true;
+        }
+
+        return false;
+    }
+
+    // Provides the already filtered history relevant to choose a new fee for the given channel.
+    // For a channel with the balance below the minimum, returns all changes that lowered the balance. Returns the
+    // opposite for a channel with the current balance above the maximum. Returns all changes for all other channels.
+    private static *getHistory(channel: ChannelStats, config: ActionsConfig) {
+        let balance = channel.local_balance;
+        const getFraction = this.getFractionFunction(channel, config);
+
+        for (const [time, changes] of channel.history) {
+            for (const change of changes) {
+                const { amount } = change;
+                const fraction = getFraction?.(balance);
+
+                if (this.isRelevant(channel, config, amount)) {
+                    yield { time, change, balance, fraction } as const;
+                }
+
+                balance += amount;
+            }
+        }
+    }
+
+    private static getFractionFunction(channel: ChannelStats, config: ActionsConfig) {
+        const { capacity } = channel;
+        const minBalance = Math.round(capacity * config.minChannelBalanceFraction);
+
+        return this.choose(channel, config, {
+            belowMin: (balance: number) => 1 - (balance / minBalance),
+            between: undefined,
+            aboveMax: (balance: number) => 1 - ((capacity - balance) / minBalance),
+        });
+    }
+
+    private static isRelevant(channel: ChannelStats, config: ActionsConfig, amount: number) {
+        return this.choose(channel, config, { belowMin: amount > 0, between: true, aboveMax: amount < 0 });
+    }
+
+    private static increaseFeeRate(amount: number, fee: number, baseFee: number, addFraction: number) {
+        // If the fee rate has been really low then the formula wouldn't increase it meaningfully. An increase to
+        // at least 30 seems like a good idea.
+        return Math.max(this.getFeeRate(amount, fee, baseFee) * (1 + addFraction), 30);
+    }
+
+    private static decreaseFeeRate(amount: number, fee: number, baseFee: number, subtractFraction: number) {
+        return Math.max(this.getFeeRate(amount, fee, baseFee) * (1 - subtractFraction), 0);
+    }
+
+    private static getFeeRate(amount: number, fee: number, baseFee: number) {
+        return Math.round((fee - baseFee) / amount * 1_000_000);
+    }
+
+    private static *getIncreaseFeeAction(
+        id: string,
+        channel: ChannelStats,
+        config: ActionsConfig,
+        targetFee: number,
+        reason: string,
+    ) {
+        if (targetFee > channel.fee_rate) {
+            yield this.createFeeAction(id, channel, config, targetFee, reason);
+        }
+    }
+
+    private static *getDecreaseFeeAction(
+        id: string,
+        channel: ChannelStats,
+        config: ActionsConfig,
+        targetFee: number,
+        reason: string,
+    ) {
+        if (targetFee < channel.fee_rate) {
+            yield this.createFeeAction(id, channel, config, targetFee, reason);
+        }
+    }
+
+    private static choose<T>(
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        { local_balance, capacity }: ChannelStats,
+        { minChannelBalanceFraction }: ActionsConfig,
+        { belowMin, between, aboveMax }: { readonly belowMin: T; readonly between: T; readonly aboveMax: T },
+    ) {
+        const minBalance = minChannelBalanceFraction * capacity;
+
+        if (local_balance < minBalance) {
+            return belowMin;
+        } else if (local_balance > capacity - minBalance) {
+            return aboveMax;
+        }
+
+        return between;
+    }
+
+    private static createFeeAction(
+        id: string,
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        { partnerAlias, fee_rate }: ChannelStats,
+        { maxFeeRate }: ActionsConfig,
+        targetFee: number,
+        reason: string,
+    ) {
+        const target = Math.round(targetFee);
+
+        return {
+            entity: "channel",
+            id,
+            alias: partnerAlias,
+            priority: 1,
+            variable: "feeRate",
+            actual: fee_rate,
+            target,
+            max: maxFeeRate,
+            reason,
+        } as const satisfies Action;
     }
 
     private constructor() { /* Intentionally empty */ }
