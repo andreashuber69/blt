@@ -9,6 +9,22 @@ const getNewForwardStats = () => ({
 
 /** Contains information about a balance change in a channel. */
 export abstract class BalanceChange {
+    public get balance() {
+        if (this.balanceImpl === undefined) {
+            throw new Error("The balance has not been set.");
+        }
+
+        return this.balanceImpl;
+    }
+
+    public set balance(value: number) {
+        if (this.balanceImpl !== undefined) {
+            throw new Error("The balance must not be set multiple times.");
+        }
+
+        this.balanceImpl = value;
+    }
+
     /**
      * Initializes a new instance.
      * @param amount By what amount did the channel balance change? A positive value means that the channel balance
@@ -16,9 +32,7 @@ export abstract class BalanceChange {
      */
     protected constructor(public readonly amount: number) {}
 
-    // https://stackoverflow.com/questions/48829743/why-duck-typing-is-allowed-for-classes-in-typescript
-    // @ts-expect-error TS6133
-    private readonly preventDuckTyping: undefined;
+    private balanceImpl: number | undefined;
 }
 
 export class Payment extends BalanceChange {
