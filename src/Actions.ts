@@ -284,7 +284,7 @@ export class Actions {
             const isRecent = elapsedMilliseconds < 5 * 60 * 1000;
             // For recent changes we depend on the fraction only, for older changes we also consider how long we were
             // out of bounds.
-            const addFraction = isRecent ? 0.5 * fraction : fraction; // TODO longterm fee increase
+            const addFraction = isRecent ? 0.5 * fraction : fraction; // TODO long term fee increase
 
             // For all changes that pushed the local balance below the minimum or above the maximum, we calculate the
             // resulting fee increase. In the end we choose the highest fee increase for each channel. This approach
