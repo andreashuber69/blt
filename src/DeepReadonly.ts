@@ -2,7 +2,9 @@
 export type DeepReadonly<T> =
     /* eslint-disable @typescript-eslint/indent */
     T extends Array<infer R> ? ReadonlyArray<DeepReadonly<R>> :
-    T extends () => unknown ? T :
+    T extends Map<infer K, infer V> ? ReadonlyMap<DeepReadonly<K>, DeepReadonly<V>> :
+    T extends Set<infer K> ? ReadonlySet<DeepReadonly<K>> :
+    T extends (...args: never[]) => unknown ? T :
     T extends object ? { readonly [P in keyof T]: DeepReadonly<T[P]> } :
     T;
     /* eslint-enable @typescript-eslint/indent */
