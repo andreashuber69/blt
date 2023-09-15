@@ -35,11 +35,11 @@ export class NodeStats {
             // eslint-disable-next-line @typescript-eslint/naming-convention
             for (const { is_confirmed, route } of attempts) {
                 if (is_confirmed) {
-                    const { tokens, fee } = this.getTokens(route);
+                    const { rawTokens, fee } = this.getTokens(route);
                     const outgoingId = route.hops.at(0)?.channel;
-                    this.add(this.getHistory(channelsImpl, outgoingId), confirmed_at, new Payment(tokens));
+                    this.add(this.getHistory(channelsImpl, outgoingId), confirmed_at, new Payment(rawTokens));
                     const incomingId = route.hops.at(-1)?.channel;
-                    this.add(this.getHistory(channelsImpl, incomingId), confirmed_at, new Payment(-tokens + fee));
+                    this.add(this.getHistory(channelsImpl, incomingId), confirmed_at, new Payment(-rawTokens + fee));
                 }
             }
         }
@@ -54,14 +54,17 @@ export class NodeStats {
     private static updateStats(channelStats: ChannelStats | undefined, isOut: boolean, forward: ForwardsElement) {
         if (channelStats) {
             const { [isOut ? "outgoingForwards" : "incomingForwards"]: forwardStats, history } = channelStats;
-            const { tokens, fee } = this.getTokens(forward);
-            const real = isOut ? tokens : tokens + fee;
-            forwardStats.maxTokens = Math.max(forwardStats.maxTokens, real);
+            const { rawTokens, fee } = this.getTokens(forward);
+            const tokens = isOut ? rawTokens : rawTokens + fee;
+            forwardStats.maxTokens = Math.max(forwardStats.maxTokens, tokens);
             ++forwardStats.count;
-            forwardStats.totalTokens += real;
+            forwardStats.totalTokens += tokens;
             // eslint-disable-next-line @typescript-eslint/naming-convention
             const { created_at, outgoing_channel } = forward;
-            const change = isOut ? new OutgoingForward(real, fee) : new IncomingForward(-real, fee, outgoing_channel);
+
+            const change =
+                isOut ? new OutgoingForward(tokens, fee) : new IncomingForward(-tokens, fee, outgoing_channel);
+
             this.add(history, created_at, change);
         }
     }
@@ -78,7 +81,7 @@ export class NodeStats {
 
     // eslint-disable-next-line @typescript-eslint/naming-convention
     private static getTokens({ fee_mtokens, mtokens }: { readonly fee_mtokens: string; readonly mtokens: string }) {
-        return { tokens: Number(mtokens) / 1000, fee: Number(fee_mtokens) / 1000 };
+        return { rawTokens: Number(mtokens) / 1000, fee: Number(fee_mtokens) / 1000 };
     }
 
     private constructor(public readonly channels: ReadonlyMap<string, ChannelStats>) {}
