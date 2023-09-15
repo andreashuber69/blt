@@ -11,7 +11,11 @@ const getNewForwardStats = () => ({
 export abstract class BalanceChange {
     /** Gets the local channel balance after the change. */
     public get balance() {
-        return this.data.balance;
+        return this.getData("balanceImpl");
+    }
+
+    public set balance(value: number) {
+        this.setData("balanceImpl", value);
     }
 
     /**
@@ -20,15 +24,11 @@ export abstract class BalanceChange {
      * {@linkcode BalanceChange.balance} is at the furthest point possible below the target. +1 means the opposite.
      */
     public get targetBalanceDistance() {
-        return this.data.targetBalanceDistance;
+        return this.getData("targetBalanceDistanceImpl");
     }
 
-    public setData(balance: number, targetBalanceDistance: number) {
-        if (this.dataImpl !== undefined) {
-            throw new Error("The data must not be set multiple times.");
-        }
-
-        this.dataImpl = { balance, targetBalanceDistance };
+    public set targetBalanceDistance(value: number) {
+        this.setData("targetBalanceDistanceImpl", value);
     }
 
     /**
@@ -38,14 +38,27 @@ export abstract class BalanceChange {
      */
     protected constructor(public readonly amount: number) {}
 
-    private dataImpl: { readonly balance: number; readonly targetBalanceDistance: number } | undefined;
+    // eslint-disable-next-line @typescript-eslint/prefer-readonly
+    private balanceImpl: number | undefined;
+    // eslint-disable-next-line @typescript-eslint/prefer-readonly
+    private targetBalanceDistanceImpl: number | undefined;
 
-    private get data() {
-        if (this.dataImpl === undefined) {
+    private getData(prop: "balanceImpl" | "targetBalanceDistanceImpl") {
+        const result = this[prop];
+
+        if (result === undefined) {
             throw new Error("The data has not been set.");
         }
 
-        return this.dataImpl;
+        return result;
+    }
+
+    private setData(prop: "balanceImpl" | "targetBalanceDistanceImpl", value: number) {
+        if (this[prop] !== undefined) {
+            throw new Error("The data must not be set multiple times.");
+        }
+
+        this[prop] = value;
     }
 }
 
