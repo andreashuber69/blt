@@ -75,6 +75,8 @@ while (true) {
                 minChannelBalanceFraction: 0.25,
                 minRebalanceDistance: 0.05,
                 largestForwardMarginFraction: 0.1,
+                minFeeIncreaseDistance: 0.3,
+                feeDecreaseWaitDays: 4,
                 maxFeeRate: 2500,
             };
 

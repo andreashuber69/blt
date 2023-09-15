@@ -17,13 +17,25 @@ export interface ActionsConfig {
 
     /**
      * The minimum absolute distance from the target a channel or node balance can have before balance actions are
-     * suggested. 0 means that rebalancing is proposed even if the target deviates only 1 satoshi. 1 means that no
+     * suggested. A value close to 0 means that rebalancing is proposed even if the target deviates very little (0
+     * itself is not allowed as that equates to infinite priority for a difference of even 1 satoshi). 1 means that no
      * rebalancing is ever suggested.
      */
     readonly minRebalanceDistance: number;
 
     /** The fraction to be added to the largest past forward to allow for even larger forwards in the future. */
     readonly largestForwardMarginFraction: number;
+
+    /**
+     * The minimum absolute distance from the target a channel balance can have before fee increase actions are
+     * suggested. A value close to 0 means that the proposed fee changes are rather large (0 itself is not allowed as
+     * that equates to the {@linkcode ActionsConfig.maxFeeRate} being suggested for every fee increase. 1 means that no
+     * fee increases are ever suggested. 0.3 is probably a sensible value.
+     */
+    readonly minFeeIncreaseDistance: number;
+
+    /** The number of days a channel can be without outgoing forwards before fee decrease actions are suggested. */
+    readonly feeDecreaseWaitDays: number;
 
     /** The maximum fee rate on a channel in PPM. */
     readonly maxFeeRate: number;
