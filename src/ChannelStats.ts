@@ -1,4 +1,5 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
+import type { DeepReadonly } from "./DeepReadonly.js";
 import type { ChannelsElement } from "./info/ChannelsRefresher.js";
 
 const getNewForwardStats = () => ({
@@ -6,6 +7,8 @@ const getNewForwardStats = () => ({
     count: 0,
     totalTokens: 0,
 });
+
+export type MutableForwardStats = ReturnType<typeof getNewForwardStats>;
 
 /** Contains information about a balance change in a channel. */
 export abstract class BalanceChange {
@@ -91,4 +94,6 @@ export const getNewChannelStats = (
     history: new Map<string, BalanceChange[]>(),
 });
 
-export type ChannelStats = Readonly<ReturnType<typeof getNewChannelStats>>;
+export type MutableChannelStats = ReturnType<typeof getNewChannelStats>;
+
+export type ChannelStats = DeepReadonly<MutableChannelStats>;

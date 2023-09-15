@@ -1,5 +1,5 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
-import type { ChannelStats } from "./ChannelStats.js";
+import type { ChannelStats, MutableChannelStats } from "./ChannelStats.js";
 import { IncomingForward, OutgoingForward } from "./ChannelStats.js";
 import type { YieldType } from "./lightning/YieldType.js";
 import type { INodeStats } from "./NodeStats.js";
@@ -124,8 +124,8 @@ export class Actions {
             max += channelBalanceAction.max;
 
             this.updateStats(stats, channelBalanceAction);
-            yield* this.getFeeActions(id, channels, config);
             yield* this.filterBalanceAction(channelBalanceAction);
+            yield* this.getFeeActions(id, channels, config);
         }
 
         const nodeBalanceAction = {
@@ -142,7 +142,7 @@ export class Actions {
     }
 
     // eslint-disable-next-line @typescript-eslint/naming-convention
-    private static updateStats({ local_balance, history }: ChannelStats, { target, max }: Action) {
+    private static updateStats({ local_balance, history }: MutableChannelStats, { target, max }: Action) {
         let balance = local_balance;
 
         for (const changes of history.values()) {

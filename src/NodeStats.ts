@@ -1,5 +1,5 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
-import type { BalanceChange, ChannelStats } from "./ChannelStats.js";
+import type { BalanceChange, MutableChannelStats, MutableForwardStats } from "./ChannelStats.js";
 import { getNewChannelStats, IncomingForward, OutgoingForward, Payment } from "./ChannelStats.js";
 import type { INodeInfo } from "./info/NodeInfo.js";
 
@@ -51,7 +51,7 @@ export class NodeStats {
         return new NodeStats(channelsImpl);
     }
 
-    private static updateStats(forwardStats: ChannelStats["incomingForwards"] | undefined, tokens: number) {
+    private static updateStats(forwardStats: MutableForwardStats | undefined, tokens: number) {
         if (forwardStats) {
             forwardStats.maxTokens = Math.max(forwardStats.maxTokens, tokens);
             ++forwardStats.count;
@@ -70,7 +70,7 @@ export class NodeStats {
         return { rawTokens: Number(mtokens) / 1000, fee: Number(fee_mtokens) / 1000 };
     }
 
-    private constructor(public readonly channels: ReadonlyMap<string, ChannelStats>) {}
+    private constructor(public readonly channels: ReadonlyMap<string, MutableChannelStats>) {}
 }
 
 export type INodeStats = Pick<NodeStats, "channels">;
