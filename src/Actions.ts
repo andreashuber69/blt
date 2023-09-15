@@ -211,7 +211,6 @@ export class Actions {
         const marginPercent = Math.round(largestForwardMarginFraction * 100);
 
         if (minLargestForwardBalance > maxLargestForwardBalance) {
-            // eslint-disable-next-line no-warning-comments
             // TODO: "Increase" the channel capacity?
             return createAction(
                 0.5 * capacity,
@@ -239,7 +238,6 @@ export class Actions {
         }
 
         if (optimalBalance < minLargestForwardBalance) {
-            // eslint-disable-next-line no-warning-comments
             // TODO: "Increase" the channel capacity?
             return createAction(
                 minLargestForwardBalance,
@@ -249,7 +247,6 @@ export class Actions {
         }
 
         if (optimalBalance > maxLargestForwardBalance) {
-            // eslint-disable-next-line no-warning-comments
             // TODO: "Increase" the channel capacity?
             return createAction(
                 maxLargestForwardBalance,
