@@ -5,6 +5,9 @@ import type { YieldType } from "./lightning/YieldType.js";
 import type { INodeStats } from "./NodeStats.js";
 
 export interface ActionsConfig {
+    /** The minimum number of past forwards routed through a channel to consider it as indicative for future flow. */
+    readonly minChannelForwards: number;
+
     /**
      * The minimal balance a channel should have as a fraction of its capacity.
      * @description For example, 0.25 means that suggested actions will not let the local balance fall below 1/4 of the
@@ -13,13 +16,11 @@ export interface ActionsConfig {
     readonly minChannelBalanceFraction: number;
 
     /**
-     * The maximum deviation from the target a channel or node balance can have as a fraction of its maximum value
-     * before corrective actions are suggested.
+     * The minimum absolute distance from the target a channel or node balance can have before balance actions are
+     * suggested. 0 means that rebalancing is proposed even if the target deviates only 1 satoshi. 1 means that no
+     * rebalancing is ever suggested.
      */
-    readonly maxBalanceDeviationFraction: number;
-
-    /** The minimum number of past forwards routed through a channel to consider it as indicative for future flow. */
-    readonly minChannelForwards: number;
+    readonly minRebalanceDistance: number;
 
     /** The fraction to be added to the largest past forward to allow for even larger forwards in the future. */
     readonly largestForwardMarginFraction: number;
@@ -131,7 +132,7 @@ export class Actions {
         const nodeBalanceAction = {
             entity: "node",
             variable: "balance",
-            priority: this.getPriority(4, actual, target, config.maxBalanceDeviationFraction * max),
+            priority: this.getPriority(4, actual, target, config.minRebalanceDistance * max),
             actual,
             target,
             max,
@@ -139,34 +140,6 @@ export class Actions {
         } satisfies Action;
 
         yield* this.filterBalanceAction(nodeBalanceAction);
-    }
-
-    // eslint-disable-next-line @typescript-eslint/naming-convention
-    private static updateStats({ local_balance, history }: MutableChannelStats, { target, max }: Action) {
-        let balance = local_balance;
-
-        for (const changes of history.values()) {
-            for (const change of changes) {
-                const distance = balance <= target ? (balance / target) - 1 : (balance - target) / (max - target);
-                change.setData(balance, distance);
-                balance += change.amount;
-            }
-        }
-    }
-
-    private static *getFeeActions(id: string, channels: ReadonlyMap<string, ChannelStats>, config: ActionsConfig) {
-        const channel = channels.get(id);
-
-        if (!channel) {
-            throw new Error("Channel statistics not found!");
-        }
-
-        for (const historyEntry of this.getHistory(channel, config)) {
-            if (yield* this.getFeeAction(id, channel, historyEntry, channels, config)) {
-                break;
-                // TODO no outgoing forwards in the last 30 days
-            }
-        }
     }
 
     private static getChannelBalanceAction(
@@ -181,7 +154,7 @@ export class Actions {
         }: ChannelStats,
         {
             minChannelBalanceFraction,
-            maxBalanceDeviationFraction,
+            minRebalanceDistance: maxBalanceDeviationFraction,
             minChannelForwards,
             largestForwardMarginFraction,
         }: ActionsConfig,
@@ -276,6 +249,33 @@ export class Actions {
         return createAction(optimalBalance, "This is the optimal balance according to flow.");
     }
 
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    private static updateStats({ local_balance, history }: MutableChannelStats, { target, max }: Action) {
+        let balance = local_balance;
+
+        for (const changes of history.values()) {
+            for (const change of changes) {
+                change.setData(balance, this.getDistance(balance, target, max));
+                balance += change.amount;
+            }
+        }
+    }
+
+    private static *getFeeActions(id: string, channels: ReadonlyMap<string, ChannelStats>, config: ActionsConfig) {
+        const channel = channels.get(id);
+
+        if (!channel) {
+            throw new Error("Channel statistics not found!");
+        }
+
+        for (const historyEntry of this.getHistory(channel, config)) {
+            if (yield* this.getFeeAction(id, channel, historyEntry, channels, config)) {
+                break;
+                // TODO no outgoing forwards in the last 30 days
+            }
+        }
+    }
+
     private static *filterBalanceAction(action: Action) {
         if (action.priority > 1) {
             yield action;
@@ -284,6 +284,27 @@ export class Actions {
 
     private static getPriority(base: number, actual: number, target: number, deviation: number) {
         return base ** Math.floor(Math.abs(actual - target) / deviation);
+    }
+
+    private static getDistance(balance: number, target: number, max: number) {
+        return balance <= target ? (balance / target) - 1 : (balance - target) / (max - target);
+    }
+
+    // Provides the already filtered history relevant to choose a new fee for the given channel.
+    // For a channel with the balance below the minimum, returns all changes that lowered the balance. Returns the
+    // opposite for a channel with the current balance above the maximum. Returns all changes for all other channels.
+    private static *getHistory(channel: ChannelStats, config: ActionsConfig) {
+        const getFraction = this.getFractionFunction(channel, config);
+
+        for (const [time, changes] of channel.history) {
+            for (const change of changes) {
+                const fraction = getFraction?.(change.balance);
+
+                if (this.isRelevant(channel, config, change.amount)) {
+                    yield { time, change, fraction } as const;
+                }
+            }
+        }
     }
 
     private static *getFeeAction(
@@ -353,52 +374,6 @@ export class Actions {
         return false;
     }
 
-    // Provides the already filtered history relevant to choose a new fee for the given channel.
-    // For a channel with the balance below the minimum, returns all changes that lowered the balance. Returns the
-    // opposite for a channel with the current balance above the maximum. Returns all changes for all other channels.
-    private static *getHistory(channel: ChannelStats, config: ActionsConfig) {
-        const getFraction = this.getFractionFunction(channel, config);
-
-        for (const [time, changes] of channel.history) {
-            for (const change of changes) {
-                const fraction = getFraction?.(change.balance);
-
-                if (this.isRelevant(channel, config, change.amount)) {
-                    yield { time, change, fraction } as const;
-                }
-            }
-        }
-    }
-
-    private static getFractionFunction(channel: ChannelStats, config: ActionsConfig) {
-        const { capacity } = channel;
-        const minBalance = Math.round(capacity * config.minChannelBalanceFraction);
-
-        return this.choose(channel, config, {
-            belowMin: (balance: number) => 1 - (balance / minBalance),
-            between: undefined,
-            aboveMax: (balance: number) => 1 - ((capacity - balance) / minBalance),
-        });
-    }
-
-    private static isRelevant(channel: ChannelStats, config: ActionsConfig, amount: number) {
-        return this.choose(channel, config, { belowMin: amount > 0, between: true, aboveMax: amount < 0 });
-    }
-
-    private static increaseFeeRate(amount: number, fee: number, baseFee: number, addFraction: number) {
-        // If the fee rate has been really low then the formula wouldn't increase it meaningfully. An increase to
-        // at least 30 seems like a good idea.
-        return Math.max(this.getFeeRate(amount, fee, baseFee) * (1 + addFraction), 30);
-    }
-
-    private static decreaseFeeRate(amount: number, fee: number, baseFee: number, subtractFraction: number) {
-        return Math.max(this.getFeeRate(amount, fee, baseFee) * (1 - subtractFraction), 0);
-    }
-
-    private static getFeeRate(amount: number, fee: number, baseFee: number) {
-        return Math.round((fee - baseFee) / amount * 1_000_000);
-    }
-
     private static *getIncreaseFeeAction(
         id: string,
         channel: ChannelStats,
@@ -423,6 +398,31 @@ export class Actions {
         }
     }
 
+    private static increaseFeeRate(amount: number, fee: number, baseFee: number, addFraction: number) {
+        // If the fee rate has been really low then the formula wouldn't increase it meaningfully. An increase to
+        // at least 30 seems like a good idea.
+        return Math.max(this.getFeeRate(amount, fee, baseFee) * (1 + addFraction), 30);
+    }
+
+    private static decreaseFeeRate(amount: number, fee: number, baseFee: number, subtractFraction: number) {
+        return Math.max(this.getFeeRate(amount, fee, baseFee) * (1 - subtractFraction), 0);
+    }
+
+    private static getFractionFunction(channel: ChannelStats, config: ActionsConfig) {
+        const { capacity } = channel;
+        const minBalance = Math.round(capacity * config.minChannelBalanceFraction);
+
+        return this.choose(channel, config, {
+            belowMin: (balance: number) => 1 - (balance / minBalance),
+            between: undefined,
+            aboveMax: (balance: number) => 1 - ((capacity - balance) / minBalance),
+        });
+    }
+
+    private static isRelevant(channel: ChannelStats, config: ActionsConfig, amount: number) {
+        return this.choose(channel, config, { belowMin: amount > 0, between: true, aboveMax: amount < 0 });
+    }
+
     private static choose<T>(
         // eslint-disable-next-line @typescript-eslint/naming-convention
         { local_balance, capacity }: ChannelStats,
@@ -438,6 +438,10 @@ export class Actions {
         }
 
         return between;
+    }
+
+    private static getFeeRate(amount: number, fee: number, baseFee: number) {
+        return Math.round((fee - baseFee) / amount * 1_000_000);
     }
 
     private static createFeeAction(

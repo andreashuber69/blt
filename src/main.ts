@@ -71,9 +71,9 @@ while (true) {
             log(JSON.stringify(stats.channels, undefined, 2));
 
             const config: ActionsConfig = {
-                minChannelBalanceFraction: 0.25,
-                maxBalanceDeviationFraction: 0.05,
                 minChannelForwards: 20,
+                minChannelBalanceFraction: 0.25,
+                minRebalanceDistance: 0.05,
                 largestForwardMarginFraction: 0.1,
                 maxFeeRate: 2500,
             };
