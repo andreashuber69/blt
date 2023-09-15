@@ -132,7 +132,7 @@ export class Actions {
         const nodeBalanceAction = {
             entity: "node",
             variable: "balance",
-            priority: this.getPriority(4, actual, target, config.minRebalanceDistance * max),
+            priority: this.getPriority(4, this.getDistance(actual, target, max), config.minRebalanceDistance),
             actual,
             target,
             max,
@@ -154,7 +154,7 @@ export class Actions {
         }: ChannelStats,
         {
             minChannelBalanceFraction,
-            minRebalanceDistance: maxBalanceDeviationFraction,
+            minRebalanceDistance,
             minChannelForwards,
             largestForwardMarginFraction,
         }: ActionsConfig,
@@ -166,7 +166,7 @@ export class Actions {
                 entity: "channel",
                 id,
                 alias: partnerAlias,
-                priority: this.getPriority(2, local_balance, target, maxBalanceDeviationFraction * capacity),
+                priority: this.getPriority(2, this.getDistance(local_balance, target, capacity), minRebalanceDistance),
                 variable: "balance",
                 actual: local_balance,
                 target,
@@ -282,8 +282,8 @@ export class Actions {
         }
     }
 
-    private static getPriority(base: number, actual: number, target: number, deviation: number) {
-        return base ** Math.floor(Math.abs(actual - target) / deviation);
+    private static getPriority(base: number, distance: number, minRebalanceDistance: number) {
+        return base ** Math.floor(Math.abs(distance) / minRebalanceDistance);
     }
 
     private static getDistance(balance: number, target: number, max: number) {
