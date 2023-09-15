@@ -1,10 +1,7 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import type { BalanceChange, ChannelStats } from "./ChannelStats.js";
 import { getNewChannelStats, IncomingForward, OutgoingForward, Payment } from "./ChannelStats.js";
-import type { ForwardsElement } from "./info/ForwardsRefresher.js";
 import type { INodeInfo } from "./info/NodeInfo.js";
-
-type ChannelsImpl = Map<string, ReturnType<typeof getNewChannelStats>>;
 
 export class NodeStats {
     public static get(
@@ -23,11 +20,14 @@ export class NodeStats {
 
         for (const forward of forwards) {
             // eslint-disable-next-line @typescript-eslint/naming-convention
-            const { incoming_channel, outgoing_channel } = forward;
+            const { created_at, incoming_channel, outgoing_channel } = forward;
+            const { rawTokens, fee } = this.getTokens(forward);
             const incomingStats = channelsImpl.get(incoming_channel);
-            NodeStats.updateStats(incomingStats, false, forward);
+            NodeStats.updateStats(incomingStats?.incomingForwards, rawTokens + fee);
+            this.add(incomingStats?.history, created_at, new IncomingForward(-rawTokens - fee, fee, outgoing_channel));
             const outgoingStats = channelsImpl.get(outgoing_channel);
-            NodeStats.updateStats(outgoingStats, true, forward);
+            NodeStats.updateStats(outgoingStats?.outgoingForwards, rawTokens);
+            this.add(outgoingStats?.history, created_at, new OutgoingForward(rawTokens, fee));
         }
 
         // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -36,10 +36,10 @@ export class NodeStats {
             for (const { is_confirmed, route } of attempts) {
                 if (is_confirmed) {
                     const { rawTokens, fee } = this.getTokens(route);
-                    const outgoingId = route.hops.at(0)?.channel;
-                    this.add(this.getHistory(channelsImpl, outgoingId), confirmed_at, new Payment(rawTokens));
-                    const incomingId = route.hops.at(-1)?.channel;
-                    this.add(this.getHistory(channelsImpl, incomingId), confirmed_at, new Payment(-rawTokens + fee));
+                    const outgoingStats = channelsImpl.get(route.hops.at(0)?.channel ?? "");
+                    this.add(outgoingStats?.history, confirmed_at, new Payment(rawTokens));
+                    const incomingStats = channelsImpl.get(route.hops.at(-1)?.channel ?? "");
+                    this.add(incomingStats?.history, confirmed_at, new Payment(-rawTokens + fee));
                 }
             }
         }
@@ -51,26 +51,12 @@ export class NodeStats {
         return new NodeStats(channelsImpl);
     }
 
-    private static updateStats(channelStats: ChannelStats | undefined, isOut: boolean, forward: ForwardsElement) {
-        if (channelStats) {
-            const { [isOut ? "outgoingForwards" : "incomingForwards"]: forwardStats, history } = channelStats;
-            const { rawTokens, fee } = this.getTokens(forward);
-            const tokens = isOut ? rawTokens : rawTokens + fee;
+    private static updateStats(forwardStats: ChannelStats["incomingForwards"] | undefined, tokens: number) {
+        if (forwardStats) {
             forwardStats.maxTokens = Math.max(forwardStats.maxTokens, tokens);
             ++forwardStats.count;
             forwardStats.totalTokens += tokens;
-            // eslint-disable-next-line @typescript-eslint/naming-convention
-            const { created_at, outgoing_channel } = forward;
-
-            const change =
-                isOut ? new OutgoingForward(tokens, fee) : new IncomingForward(-tokens, fee, outgoing_channel);
-
-            this.add(history, created_at, change);
         }
-    }
-
-    private static getHistory(channelsImpl: ChannelsImpl, channel: string | undefined) {
-        return channelsImpl.get(channel ?? "")?.history;
     }
 
     private static add(history: Map<string, BalanceChange[]> | undefined, key: string, value: BalanceChange) {
