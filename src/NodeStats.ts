@@ -22,8 +22,12 @@ export class NodeStats {
         ));
 
         for (const forward of forwards) {
-            NodeStats.updateStats(channelsImpl.get(forward.incoming_channel), false, forward);
-            NodeStats.updateStats(channelsImpl.get(forward.outgoing_channel), true, forward);
+            // eslint-disable-next-line @typescript-eslint/naming-convention
+            const { incoming_channel, outgoing_channel } = forward;
+            const incomingStats = channelsImpl.get(incoming_channel);
+            NodeStats.updateStats(incomingStats, false, forward);
+            const outgoingStats = channelsImpl.get(outgoing_channel);
+            NodeStats.updateStats(outgoingStats, true, forward);
         }
 
         // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -32,9 +36,10 @@ export class NodeStats {
             for (const { is_confirmed, route } of attempts) {
                 if (is_confirmed) {
                     const { tokens, fee } = this.getTokens(route);
-                    this.add(this.getHistory(channelsImpl, route.hops.at(0)), confirmed_at, new Payment(tokens));
-                    // eslint-disable-next-line max-len
-                    this.add(this.getHistory(channelsImpl, route.hops.at(-1)), confirmed_at, new Payment(-tokens + fee));
+                    const outgoingId = route.hops.at(0)?.channel;
+                    this.add(this.getHistory(channelsImpl, outgoingId), confirmed_at, new Payment(tokens));
+                    const incomingId = route.hops.at(-1)?.channel;
+                    this.add(this.getHistory(channelsImpl, incomingId), confirmed_at, new Payment(-tokens + fee));
                 }
             }
         }
@@ -46,11 +51,7 @@ export class NodeStats {
         return new NodeStats(channelsImpl);
     }
 
-    private static updateStats(
-        channelStats: ReturnType<typeof getNewChannelStats> | undefined,
-        isOut: boolean,
-        forward: ForwardsElement,
-    ) {
+    private static updateStats(channelStats: ChannelStats | undefined, isOut: boolean, forward: ForwardsElement) {
         if (channelStats) {
             const { [isOut ? "outgoingForwards" : "incomingForwards"]: forwardStats, history } = channelStats;
             const { tokens, fee } = this.getTokens(forward);
@@ -65,8 +66,8 @@ export class NodeStats {
         }
     }
 
-    private static getHistory(channelsImpl: ChannelsImpl, hop: { readonly channel: string } | undefined) {
-        return channelsImpl.get(hop?.channel ?? "")?.history;
+    private static getHistory(channelsImpl: ChannelsImpl, channel: string | undefined) {
+        return channelsImpl.get(channel ?? "")?.history;
     }
 
     private static add(history: Map<string, BalanceChange[]> | undefined, key: string, value: BalanceChange) {
