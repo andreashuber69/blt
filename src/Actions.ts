@@ -118,11 +118,13 @@ export class Actions {
         let max = 0;
 
         for (const [id, stats] of channels.entries()) {
-            yield* this.getFeeActions(id, channels, config);
             const channelBalanceAction = this.getChannelBalanceAction(id, stats, config);
             actual += channelBalanceAction.actual;
             target += channelBalanceAction.target;
             max += channelBalanceAction.max;
+
+            this.updateStats(stats, channelBalanceAction);
+            yield* this.getFeeActions(id, channels, config);
             yield* this.filterBalanceAction(channelBalanceAction);
         }
 
@@ -137,6 +139,19 @@ export class Actions {
         } satisfies Action;
 
         yield* this.filterBalanceAction(nodeBalanceAction);
+    }
+
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    private static updateStats({ local_balance, history }: ChannelStats, { target, max }: Action) {
+        let balance = local_balance;
+
+        for (const changes of history.values()) {
+            for (const change of changes) {
+                const distance = balance <= target ? (balance / target) - 1 : (balance - target) / (max - target);
+                change.setData(balance, distance);
+                balance += change.amount;
+            }
+        }
     }
 
     private static *getFeeActions(id: string, channels: ReadonlyMap<string, ChannelStats>, config: ActionsConfig) {

@@ -41,14 +41,6 @@ export class NodeStats {
 
         for (const channel of channelsImpl.values()) {
             channel.history = new Map([...channel.history].sort((a, b) => -a[0].localeCompare(b[0])));
-            let balance = channel.local_balance;
-
-            for (const changes of channel.history.values()) {
-                for (const change of changes) {
-                    change.balance = balance;
-                    balance += change.amount;
-                }
-            }
         }
 
         return new NodeStats(channelsImpl);
