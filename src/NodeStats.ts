@@ -45,7 +45,7 @@ export class NodeStats {
 
             for (const changes of channel.history.values()) {
                 for (const change of changes) {
-                    change.balance = balance;
+                    change.setData(balance, 0);
                     balance += change.amount;
                 }
             }

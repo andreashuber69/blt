@@ -274,7 +274,7 @@ export class Actions {
     private static *getFeeAction(
         id: string,
         channel: ChannelStats,
-        { time, change, balance, fraction }: YieldType<typeof this.getHistory>,
+        { time, change, fraction }: YieldType<typeof this.getHistory>,
         channels: ReadonlyMap<string, ChannelStats>,
         config: ActionsConfig,
     ) {
@@ -302,10 +302,10 @@ export class Actions {
                     channel,
                     config,
                     this.increaseFeeRate(change.amount, change.fee, channel.base_fee, addFraction),
-                    `The most recent outgoing forward took the balance to ${balance}.`, // TODO message
+                    `The most recent outgoing forward took the balance to ${change.balance}.`, // TODO message
                 );
             } else if (change instanceof IncomingForward) {
-                const { amount, fee, outgoingChannelId } = change;
+                const { amount, balance, fee, outgoingChannelId } = change;
                 const outgoingChannel = channels.get(outgoingChannelId);
 
                 if (!outgoingChannel) {
@@ -342,19 +342,15 @@ export class Actions {
     // For a channel with the balance below the minimum, returns all changes that lowered the balance. Returns the
     // opposite for a channel with the current balance above the maximum. Returns all changes for all other channels.
     private static *getHistory(channel: ChannelStats, config: ActionsConfig) {
-        let balance = channel.local_balance;
         const getFraction = this.getFractionFunction(channel, config);
 
         for (const [time, changes] of channel.history) {
             for (const change of changes) {
-                const { amount } = change;
-                const fraction = getFraction?.(balance);
+                const fraction = getFraction?.(change.balance);
 
-                if (this.isRelevant(channel, config, amount)) {
-                    yield { time, change, balance, fraction } as const;
+                if (this.isRelevant(channel, config, change.amount)) {
+                    yield { time, change, fraction } as const;
                 }
-
-                balance += amount;
             }
         }
     }

@@ -9,20 +9,26 @@ const getNewForwardStats = () => ({
 
 /** Contains information about a balance change in a channel. */
 export abstract class BalanceChange {
+    /** Gets the local channel balance after the change. */
     public get balance() {
-        if (this.balanceImpl === undefined) {
-            throw new Error("The balance has not been set.");
-        }
-
-        return this.balanceImpl;
+        return this.data.balance;
     }
 
-    public set balance(value: number) {
-        if (this.balanceImpl !== undefined) {
-            throw new Error("The balance must not be set multiple times.");
+    /**
+     * Gets the standardized distance of the current balance to the target balance.
+     * @description 0 means that {@linkcode BalanceChange.balance} is equal to the target balance. -1 expresses that
+     * {@linkcode BalanceChange.balance} is at the furthest point possible below the target. +1 means the opposite.
+     */
+    public get targetBalanceDistance() {
+        return this.data.targetBalanceDistance;
+    }
+
+    public setData(balance: number, targetBalanceDistance: number) {
+        if (this.dataImpl !== undefined) {
+            throw new Error("The data must not be set multiple times.");
         }
 
-        this.balanceImpl = value;
+        this.dataImpl = { balance, targetBalanceDistance };
     }
 
     /**
@@ -32,7 +38,15 @@ export abstract class BalanceChange {
      */
     protected constructor(public readonly amount: number) {}
 
-    private balanceImpl: number | undefined;
+    private dataImpl: { readonly balance: number; readonly targetBalanceDistance: number } | undefined;
+
+    private get data() {
+        if (this.dataImpl === undefined) {
+            throw new Error("The data has not been set.");
+        }
+
+        return this.dataImpl;
+    }
 }
 
 export class Payment extends BalanceChange {
@@ -73,10 +87,6 @@ export const getNewChannelStats = (
 
     /**
      * Contains the balance history of the channel, sorted from latest to earliest. The key is the ISO 8601 date & time.
-     * @description The sort order as well as the fact that {@linkcode BalanceChange.amount} is positive when the
-     * balance decreased makes balance history reconstruction straight-forward. Starting with the current balance of a
-     * channel, an algorithm can iterate through the history and just add {@linkcode BalanceChange.amount} to get the
-     * balance before the point in time of the current history element being iterated over.
      */
     history: new Map<string, BalanceChange[]>(),
 });
