@@ -1,5 +1,5 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
-import type { ChannelStats, MutableChannelStats } from "./ChannelStats.js";
+import type { BalanceChange, ChannelStats, MutableChannelStats } from "./ChannelStats.js";
 import { IncomingForward, OutgoingForward } from "./ChannelStats.js";
 import type { YieldType } from "./lightning/YieldType.js";
 import type { INodeStats } from "./NodeStats.js";
@@ -300,17 +300,30 @@ export class Actions {
     }
 
     // Provides the already filtered history relevant to choose a new fee for the given channel.
-    // For a channel with the balance below the minimum, returns all changes that lowered the balance. Returns the
-    // opposite for a channel with the current balance above the maximum. Returns all changes for all other channels.
-    private static *getHistory(channel: ChannelStats, config: ActionsConfig) {
-        const getFraction = this.getFractionFunction(channel, config);
+    // For a channel with a negative target balance distance, returns all changes that lowered the balance below (or
+    // further below) minFeeIncreaseDistance up to the point where the target balance distance goes back below
+    // minFeeIncreaseDistance. Returns the opposite for a channel with a positive target balance distance. Returns all
+    // changes for all other channels.
+    private static *getHistory(channel: ChannelStats, { minFeeIncreaseDistance }: ActionsConfig) {
+        let firstTargetBalanceDistance: number | undefined;
+
+        const isRelevant = (
+            firstDistance: number,
+            { amount, targetBalanceDistance: distance }: Readonly<BalanceChange>,
+        ) => (
+            Math.abs(firstDistance) > minFeeIncreaseDistance ?
+                Math.abs(distance) > minFeeIncreaseDistance && Math.sign(firstDistance) !== Math.sign(amount) :
+                true
+        );
 
         for (const [time, changes] of channel.history) {
             for (const change of changes) {
-                const fraction = getFraction?.(change.balance);
+                firstTargetBalanceDistance ??= change.targetBalanceDistance;
 
-                if (this.isRelevant(channel, config, change.amount)) {
-                    yield { time, change, fraction } as const;
+                if (isRelevant(firstTargetBalanceDistance, change)) {
+                    yield { time, change } as const;
+                } else {
+                    return;
                 }
             }
         }
@@ -319,18 +332,15 @@ export class Actions {
     private static *getFeeAction(
         id: string,
         channel: ChannelStats,
-        { time, change, fraction }: YieldType<typeof this.getHistory>,
+        historyEntry: YieldType<typeof this.getHistory>,
         channels: ReadonlyMap<string, ChannelStats>,
         config: ActionsConfig,
     ) {
+        const { time, change } = historyEntry;
         const elapsedMilliseconds = Date.now() - new Date(time).valueOf();
+        const increaseFraction = this.getIncreaseFraction(elapsedMilliseconds, change, config);
 
-        if (fraction) {
-            const isRecent = elapsedMilliseconds < 5 * 60 * 1000;
-            // For recent changes we depend on the fraction only, for older changes we also consider how long we were
-            // out of bounds.
-            const addFraction = isRecent ? 0.5 * fraction : fraction; // TODO long term fee increase
-
+        if (change.targetBalanceDistance < -config.minFeeIncreaseDistance) {
             // For all changes that pushed the local balance below the minimum or above the maximum, we calculate the
             // resulting fee increase. In the end we choose the highest fee increase for each channel. This approach
             // guarantees that we do the "right thing", even when there are conflicting increases from "emergency"
@@ -346,10 +356,12 @@ export class Actions {
                     id,
                     channel,
                     config,
-                    this.increaseFeeRate(change.amount, change.fee, channel.base_fee, addFraction),
+                    this.increaseFeeRate(change.amount, change.fee, channel.base_fee, increaseFraction),
                     `The most recent outgoing forward took the balance to ${change.balance}.`, // TODO message
                 );
-            } else if (change instanceof IncomingForward) {
+            }
+        } else if (change.targetBalanceDistance > config.minFeeIncreaseDistance) {
+            if (change instanceof IncomingForward) {
                 const { amount, balance, fee, outgoingChannelId } = change;
                 const outgoingChannel = channels.get(outgoingChannelId);
 
@@ -361,7 +373,7 @@ export class Actions {
                     outgoingChannelId,
                     outgoingChannel,
                     config,
-                    this.increaseFeeRate(-amount - fee, fee, outgoingChannel.base_fee, addFraction),
+                    this.increaseFeeRate(-amount - fee, fee, outgoingChannel.base_fee, increaseFraction),
                     `An incoming forward in channel ${id} (${channel.partnerAlias}) took its balance ` +
                     `to ${balance} and was routed out through this channel.`, // TODO message
                 );
@@ -381,6 +393,18 @@ export class Actions {
         }
 
         return false;
+    }
+
+    private static getIncreaseFraction(
+        elapsedMilliseconds: number,
+        change: Readonly<BalanceChange>,
+        config: ActionsConfig,
+    ) {
+        const isRecent = elapsedMilliseconds < 5 * 60 * 1000;
+        const distance = Math.abs(change.targetBalanceDistance);
+        const rawFraction = distance - config.minFeeIncreaseDistance;
+        // TODO: get days from config
+        return isRecent ? rawFraction : rawFraction * (elapsedMilliseconds / 7 / 24 / 60 / 60 / 1000);
     }
 
     private static *getIncreaseFeeAction(
@@ -415,38 +439,6 @@ export class Actions {
 
     private static decreaseFeeRate(amount: number, fee: number, baseFee: number, subtractFraction: number) {
         return Math.max(this.getFeeRate(amount, fee, baseFee) * (1 - subtractFraction), 0);
-    }
-
-    private static getFractionFunction(channel: ChannelStats, config: ActionsConfig) {
-        const { capacity } = channel;
-        const minBalance = Math.round(capacity * config.minChannelBalanceFraction);
-
-        return this.choose(channel, config, {
-            belowMin: (balance: number) => 1 - (balance / minBalance),
-            between: undefined,
-            aboveMax: (balance: number) => 1 - ((capacity - balance) / minBalance),
-        });
-    }
-
-    private static isRelevant(channel: ChannelStats, config: ActionsConfig, amount: number) {
-        return this.choose(channel, config, { belowMin: amount > 0, between: true, aboveMax: amount < 0 });
-    }
-
-    private static choose<T>(
-        // eslint-disable-next-line @typescript-eslint/naming-convention
-        { local_balance, capacity }: ChannelStats,
-        { minChannelBalanceFraction }: ActionsConfig,
-        { belowMin, between, aboveMax }: { readonly belowMin: T; readonly between: T; readonly aboveMax: T },
-    ) {
-        const minBalance = minChannelBalanceFraction * capacity;
-
-        if (local_balance < minBalance) {
-            return belowMin;
-        } else if (local_balance > capacity - minBalance) {
-            return aboveMax;
-        }
-
-        return between;
     }
 
     private static getFeeRate(amount: number, fee: number, baseFee: number) {
