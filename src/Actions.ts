@@ -1,5 +1,5 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
-import type { BalanceChange, ChannelStats, MutableChannelStats } from "./ChannelStats.js";
+import type { ChannelStats, MutableChannelStats } from "./ChannelStats.js";
 import { IncomingForward, OutgoingForward } from "./ChannelStats.js";
 import type { YieldType } from "./lightning/YieldType.js";
 import type { INodeStats } from "./NodeStats.js";
@@ -136,9 +136,9 @@ export class Actions {
             target += channelBalanceAction.target;
             max += channelBalanceAction.max;
 
-            this.updateStats(stats, channelBalanceAction);
+            const currentTargetBalanceDistance = this.updateStats(stats, channelBalanceAction);
             yield* this.filterBalanceAction(channelBalanceAction);
-            yield* this.getFeeActions(id, channels, config);
+            yield* this.getFeeActions(id, channels, currentTargetBalanceDistance, config);
         }
 
         const nodeBalanceAction = {
@@ -260,25 +260,39 @@ export class Actions {
 
     // eslint-disable-next-line @typescript-eslint/naming-convention
     private static updateStats({ local_balance, history }: MutableChannelStats, { target, max }: Action) {
+        let currentTargetBalanceDistance: number | undefined;
         let balance = local_balance;
 
         for (const changes of history.values()) {
             for (const change of changes) {
                 change.setData(balance, this.getDistance(balance, target, max));
+                currentTargetBalanceDistance ??= change.targetBalanceDistance;
                 balance += change.amount;
             }
         }
+
+        return currentTargetBalanceDistance;
     }
 
-    private static *getFeeActions(id: string, channels: ReadonlyMap<string, ChannelStats>, config: ActionsConfig) {
+    private static *getFeeActions(
+        id: string,
+        channels: ReadonlyMap<string, ChannelStats>,
+        currentTargetBalanceDistance: number | undefined,
+        config: ActionsConfig,
+    ) {
         const channel = channels.get(id);
 
         if (!channel) {
             throw new Error("Channel statistics not found!");
         }
 
-        for (const historyEntry of this.getHistory(channel, config)) {
-            if (yield* this.getFeeAction(id, channel, historyEntry, channels, config)) {
+        if (!currentTargetBalanceDistance) {
+            // TODO channel without any forwards or payments
+            return;
+        }
+
+        for (const historyEntry of this.getHistory(channel, currentTargetBalanceDistance, config)) {
+            if (yield* this.getFeeAction(id, channel, currentTargetBalanceDistance, historyEntry, channels, config)) {
                 break;
                 // TODO no outgoing forwards in the last 30 days
             }
@@ -304,26 +318,25 @@ export class Actions {
     // further below) minFeeIncreaseDistance up to the point where the target balance distance goes back below
     // minFeeIncreaseDistance. Returns the opposite for a channel with a positive target balance distance. Returns all
     // changes for all other channels.
-    private static *getHistory(channel: ChannelStats, { minFeeIncreaseDistance }: ActionsConfig) {
-        let firstTargetBalanceDistance: number | undefined;
-
-        const isRelevant = (
-            firstDistance: number,
-            { amount, targetBalanceDistance: distance }: Readonly<BalanceChange>,
-        ) => (
-            Math.abs(firstDistance) > minFeeIncreaseDistance ?
-                Math.abs(distance) > minFeeIncreaseDistance && Math.sign(firstDistance) !== Math.sign(amount) :
-                true
-        );
+    private static *getHistory(
+        channel: ChannelStats,
+        currentTargetBalanceDistance: number,
+        { minFeeIncreaseDistance }: ActionsConfig,
+    ) {
+        const isOutOfBounds = Math.abs(currentTargetBalanceDistance) > minFeeIncreaseDistance;
 
         for (const [time, changes] of channel.history) {
             for (const change of changes) {
-                firstTargetBalanceDistance ??= change.targetBalanceDistance;
-
-                if (isRelevant(firstTargetBalanceDistance, change)) {
-                    yield { time, change } as const;
+                if (isOutOfBounds) {
+                    if (Math.abs(change.targetBalanceDistance) < minFeeIncreaseDistance) {
+                        return; // We only need to go back to the point where we're back within bounds.
+                    } else if (Math.sign(currentTargetBalanceDistance) !== Math.sign(change.amount)) {
+                        // Only return the balance changes that contributed to the current out of bounds situation.
+                        yield { time, change } as const;
+                    }
                 } else {
-                    return;
+                    // If we're within bounds we return all balance changes.
+                    yield { time, change } as const;
                 }
             }
         }
@@ -332,36 +345,39 @@ export class Actions {
     private static *getFeeAction(
         id: string,
         channel: ChannelStats,
+        currentTargetBalanceDistance: number,
         historyEntry: YieldType<typeof this.getHistory>,
         channels: ReadonlyMap<string, ChannelStats>,
         config: ActionsConfig,
     ) {
         const { time, change } = historyEntry;
         const elapsedMilliseconds = Date.now() - new Date(time).valueOf();
-        const increaseFraction = this.getIncreaseFraction(elapsedMilliseconds, change, config);
+        const increaseFraction = this.getIncreaseFraction(elapsedMilliseconds, currentTargetBalanceDistance, config);
 
-        if (change.targetBalanceDistance < -config.minFeeIncreaseDistance) {
-            // For all changes that pushed the local balance below the minimum or above the maximum, we calculate the
-            // resulting fee increase. In the end we choose the highest fee increase for each channel. This approach
-            // guarantees that we do the "right thing", even when there are conflicting increases from "emergency"
-            // measures and long term measures. For example, a channel could have had a balance slightly below the
-            // minimum for two weeks when another outgoing forward reduces the balance slightly more. When this code is
-            // run immediately afterwards, it will produce two fee increases. An "emergency" one (designed to curb
-            // further outflow) and a long term one, which is designed to slowly raise the fee to the point where
-            // rebalances are able to increase outgoing liquidity. In this case it is likely that the long term fee
-            // increase is higher than the immediate one. On the other hand, when the time span between the two outgoing
-            // forwards is much shorter, it is likely that the immediate fee increase is higher.
+        // For all changes that pushed the target balance distance out of bounds, we calculate the resulting fee
+        // increase. In the end we choose the highest fee increase for each channel. This approach guarantees that
+        // we do the "right thing", even when there are conflicting increases from "emergency" measures and long
+        // term measures. For example, a channel could have had a balance slightly below the minimum for two weeks
+        // when another outgoing forward reduces the balance slightly more. When this code is run immediately
+        // afterwards, it will produce two fee increases. An "emergency" one (designed to curb further outflow) and
+        // a long term one, which is designed to slowly raise the fee to the point where rebalances are able to
+        // increase outgoing liquidity. In this case it is likely that the long term fee increase is higher than the
+        // immediate one. On the other hand, when the time span between the two outgoing forwards is much shorter,
+        // it is likely that the immediate fee increase is higher.
+        if (currentTargetBalanceDistance <= -config.minFeeIncreaseDistance) {
             if (change instanceof OutgoingForward) {
                 yield* this.getIncreaseFeeAction(
                     id,
                     channel,
                     config,
                     this.increaseFeeRate(change.amount, change.fee, channel.base_fee, increaseFraction),
-                    `The most recent outgoing forward took the balance to ${change.balance}.`, // TODO message
+                    `The outgoing forward at ${time} took the distance to the target balance to ` +
+                    `${change.targetBalanceDistance} and the distance is still not within bounds.`,
                 );
             }
-        } else if (change.targetBalanceDistance > config.minFeeIncreaseDistance) {
+        } else if (currentTargetBalanceDistance >= config.minFeeIncreaseDistance) {
             if (change instanceof IncomingForward) {
+                // TODO: Broken, reimplement
                 const { amount, balance, fee, outgoingChannelId } = change;
                 const outgoingChannel = channels.get(outgoingChannelId);
 
@@ -375,18 +391,20 @@ export class Actions {
                     config,
                     this.increaseFeeRate(-amount - fee, fee, outgoingChannel.base_fee, increaseFraction),
                     `An incoming forward in channel ${id} (${channel.partnerAlias}) took its balance ` +
-                    `to ${balance} and was routed out through this channel.`, // TODO message
+                    `to ${balance} and was routed out through this channel.`,
                 );
             }
         } else if (change instanceof OutgoingForward) {
             const subtractFraction = elapsedMilliseconds / 30 / 24 / 60 / 60 / 1000; // TODO: take days from settings
 
+            // TODO: Use feeDecreaseWaitDays
             yield* this.getDecreaseFeeAction(
                 id,
                 channel,
                 config,
                 this.decreaseFeeRate(change.amount, change.fee, channel.base_fee, subtractFraction),
-                `The most recent outgoing forward took place on ${time}.`,
+                `The current distance from the target balance is ${currentTargetBalanceDistance} and the most recent ` +
+                `outgoing forward took place on ${time}.`,
             );
 
             return true;
@@ -397,12 +415,11 @@ export class Actions {
 
     private static getIncreaseFraction(
         elapsedMilliseconds: number,
-        change: Readonly<BalanceChange>,
+        currentTargetBalanceDistance: number,
         config: ActionsConfig,
     ) {
         const isRecent = elapsedMilliseconds < 5 * 60 * 1000;
-        const distance = Math.abs(change.targetBalanceDistance);
-        const rawFraction = distance - config.minFeeIncreaseDistance;
+        const rawFraction = Math.abs(currentTargetBalanceDistance) - config.minFeeIncreaseDistance;
         // TODO: get days from config
         return isRecent ? rawFraction : rawFraction * (elapsedMilliseconds / 7 / 24 / 60 / 60 / 1000);
     }
@@ -434,11 +451,11 @@ export class Actions {
     private static increaseFeeRate(amount: number, fee: number, baseFee: number, addFraction: number) {
         // If the fee rate has been really low then the formula wouldn't increase it meaningfully. An increase to
         // at least 30 seems like a good idea.
-        return Math.max(this.getFeeRate(amount, fee, baseFee) * (1 + addFraction), 30);
+        return Math.max(Math.round(this.getFeeRate(amount, fee, baseFee) * (1 + addFraction)), 30);
     }
 
     private static decreaseFeeRate(amount: number, fee: number, baseFee: number, subtractFraction: number) {
-        return Math.max(this.getFeeRate(amount, fee, baseFee) * (1 - subtractFraction), 0);
+        return Math.max(Math.round(this.getFeeRate(amount, fee, baseFee) * (1 - subtractFraction)), 0);
     }
 
     private static getFeeRate(amount: number, fee: number, baseFee: number) {
@@ -450,11 +467,9 @@ export class Actions {
         // eslint-disable-next-line @typescript-eslint/naming-convention
         { partnerAlias, fee_rate }: ChannelStats,
         { maxFeeRate }: ActionsConfig,
-        targetFee: number,
+        target: number,
         reason: string,
     ) {
-        const target = Math.round(targetFee);
-
         return {
             entity: "channel",
             id,
