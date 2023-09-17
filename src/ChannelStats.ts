@@ -36,10 +36,11 @@ export abstract class BalanceChange {
 
     /**
      * Initializes a new instance.
+     * @param time The ISO 8601 date &amp; time.
      * @param amount By what amount did the channel balance change? A positive value means that the channel balance
      * decreased; a negative value means that it increased.
      */
-    protected constructor(public readonly amount: number) {}
+    protected constructor(public readonly time: string, public readonly amount: number) {}
 
     private dataImpl: { readonly balance: number; readonly targetBalanceDistance: number } | undefined;
 
@@ -53,31 +54,38 @@ export abstract class BalanceChange {
 }
 
 export class Payment extends BalanceChange {
-    public constructor(amount: number) {
-        super(amount);
+    public constructor(time: string, amount: number) {
+        super(time, amount);
     }
 }
 
 export class IncomingForward extends BalanceChange {
     /**
      * Initializes a new instance.
+     * @param time The ISO 8601 date &amp; time.
      * @param amount See {@linkcode BalanceChange.constructor}.
      * @param fee The fee that was paid for the forward.
      * @param outgoingChannelId The id of the channel the amount was forwarded to.
      */
-    public constructor(amount: number, public readonly fee: number, public readonly outgoingChannelId: string) {
-        super(amount);
+    public constructor(
+        time: string,
+        amount: number,
+        public readonly fee: number,
+        public readonly outgoingChannelId: string,
+    ) {
+        super(time, amount);
     }
 }
 
 export class OutgoingForward extends BalanceChange {
     /**
      * Initializes a new instance.
+     * @param time The ISO 8601 date &amp; time.
      * @param amount See {@linkcode BalanceChange.constructor}.
      * @param fee The fee that was paid for the forward.
      */
-    public constructor(amount: number, public readonly fee: number) {
-        super(amount);
+    public constructor(time: string, amount: number, public readonly fee: number) {
+        super(time, amount);
     }
 }
 
