@@ -1,5 +1,4 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
-import type { DeepReadonly } from "./DeepReadonly.js";
 import type { ChannelsElement } from "./info/ChannelsRefresher.js";
 
 const getNewForwardStats = () => ({
@@ -89,7 +88,7 @@ export class OutgoingForward extends BalanceChange {
     }
 }
 
-export class MutableChannelStats {
+export class ChannelStats {
     public constructor(
         public readonly properties: Omit<ChannelsElement, "id"> & { readonly partnerAlias?: string | undefined },
     ) {}
@@ -97,10 +96,21 @@ export class MutableChannelStats {
     public readonly incomingForwards = getNewForwardStats();
     public readonly outgoingForwards = getNewForwardStats();
 
-    /**
-     * Contains the balance history of the channel, sorted from latest to earliest. The key is the ISO 8601 date & time.
-     */
-    public history = new Map<string, BalanceChange[]>();
-}
+    /** Gets the balance history of the channel, sorted from latest to earliest. */
+    public get history(): readonly BalanceChange[] {
+        if (this.isUnsorted) {
+            this.historyImpl.sort((a, b) => -a.time.localeCompare(b.time));
+            this.isUnsorted = false;
+        }
 
-export type ChannelStats = DeepReadonly<MutableChannelStats>;
+        return this.historyImpl;
+    }
+
+    public add(change: BalanceChange) {
+        this.isUnsorted = true;
+        this.historyImpl.push(change);
+    }
+
+    private readonly historyImpl = new Array<BalanceChange>();
+    private isUnsorted = false;
+}

@@ -1,7 +1,6 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
-import type { ChannelStats, MutableChannelStats } from "./ChannelStats.js";
+import type { BalanceChange, ChannelStats } from "./ChannelStats.js";
 import { IncomingForward, OutgoingForward } from "./ChannelStats.js";
-import type { YieldType } from "./lightning/YieldType.js";
 import type { INodeStats } from "./NodeStats.js";
 
 export interface ActionsConfig {
@@ -260,18 +259,16 @@ export class Actions {
 
     private static updateStats(
         // eslint-disable-next-line @typescript-eslint/naming-convention
-        { properties: { local_balance }, history }: MutableChannelStats,
+        { properties: { local_balance }, history }: ChannelStats,
         { target, max }: Action,
     ) {
         let currentTargetBalanceDistance: number | undefined;
         let balance = local_balance;
 
-        for (const changes of history.values()) {
-            for (const change of changes) {
-                change.setData(balance, this.getDistance(balance, target, max));
-                currentTargetBalanceDistance ??= change.targetBalanceDistance;
-                balance += change.amount;
-            }
+        for (const change of history) {
+            change.setData(balance, this.getDistance(balance, target, max));
+            currentTargetBalanceDistance ??= change.targetBalanceDistance;
+            balance += change.amount;
         }
 
         return currentTargetBalanceDistance;
@@ -328,19 +325,17 @@ export class Actions {
     ) {
         const isOutOfBounds = Math.abs(currentTargetBalanceDistance) > minFeeIncreaseDistance;
 
-        for (const [time, changes] of channel.history) {
-            for (const change of changes) {
-                if (isOutOfBounds) {
-                    if (Math.abs(change.targetBalanceDistance) < minFeeIncreaseDistance) {
-                        return; // We only need to go back to the point where we're back within bounds.
-                    } else if (Math.sign(currentTargetBalanceDistance) !== Math.sign(change.amount)) {
-                        // Only return the balance changes that contributed to the current out of bounds situation.
-                        yield { time, change } as const;
-                    }
-                } else {
-                    // If we're within bounds we return all balance changes.
-                    yield { time, change } as const;
+        for (const change of channel.history) {
+            if (isOutOfBounds) {
+                if (Math.abs(change.targetBalanceDistance) < minFeeIncreaseDistance) {
+                    return; // We only need to go back to the point where we're back within bounds.
+                } else if (Math.sign(currentTargetBalanceDistance) !== Math.sign(change.amount)) {
+                    // Only return the balance changes that contributed to the current out of bounds situation.
+                    yield change;
                 }
+            } else {
+                // If we're within bounds we return all balance changes.
+                yield change;
             }
         }
     }
@@ -349,12 +344,11 @@ export class Actions {
         id: string,
         channel: ChannelStats,
         currentTargetBalanceDistance: number,
-        historyEntry: YieldType<typeof this.getHistory>,
+        change: BalanceChange,
         channels: ReadonlyMap<string, ChannelStats>,
         config: ActionsConfig,
     ) {
-        const { time, change } = historyEntry;
-        const elapsedMilliseconds = Date.now() - new Date(time).valueOf();
+        const elapsedMilliseconds = Date.now() - new Date(change.time).valueOf();
         const increaseFraction = this.getIncreaseFraction(elapsedMilliseconds, currentTargetBalanceDistance, config);
 
         // For all changes that pushed the target balance distance out of bounds, we calculate the resulting fee
@@ -374,7 +368,7 @@ export class Actions {
                     channel,
                     config,
                     this.increaseFeeRate(change.amount, change.fee, channel.properties.base_fee, increaseFraction),
-                    `The outgoing forward at ${time} took the distance to the target balance to ` +
+                    `The outgoing forward at ${change.time} took the distance to the target balance to ` +
                     `${change.targetBalanceDistance} and the distance is still not within bounds.`,
                 );
             }
@@ -407,7 +401,7 @@ export class Actions {
                 config,
                 this.decreaseFeeRate(change.amount, change.fee, channel.properties.base_fee, subtractFraction),
                 `The current distance from the target balance is ${currentTargetBalanceDistance} and the most recent ` +
-                `outgoing forward took place on ${time}.`,
+                `outgoing forward took place on ${change.time}.`,
             );
 
             return true;

@@ -1,6 +1,6 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
-import type { BalanceChange, MutableForwardStats } from "./ChannelStats.js";
-import { IncomingForward, MutableChannelStats, OutgoingForward, Payment } from "./ChannelStats.js";
+import type { MutableForwardStats } from "./ChannelStats.js";
+import { ChannelStats, IncomingForward, OutgoingForward, Payment } from "./ChannelStats.js";
 import type { INodeInfo } from "./info/NodeInfo.js";
 
 export class NodeStats {
@@ -16,7 +16,7 @@ export class NodeStats {
 
         const channelsImpl = new Map(channels.map(
             // TODO: Consider getting rid of the map, use array instead
-            ({ id, ...rest }) => [id, new MutableChannelStats({ partnerAlias: nodesMap.get(id)?.alias, ...rest })],
+            ({ id, ...rest }) => [id, new ChannelStats({ partnerAlias: nodesMap.get(id)?.alias, ...rest })],
         ));
 
         for (const forward of forwards) {
@@ -25,11 +25,10 @@ export class NodeStats {
             const { rawTokens, fee } = this.getTokens(forward);
             const incomingStats = channelsImpl.get(incoming_channel);
             NodeStats.updateStats(incomingStats?.incomingForwards, rawTokens + fee);
-            // eslint-disable-next-line max-len
-            this.add(incomingStats?.history, created_at, new IncomingForward(created_at, -rawTokens - fee, fee, outgoing_channel));
+            incomingStats?.add(new IncomingForward(created_at, -rawTokens - fee, fee, outgoing_channel));
             const outgoingStats = channelsImpl.get(outgoing_channel);
             NodeStats.updateStats(outgoingStats?.outgoingForwards, rawTokens);
-            this.add(outgoingStats?.history, created_at, new OutgoingForward(created_at, rawTokens, fee));
+            outgoingStats?.add(new OutgoingForward(created_at, rawTokens, fee));
         }
 
         // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -39,15 +38,11 @@ export class NodeStats {
                 if (is_confirmed) {
                     const { rawTokens, fee } = this.getTokens(route);
                     const outgoingStats = channelsImpl.get(route.hops.at(0)?.channel ?? "");
-                    this.add(outgoingStats?.history, confirmed_at, new Payment(confirmed_at, rawTokens));
+                    outgoingStats?.add(new Payment(confirmed_at, rawTokens));
                     const incomingStats = channelsImpl.get(route.hops.at(-1)?.channel ?? "");
-                    this.add(incomingStats?.history, confirmed_at, new Payment(confirmed_at, -rawTokens + fee));
+                    incomingStats?.add(new Payment(confirmed_at, -rawTokens + fee));
                 }
             }
-        }
-
-        for (const channel of channelsImpl.values()) {
-            channel.history = new Map([...channel.history].sort((a, b) => -a[0].localeCompare(b[0])));
         }
 
         return new NodeStats(channelsImpl);
@@ -61,18 +56,12 @@ export class NodeStats {
         }
     }
 
-    private static add(history: Map<string, BalanceChange[]> | undefined, key: string, value: BalanceChange) {
-        if (history && !history.get(key)?.push(value)) {
-            history.set(key, [value]);
-        }
-    }
-
     // eslint-disable-next-line @typescript-eslint/naming-convention
     private static getTokens({ fee_mtokens, mtokens }: { readonly fee_mtokens: string; readonly mtokens: string }) {
         return { rawTokens: Number(mtokens) / 1000, fee: Number(fee_mtokens) / 1000 };
     }
 
-    private constructor(public readonly channels: ReadonlyMap<string, MutableChannelStats>) {}
+    private constructor(public readonly channels: ReadonlyMap<string, ChannelStats>) {}
 }
 
 export type INodeStats = Pick<NodeStats, "channels">;

@@ -159,15 +159,13 @@ const verifyFlow = (
         let outgoingTokens = 0;
         let incomingTokens = 0;
 
-        for (const changes of history.values()) {
-            for (const change of changes) {
-                if (change instanceof OutgoingForward) {
-                    outgoingTokens += change.amount;
-                    assert(change.fee);
-                } else if (change instanceof IncomingForward) {
-                    incomingTokens -= change.amount;
-                    assert(change.outgoingChannelId);
-                }
+        for (const change of history) {
+            if (change instanceof OutgoingForward) {
+                outgoingTokens += change.amount;
+                assert(change.fee);
+            } else if (change instanceof IncomingForward) {
+                incomingTokens -= change.amount;
+                assert(change.outgoingChannelId);
             }
         }
 
