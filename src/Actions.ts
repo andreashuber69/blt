@@ -138,6 +138,8 @@ export class Actions {
 
             const currentTargetBalanceDistance = this.updateStats(channel, channelBalanceAction);
             yield* this.filterBalanceAction(channelBalanceAction);
+            // TODO: The yield below must be in its own loop so that the stats of all channels are update before we
+            // attempt to calculate fees.
             yield* this.getFeeActions(id, channels, currentTargetBalanceDistance, config);
         }
 
