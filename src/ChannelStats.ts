@@ -106,6 +106,14 @@ export class ChannelStats {
         return this.historyImpl;
     }
 
+    /**
+     * Gets {@linkcode BalanceChange.targetBalanceDistance} of the latest element in the history. Returns `undefined`
+     * if the history is empty.
+     */
+    public get targetBalanceDistance() {
+        return this.history[0]?.targetBalanceDistance;
+    }
+
     public addToHistory(change: BalanceChange) {
         this.isUnsorted = true;
         this.historyImpl.push(change);
