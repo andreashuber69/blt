@@ -130,13 +130,13 @@ export class Actions {
         let target = 0;
         let max = 0;
 
-        for (const [id, stats] of channels.entries()) {
-            const channelBalanceAction = this.getChannelBalanceAction(id, stats, config);
+        for (const [id, channel] of channels.entries()) {
+            const channelBalanceAction = this.getChannelBalanceAction(id, channel, config);
             actual += channelBalanceAction.actual;
             target += channelBalanceAction.target;
             max += channelBalanceAction.max;
 
-            const currentTargetBalanceDistance = this.updateStats(stats, channelBalanceAction);
+            const currentTargetBalanceDistance = this.updateStats(channel, channelBalanceAction);
             yield* this.filterBalanceAction(channelBalanceAction);
             yield* this.getFeeActions(id, channels, currentTargetBalanceDistance, config);
         }
