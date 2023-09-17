@@ -106,7 +106,7 @@ export class ChannelStats {
         return this.historyImpl;
     }
 
-    public add(change: BalanceChange) {
+    public addToHistory(change: BalanceChange) {
         this.isUnsorted = true;
         this.historyImpl.push(change);
     }
