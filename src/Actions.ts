@@ -130,8 +130,8 @@ export class Actions {
         let target = 0;
         let max = 0;
 
-        for (const [id, channel] of channels.entries()) {
-            const channelBalanceAction = this.getChannelBalanceAction(id, channel, config);
+        for (const channel of channels.values()) {
+            const channelBalanceAction = this.getChannelBalanceAction(channel, config);
             actual += channelBalanceAction.actual;
             target += channelBalanceAction.target;
             max += channelBalanceAction.max;
@@ -152,16 +152,15 @@ export class Actions {
 
         yield* this.filterBalanceAction(nodeBalanceAction);
 
-        for (const [id] of channels.entries()) {
-            yield* this.getFeeActions(id, channels, config);
+        for (const channel of channels.values()) {
+            yield* this.getFeeActions(channel, channels, config);
         }
     }
 
     private static getChannelBalanceAction(
-        id: string,
         {
             // eslint-disable-next-line @typescript-eslint/naming-convention
-            properties: { partnerAlias, capacity, local_balance },
+            properties: { id, partnerAlias, capacity, local_balance },
             incomingForwards: incoming,
             outgoingForwards: outgoing,
         }: ChannelStats,
@@ -273,20 +272,15 @@ export class Actions {
         }
     }
 
-    private static *getFeeActions(id: string, channels: ReadonlyMap<string, ChannelStats>, config: ActionsConfig) {
-        const channel = channels.get(id);
-
-        if (!channel) {
-            throw new Error("Channel statistics not found!");
-        }
-
+    // eslint-disable-next-line max-len
+    private static *getFeeActions(channel: ChannelStats, channels: ReadonlyMap<string, ChannelStats>, config: ActionsConfig) {
         if (channel.history.length === 0) {
             // TODO channel without any forwards or payments
             return;
         }
 
         for (const historyEntry of this.getHistory(channel, config)) {
-            if (yield* this.getFeeAction(id, channel, historyEntry, channels, config)) {
+            if (yield* this.getFeeAction(channel, historyEntry, channels, config)) {
                 break;
                 // TODO no outgoing forwards in the last 30 days
             }
@@ -327,7 +321,6 @@ export class Actions {
     }
 
     private static *getFeeAction(
-        id: string,
         channel: ChannelStats,
         change: BalanceChange,
         channels: ReadonlyMap<string, ChannelStats>,
@@ -349,7 +342,6 @@ export class Actions {
         if (channel.targetBalanceDistance <= -config.minFeeIncreaseDistance) {
             if (change instanceof OutgoingForward) {
                 yield* this.getIncreaseFeeAction(
-                    id,
                     channel,
                     config,
                     this.increaseFeeRate(change.amount, change.fee, channel.properties.base_fee, increaseFraction),
@@ -368,12 +360,12 @@ export class Actions {
                 }
 
                 yield* this.getIncreaseFeeAction(
-                    outgoingChannelId,
                     outgoingChannel,
                     config,
                     this.increaseFeeRate(-amount - fee, fee, outgoingChannel.properties.base_fee, increaseFraction),
-                    `An incoming forward in channel ${id} (${channel.properties.partnerAlias}) took its balance ` +
-                    `to ${balance} and was routed out through this channel.`,
+                    `An incoming forward in channel ${outgoingChannel.properties.id} ` +
+                    `(${channel.properties.partnerAlias}) took its balance to ${balance} and was routed out through ` +
+                    "this channel.",
                 );
             }
         } else if (change instanceof OutgoingForward) {
@@ -381,7 +373,6 @@ export class Actions {
 
             // TODO: Use feeDecreaseWaitDays
             yield* this.getDecreaseFeeAction(
-                id,
                 channel,
                 config,
                 this.decreaseFeeRate(change.amount, change.fee, channel.properties.base_fee, subtractFraction),
@@ -407,26 +398,24 @@ export class Actions {
     }
 
     private static *getIncreaseFeeAction(
-        id: string,
         channel: ChannelStats,
         config: ActionsConfig,
         targetFee: number,
         reason: string,
     ) {
         if (targetFee > channel.properties.fee_rate) {
-            yield this.createFeeAction(id, channel, config, targetFee, reason);
+            yield this.createFeeAction(channel, config, targetFee, reason);
         }
     }
 
     private static *getDecreaseFeeAction(
-        id: string,
         channel: ChannelStats,
         config: ActionsConfig,
         targetFee: number,
         reason: string,
     ) {
         if (targetFee < channel.properties.fee_rate) {
-            yield this.createFeeAction(id, channel, config, targetFee, reason);
+            yield this.createFeeAction(channel, config, targetFee, reason);
         }
     }
 
@@ -445,9 +434,8 @@ export class Actions {
     }
 
     private static createFeeAction(
-        id: string,
         // eslint-disable-next-line @typescript-eslint/naming-convention
-        { properties: { partnerAlias, fee_rate } }: ChannelStats,
+        { properties: { id, partnerAlias, fee_rate } }: ChannelStats,
         { maxFeeRate }: ActionsConfig,
         target: number,
         reason: string,

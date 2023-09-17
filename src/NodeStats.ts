@@ -15,8 +15,7 @@ export class NodeStats {
         const nodesMap = new Map(nodes.map((n) => [n.id, n]));
 
         const channelsImpl = new Map(channels.map(
-            // TODO: Consider getting rid of the map, use array instead
-            ({ id, ...rest }) => [id, new ChannelStats({ partnerAlias: nodesMap.get(id)?.alias, ...rest })],
+            ({ id, ...rest }) => [id, new ChannelStats({ id, partnerAlias: nodesMap.get(id)?.alias, ...rest })],
         ));
 
         for (const forward of forwards) {

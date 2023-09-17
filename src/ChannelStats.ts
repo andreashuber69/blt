@@ -90,9 +90,7 @@ export class OutgoingForward extends BalanceChange {
 }
 
 export class ChannelStats {
-    public constructor(
-        public readonly properties: Omit<ChannelsElement, "id"> & { readonly partnerAlias?: string | undefined },
-    ) {}
+    public constructor(public readonly properties: ChannelsElement & { readonly partnerAlias?: string | undefined }) {}
 
     public readonly incomingForwards = getNewForwardStats();
     public readonly outgoingForwards = getNewForwardStats();
