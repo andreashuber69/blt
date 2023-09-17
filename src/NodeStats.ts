@@ -1,6 +1,6 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
-import type { BalanceChange, MutableChannelStats, MutableForwardStats } from "./ChannelStats.js";
-import { getNewChannelStats, IncomingForward, OutgoingForward, Payment } from "./ChannelStats.js";
+import type { BalanceChange, MutableForwardStats } from "./ChannelStats.js";
+import { IncomingForward, MutableChannelStats, OutgoingForward, Payment } from "./ChannelStats.js";
 import type { INodeInfo } from "./info/NodeInfo.js";
 
 export class NodeStats {
@@ -16,7 +16,7 @@ export class NodeStats {
 
         const channelsImpl = new Map(channels.map(
             // TODO: Consider getting rid of the map, use array instead
-            ({ id, ...rest }) => [id, getNewChannelStats({ partnerAlias: nodesMap.get(id)?.alias, ...rest })],
+            ({ id, ...rest }) => [id, new MutableChannelStats({ partnerAlias: nodesMap.get(id)?.alias, ...rest })],
         ));
 
         for (const forward of forwards) {

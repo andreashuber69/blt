@@ -81,19 +81,18 @@ export class OutgoingForward extends BalanceChange {
     }
 }
 
-export const getNewChannelStats = (
-    props: Omit<ChannelsElement, "id"> & { readonly partnerAlias?: string | undefined },
-) => ({
-    ...props,
-    incomingForwards: getNewForwardStats(),
-    outgoingForwards: getNewForwardStats(),
+export class MutableChannelStats {
+    public constructor(
+        public readonly properties: Omit<ChannelsElement, "id"> & { readonly partnerAlias?: string | undefined },
+    ) {}
+
+    public readonly incomingForwards = getNewForwardStats();
+    public readonly outgoingForwards = getNewForwardStats();
 
     /**
      * Contains the balance history of the channel, sorted from latest to earliest. The key is the ISO 8601 date & time.
      */
-    history: new Map<string, BalanceChange[]>(),
-});
-
-export type MutableChannelStats = ReturnType<typeof getNewChannelStats>;
+    public history = new Map<string, BalanceChange[]>();
+}
 
 export type ChannelStats = DeepReadonly<MutableChannelStats>;

@@ -159,10 +159,8 @@ export class Actions {
     private static getChannelBalanceAction(
         id: string,
         {
-            partnerAlias,
-            capacity,
             // eslint-disable-next-line @typescript-eslint/naming-convention
-            local_balance,
+            properties: { partnerAlias, capacity, local_balance },
             incomingForwards: incoming,
             outgoingForwards: outgoing,
         }: ChannelStats,
@@ -260,8 +258,11 @@ export class Actions {
         return createAction(optimalBalance, "This is the optimal balance according to flow.");
     }
 
-    // eslint-disable-next-line @typescript-eslint/naming-convention
-    private static updateStats({ local_balance, history }: MutableChannelStats, { target, max }: Action) {
+    private static updateStats(
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        { properties: { local_balance }, history }: MutableChannelStats,
+        { target, max }: Action,
+    ) {
         let currentTargetBalanceDistance: number | undefined;
         let balance = local_balance;
 
@@ -372,7 +373,7 @@ export class Actions {
                     id,
                     channel,
                     config,
-                    this.increaseFeeRate(change.amount, change.fee, channel.base_fee, increaseFraction),
+                    this.increaseFeeRate(change.amount, change.fee, channel.properties.base_fee, increaseFraction),
                     `The outgoing forward at ${time} took the distance to the target balance to ` +
                     `${change.targetBalanceDistance} and the distance is still not within bounds.`,
                 );
@@ -391,8 +392,8 @@ export class Actions {
                     outgoingChannelId,
                     outgoingChannel,
                     config,
-                    this.increaseFeeRate(-amount - fee, fee, outgoingChannel.base_fee, increaseFraction),
-                    `An incoming forward in channel ${id} (${channel.partnerAlias}) took its balance ` +
+                    this.increaseFeeRate(-amount - fee, fee, outgoingChannel.properties.base_fee, increaseFraction),
+                    `An incoming forward in channel ${id} (${channel.properties.partnerAlias}) took its balance ` +
                     `to ${balance} and was routed out through this channel.`,
                 );
             }
@@ -404,7 +405,7 @@ export class Actions {
                 id,
                 channel,
                 config,
-                this.decreaseFeeRate(change.amount, change.fee, channel.base_fee, subtractFraction),
+                this.decreaseFeeRate(change.amount, change.fee, channel.properties.base_fee, subtractFraction),
                 `The current distance from the target balance is ${currentTargetBalanceDistance} and the most recent ` +
                 `outgoing forward took place on ${time}.`,
             );
@@ -433,7 +434,7 @@ export class Actions {
         targetFee: number,
         reason: string,
     ) {
-        if (targetFee > channel.fee_rate) {
+        if (targetFee > channel.properties.fee_rate) {
             yield this.createFeeAction(id, channel, config, targetFee, reason);
         }
     }
@@ -445,7 +446,7 @@ export class Actions {
         targetFee: number,
         reason: string,
     ) {
-        if (targetFee < channel.fee_rate) {
+        if (targetFee < channel.properties.fee_rate) {
             yield this.createFeeAction(id, channel, config, targetFee, reason);
         }
     }
@@ -467,7 +468,7 @@ export class Actions {
     private static createFeeAction(
         id: string,
         // eslint-disable-next-line @typescript-eslint/naming-convention
-        { partnerAlias, fee_rate }: ChannelStats,
+        { properties: { partnerAlias, fee_rate } }: ChannelStats,
         { maxFeeRate }: ActionsConfig,
         target: number,
         reason: string,
