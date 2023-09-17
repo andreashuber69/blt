@@ -138,9 +138,6 @@ export class Actions {
 
             this.updateStats(channel, channelBalanceAction);
             yield* this.filterBalanceAction(channelBalanceAction);
-            // TODO: The yield below must be in its own loop so that the stats of all channels are update before we
-            // attempt to calculate fees.
-            yield* this.getFeeActions(id, channels, config);
         }
 
         const nodeBalanceAction = {
@@ -154,6 +151,10 @@ export class Actions {
         } satisfies Action;
 
         yield* this.filterBalanceAction(nodeBalanceAction);
+
+        for (const [id] of channels.entries()) {
+            yield* this.getFeeActions(id, channels, config);
+        }
     }
 
     private static getChannelBalanceAction(
