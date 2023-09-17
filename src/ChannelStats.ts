@@ -1,4 +1,5 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
+import { getTargetBalanceDistance } from "./getTargetBalanceDistance.js";
 import type { ChannelsElement } from "./info/ChannelsRefresher.js";
 
 const getNewForwardStats = () => ({
@@ -107,11 +108,17 @@ export class ChannelStats {
     }
 
     /**
-     * Gets {@linkcode BalanceChange.targetBalanceDistance} of the latest element in the history. Returns `undefined`
-     * if the history is empty.
+     * Gets {@linkcode BalanceChange.targetBalanceDistance} of the latest element in the history. Returns the distance
+     * to half the capacity if the history is empty.
      */
     public get targetBalanceDistance() {
-        return this.history[0]?.targetBalanceDistance;
+        return this.history[0] ?
+            this.history[0].targetBalanceDistance :
+            getTargetBalanceDistance(
+                this.properties.local_balance,
+                this.properties.capacity / 2,
+                this.properties.capacity,
+            );
     }
 
     public addToHistory(change: BalanceChange) {

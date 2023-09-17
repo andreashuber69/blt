@@ -1,6 +1,7 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import type { BalanceChange, ChannelStats } from "./ChannelStats.js";
 import { IncomingForward, OutgoingForward } from "./ChannelStats.js";
+import { getTargetBalanceDistance } from "./getTargetBalanceDistance.js";
 import type { INodeStats } from "./NodeStats.js";
 
 export interface ActionsConfig {
@@ -135,17 +136,17 @@ export class Actions {
             target += channelBalanceAction.target;
             max += channelBalanceAction.max;
 
-            const currentTargetBalanceDistance = this.updateStats(channel, channelBalanceAction);
+            this.updateStats(channel, channelBalanceAction);
             yield* this.filterBalanceAction(channelBalanceAction);
             // TODO: The yield below must be in its own loop so that the stats of all channels are update before we
             // attempt to calculate fees.
-            yield* this.getFeeActions(id, channels, currentTargetBalanceDistance, config);
+            yield* this.getFeeActions(id, channels, config);
         }
 
         const nodeBalanceAction = {
             entity: "node",
             variable: "balance",
-            priority: this.getPriority(4, this.getDistance(actual, target, max), config.minRebalanceDistance),
+            priority: this.getPriority(4, getTargetBalanceDistance(actual, target, max), config.minRebalanceDistance),
             actual,
             target,
             max,
@@ -177,7 +178,11 @@ export class Actions {
                 entity: "channel",
                 id,
                 alias: partnerAlias,
-                priority: this.getPriority(2, this.getDistance(local_balance, target, capacity), minRebalanceDistance),
+                priority: this.getPriority(
+                    2,
+                    getTargetBalanceDistance(local_balance, target, capacity),
+                    minRebalanceDistance,
+                ),
                 variable: "balance",
                 actual: local_balance,
                 target,
@@ -257,42 +262,30 @@ export class Actions {
         return createAction(optimalBalance, "This is the optimal balance according to flow.");
     }
 
-    private static updateStats(
-        // eslint-disable-next-line @typescript-eslint/naming-convention
-        { properties: { local_balance }, history }: ChannelStats,
-        { target, max }: Action,
-    ) {
-        let currentTargetBalanceDistance: number | undefined;
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    private static updateStats({ properties: { local_balance }, history }: ChannelStats, { target, max }: Action) {
         let balance = local_balance;
 
         for (const change of history) {
-            change.setData(balance, this.getDistance(balance, target, max));
-            currentTargetBalanceDistance ??= change.targetBalanceDistance;
+            change.setData(balance, getTargetBalanceDistance(balance, target, max));
             balance += change.amount;
         }
-
-        return currentTargetBalanceDistance;
     }
 
-    private static *getFeeActions(
-        id: string,
-        channels: ReadonlyMap<string, ChannelStats>,
-        currentTargetBalanceDistance: number | undefined,
-        config: ActionsConfig,
-    ) {
+    private static *getFeeActions(id: string, channels: ReadonlyMap<string, ChannelStats>, config: ActionsConfig) {
         const channel = channels.get(id);
 
         if (!channel) {
             throw new Error("Channel statistics not found!");
         }
 
-        if (!currentTargetBalanceDistance) {
+        if (channel.history.length === 0) {
             // TODO channel without any forwards or payments
             return;
         }
 
-        for (const historyEntry of this.getHistory(channel, currentTargetBalanceDistance, config)) {
-            if (yield* this.getFeeAction(id, channel, currentTargetBalanceDistance, historyEntry, channels, config)) {
+        for (const historyEntry of this.getHistory(channel, config)) {
+            if (yield* this.getFeeAction(id, channel, historyEntry, channels, config)) {
                 break;
                 // TODO no outgoing forwards in the last 30 days
             }
@@ -309,27 +302,19 @@ export class Actions {
         return base ** Math.floor(Math.abs(distance) / minRebalanceDistance);
     }
 
-    private static getDistance(balance: number, target: number, max: number) {
-        return balance <= target ? (balance / target) - 1 : (balance - target) / (max - target);
-    }
-
     // Provides the already filtered history relevant to choose a new fee for the given channel.
     // For a channel with a negative target balance distance, returns all changes that lowered the balance below (or
     // further below) minFeeIncreaseDistance up to the point where the target balance distance goes back below
     // minFeeIncreaseDistance. Returns the opposite for a channel with a positive target balance distance. Returns all
     // changes for all other channels.
-    private static *getHistory(
-        channel: ChannelStats,
-        currentTargetBalanceDistance: number,
-        { minFeeIncreaseDistance }: ActionsConfig,
-    ) {
-        const isOutOfBounds = Math.abs(currentTargetBalanceDistance) > minFeeIncreaseDistance;
+    private static *getHistory(channel: ChannelStats, { minFeeIncreaseDistance }: ActionsConfig) {
+        const isOutOfBounds = Math.abs(channel.targetBalanceDistance) > minFeeIncreaseDistance;
 
         for (const change of channel.history) {
             if (isOutOfBounds) {
                 if (Math.abs(change.targetBalanceDistance) < minFeeIncreaseDistance) {
                     return; // We only need to go back to the point where we're back within bounds.
-                } else if (Math.sign(currentTargetBalanceDistance) !== Math.sign(change.amount)) {
+                } else if (Math.sign(channel.targetBalanceDistance) !== Math.sign(change.amount)) {
                     // Only return the balance changes that contributed to the current out of bounds situation.
                     yield change;
                 }
@@ -343,13 +328,12 @@ export class Actions {
     private static *getFeeAction(
         id: string,
         channel: ChannelStats,
-        currentTargetBalanceDistance: number,
         change: BalanceChange,
         channels: ReadonlyMap<string, ChannelStats>,
         config: ActionsConfig,
     ) {
         const elapsedMilliseconds = Date.now() - new Date(change.time).valueOf();
-        const increaseFraction = this.getIncreaseFraction(elapsedMilliseconds, currentTargetBalanceDistance, config);
+        const increaseFraction = this.getIncreaseFraction(elapsedMilliseconds, channel.targetBalanceDistance, config);
 
         // For all changes that pushed the target balance distance out of bounds, we calculate the resulting fee
         // increase. In the end we choose the highest fee increase for each channel. This approach guarantees that
@@ -361,7 +345,7 @@ export class Actions {
         // increase outgoing liquidity. In this case it is likely that the long term fee increase is higher than the
         // immediate one. On the other hand, when the time span between the two outgoing forwards is much shorter,
         // it is likely that the immediate fee increase is higher.
-        if (currentTargetBalanceDistance <= -config.minFeeIncreaseDistance) {
+        if (channel.targetBalanceDistance <= -config.minFeeIncreaseDistance) {
             if (change instanceof OutgoingForward) {
                 yield* this.getIncreaseFeeAction(
                     id,
@@ -372,7 +356,7 @@ export class Actions {
                     `${change.targetBalanceDistance} and the distance is still not within bounds.`,
                 );
             }
-        } else if (currentTargetBalanceDistance >= config.minFeeIncreaseDistance) {
+        } else if (channel.targetBalanceDistance >= config.minFeeIncreaseDistance) {
             if (change instanceof IncomingForward) {
                 // TODO: Broken, reimplement
                 const { amount, balance, fee, outgoingChannelId } = change;
@@ -400,8 +384,8 @@ export class Actions {
                 channel,
                 config,
                 this.decreaseFeeRate(change.amount, change.fee, channel.properties.base_fee, subtractFraction),
-                `The current distance from the target balance is ${currentTargetBalanceDistance} and the most recent ` +
-                `outgoing forward took place on ${change.time}.`,
+                `The current distance from the target balance is ${channel.targetBalanceDistance} and the most ` +
+                `recent outgoing forward took place on ${change.time}.`,
             );
 
             return true;
