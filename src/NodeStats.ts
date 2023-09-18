@@ -23,10 +23,10 @@ export class NodeStats {
             const { created_at, incoming_channel, outgoing_channel } = forward;
             const { rawTokens, fee } = this.getTokens(forward);
             const incomingStats = channelsImpl.get(incoming_channel);
-            NodeStats.updateStats(incomingStats?.incomingForwards, rawTokens + fee);
+            this.updateStats(incomingStats?.incomingForwards, rawTokens + fee);
             incomingStats?.addToHistory(new IncomingForward(created_at, -rawTokens - fee, fee, outgoing_channel));
             const outgoingStats = channelsImpl.get(outgoing_channel);
-            NodeStats.updateStats(outgoingStats?.outgoingForwards, rawTokens);
+            this.updateStats(outgoingStats?.outgoingForwards, rawTokens);
             outgoingStats?.addToHistory(new OutgoingForward(created_at, rawTokens, fee));
         }
 
