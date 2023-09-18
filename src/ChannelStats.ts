@@ -121,10 +121,12 @@ export class ChannelStats {
 
     public addIncomingForward(time: string, amount: number, fee: number, outgoingChannelId: string) {
         this.addToHistory(new IncomingForward(time, amount, fee, outgoingChannelId));
+        this.updateStats(this.incomingForwards, amount);
     }
 
     public addOutgoingForward(time: string, amount: number, fee: number) {
         this.addToHistory(new OutgoingForward(time, amount, fee));
+        this.updateStats(this.outgoingForwards, amount);
     }
 
     public addPayment(time: string, amount: number) {
@@ -137,5 +139,12 @@ export class ChannelStats {
     private addToHistory(change: BalanceChange) {
         this.isUnsorted = true;
         this.historyImpl.push(change);
+    }
+
+    private updateStats(stats: MutableForwardStats, tokens: number) {
+        const absoluteTokens = Math.abs(tokens);
+        stats.maxTokens = Math.max(stats.maxTokens, absoluteTokens);
+        ++stats.count;
+        stats.totalTokens += absoluteTokens;
     }
 }

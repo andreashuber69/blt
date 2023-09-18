@@ -1,5 +1,4 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
-import type { MutableForwardStats } from "./ChannelStats.js";
 import { ChannelStats } from "./ChannelStats.js";
 import type { INodeInfo } from "./info/NodeInfo.js";
 
@@ -23,10 +22,8 @@ export class NodeStats {
             const { created_at, incoming_channel, outgoing_channel } = forward;
             const { rawTokens, fee } = this.getTokens(forward);
             const incomingStats = channelsImpl.get(incoming_channel);
-            this.updateStats(incomingStats?.incomingForwards, rawTokens + fee);
             incomingStats?.addIncomingForward(created_at, -rawTokens - fee, fee, outgoing_channel);
             const outgoingStats = channelsImpl.get(outgoing_channel);
-            this.updateStats(outgoingStats?.outgoingForwards, rawTokens);
             outgoingStats?.addOutgoingForward(created_at, rawTokens, fee);
         }
 
@@ -45,14 +42,6 @@ export class NodeStats {
         }
 
         return new NodeStats(channelsImpl);
-    }
-
-    private static updateStats(forwardStats: MutableForwardStats | undefined, tokens: number) {
-        if (forwardStats) {
-            forwardStats.maxTokens = Math.max(forwardStats.maxTokens, tokens);
-            ++forwardStats.count;
-            forwardStats.totalTokens += tokens;
-        }
     }
 
     // eslint-disable-next-line @typescript-eslint/naming-convention
