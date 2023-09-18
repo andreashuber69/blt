@@ -2,14 +2,6 @@
 import { getTargetBalanceDistance } from "./getTargetBalanceDistance.js";
 import type { ChannelsElement } from "./info/ChannelsRefresher.js";
 
-const getNewForwardStats = () => ({
-    maxTokens: 0,
-    count: 0,
-    totalTokens: 0,
-});
-
-export type MutableForwardStats = ReturnType<typeof getNewForwardStats>;
-
 /** Contains information about a balance change in a channel. */
 export abstract class BalanceChange {
     /** Gets the local channel balance after the change. */
@@ -92,8 +84,13 @@ export class OutgoingForward extends BalanceChange {
 export class ChannelStats {
     public constructor(public readonly properties: ChannelsElement & { readonly partnerAlias?: string | undefined }) {}
 
-    public readonly incomingForwards = getNewForwardStats();
-    public readonly outgoingForwards = getNewForwardStats();
+    public get incomingForwards(): Readonly<typeof this.incomingForwardsImpl> {
+        return this.incomingForwardsImpl;
+    }
+
+    public get outgoingForwards(): Readonly<typeof this.outgoingForwardsImpl> {
+        return this.outgoingForwardsImpl;
+    }
 
     /** Gets the balance history of the channel, sorted from latest to earliest. */
     public get history(): readonly BalanceChange[] {
@@ -121,27 +118,39 @@ export class ChannelStats {
 
     public addIncomingForward(time: string, amount: number, fee: number, outgoingChannelId: string) {
         this.addToHistory(new IncomingForward(time, amount, fee, outgoingChannelId));
-        this.updateStats(this.incomingForwards, amount);
+        this.updateStats(this.incomingForwardsImpl, amount);
     }
 
     public addOutgoingForward(time: string, amount: number, fee: number) {
         this.addToHistory(new OutgoingForward(time, amount, fee));
-        this.updateStats(this.outgoingForwards, amount);
+        this.updateStats(this.outgoingForwardsImpl, amount);
     }
 
     public addPayment(time: string, amount: number) {
         this.addToHistory(new Payment(time, amount));
     }
 
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    private static getNewForwardStats() {
+        return {
+            maxTokens: 0,
+            count: 0,
+            totalTokens: 0,
+        };
+    }
+
     private readonly historyImpl = new Array<BalanceChange>();
     private isUnsorted = false;
+    private readonly incomingForwardsImpl = ChannelStats.getNewForwardStats();
+    private readonly outgoingForwardsImpl = ChannelStats.getNewForwardStats();
 
     private addToHistory(change: BalanceChange) {
         this.isUnsorted = true;
         this.historyImpl.push(change);
     }
 
-    private updateStats(stats: MutableForwardStats, tokens: number) {
+    private updateStats(stats: ReturnType<typeof ChannelStats.getNewForwardStats>, tokens: number) {
         const absoluteTokens = Math.abs(tokens);
         stats.maxTokens = Math.max(stats.maxTokens, absoluteTokens);
         ++stats.count;
