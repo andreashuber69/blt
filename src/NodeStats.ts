@@ -1,6 +1,6 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import type { MutableForwardStats } from "./ChannelStats.js";
-import { ChannelStats, IncomingForward, OutgoingForward, Payment } from "./ChannelStats.js";
+import { ChannelStats } from "./ChannelStats.js";
 import type { INodeInfo } from "./info/NodeInfo.js";
 
 export class NodeStats {
@@ -24,10 +24,10 @@ export class NodeStats {
             const { rawTokens, fee } = this.getTokens(forward);
             const incomingStats = channelsImpl.get(incoming_channel);
             this.updateStats(incomingStats?.incomingForwards, rawTokens + fee);
-            incomingStats?.addToHistory(new IncomingForward(created_at, -rawTokens - fee, fee, outgoing_channel));
+            incomingStats?.addIncomingForward(created_at, -rawTokens - fee, fee, outgoing_channel);
             const outgoingStats = channelsImpl.get(outgoing_channel);
             this.updateStats(outgoingStats?.outgoingForwards, rawTokens);
-            outgoingStats?.addToHistory(new OutgoingForward(created_at, rawTokens, fee));
+            outgoingStats?.addOutgoingForward(created_at, rawTokens, fee);
         }
 
         // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -37,9 +37,9 @@ export class NodeStats {
                 if (is_confirmed) {
                     const { rawTokens, fee } = this.getTokens(route);
                     const outgoingStats = channelsImpl.get(route.hops.at(0)?.channel ?? "");
-                    outgoingStats?.addToHistory(new Payment(confirmed_at, rawTokens));
+                    outgoingStats?.addPayment(confirmed_at, rawTokens);
                     const incomingStats = channelsImpl.get(route.hops.at(-1)?.channel ?? "");
-                    incomingStats?.addToHistory(new Payment(confirmed_at, -rawTokens + fee));
+                    incomingStats?.addPayment(confirmed_at, -rawTokens + fee);
                 }
             }
         }

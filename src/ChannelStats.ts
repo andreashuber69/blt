@@ -119,11 +119,23 @@ export class ChannelStats {
             );
     }
 
-    public addToHistory(change: BalanceChange) {
-        this.isUnsorted = true;
-        this.historyImpl.push(change);
+    public addIncomingForward(time: string, amount: number, fee: number, outgoingChannelId: string) {
+        this.addToHistory(new IncomingForward(time, amount, fee, outgoingChannelId));
+    }
+
+    public addOutgoingForward(time: string, amount: number, fee: number) {
+        this.addToHistory(new OutgoingForward(time, amount, fee));
+    }
+
+    public addPayment(time: string, amount: number) {
+        this.addToHistory(new Payment(time, amount));
     }
 
     private readonly historyImpl = new Array<BalanceChange>();
     private isUnsorted = false;
+
+    private addToHistory(change: BalanceChange) {
+        this.isUnsorted = true;
+        this.historyImpl.push(change);
+    }
 }
