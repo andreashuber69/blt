@@ -316,18 +316,18 @@ export class Actions {
                     return; // We only need to go back to the point where we're back within bounds.
                 } else if (Math.sign(currentDistance) !== Math.sign(change.amount)) {
                     // Only return the balance changes that contributed to the current out of bounds situation.
-                    yield { currentDistance, change, distance } as const;
+                    yield { currentDistance, change } as const;
                 }
             } else {
                 // If we're within bounds we return all balance changes.
-                yield { currentDistance, change, distance } as const;
+                yield { currentDistance, change } as const;
             }
         }
     }
 
     private static *getFeeAction(
         channel: ChannelStats,
-        { currentDistance, change, distance }: YieldType<typeof this.getHistory>,
+        { currentDistance, change }: YieldType<typeof this.getHistory>,
         config: ActionsConfig,
     ) {
         const elapsedMilliseconds = Date.now() - new Date(change.time).valueOf();
@@ -350,8 +350,8 @@ export class Actions {
                     channel,
                     config,
                     this.increaseFeeRate(change.amount, change.fee, channel.properties.base_fee, addFraction),
-                    `The outgoing forward at ${change.time} took the distance to the target balance to ` +
-                    `${distance} and the distance is still not within bounds.`,
+                    `The current distance from the target balance is ${currentDistance} and the outgoing forward at ` +
+                    `${change.time} contributed to that situation.`,
                 );
             }
         } else if (change instanceof OutgoingForward) {
