@@ -137,7 +137,7 @@ const nodeInfo: INodeInfo = {
 
 const verifyFlow = (
     channels: ReadonlyMap<string, Readonly<ChannelStats>>,
-    channel: string,
+    channelId: string,
     incomingMaxTokens: number,
     incomingCount: number,
     incomingTotalTokens: number,
@@ -145,10 +145,10 @@ const verifyFlow = (
     outgoingCount: number,
     outgoingTotalTokens: number,
 ) => {
-    it(channel, () => {
-        const channelStats = channels.get(channel);
-        assert(channelStats);
-        const { incomingForwards: incoming, outgoingForwards: outgoing, history } = channelStats;
+    it(channelId, () => {
+        const channel = channels.get(channelId);
+        assert(channel);
+        const { incomingForwards: incoming, outgoingForwards: outgoing, history } = channel;
         assert(incoming.maxTokens === incomingMaxTokens);
         assert(incoming.count === incomingCount);
         assert(incoming.totalTokens === incomingTotalTokens);
