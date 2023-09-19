@@ -91,12 +91,12 @@ export interface Action {
  * no action will be suggested. The opposite happens for fee decreases. These rules allow for human intervention and
  * also ensure that actions based on long term data will not interfere with immediate actions.</li>
  * <li>There is an ongoing effort to adjust channel balances to the given targets. Therefore, if a channel balance
- * stays below the minimum balance for long periods of time, this is taken as an indicator that the fee rate on the
+ * stays substantially below the target for long periods of time, this is taken as an indicator that the fee rate on the
  * channel itself is too low for rebalancing to succeed. It is thus raised depending on how long the balance has been
- * staying below the minimum. On the other hand, if a channel balance stays above the maximum for long, this means that
- * incoming flow was forwarded to channels with fees set too low. In order for rebalancing to work in the opposite
- * direction the fees on those channels should therefore be raised depending on how long the balance has been staying
- * above the maximum.</li>
+ * staying below the target. On the other hand, if a channel balance stays substantially above the target for long, this
+ * means that incoming flow was forwarded to channels with fees set too low. In order for rebalancing to work in the
+ * opposite direction the fees on those channels should therefore be raised depending on how long the balance has been
+ * staying above the target.</li>
  * </ul>
  * The actions are calculated as outlined below:
  * <ul>
@@ -152,7 +152,7 @@ export class Actions {
             target,
             max,
             reason: "This is the sum of the target balances of all channels.",
-        } as const;
+        };
 
         yield* this.filterBalanceAction(nodeBalanceAction);
 
@@ -179,7 +179,7 @@ export class Actions {
             largestForwardMarginFraction,
         }: ActionsConfig,
     ): Action {
-        const createAction = (targetBalance: number, reason: string) => {
+        const createAction = (targetBalance: number, reason: string): Action => {
             const target = Math.round(targetBalance);
 
             return {
@@ -196,7 +196,7 @@ export class Actions {
                 target,
                 max: capacity,
                 reason,
-            } as const;
+            };
         };
 
         const optimalBalance =
@@ -331,41 +331,47 @@ export class Actions {
         config: ActionsConfig,
     ) {
         const elapsedMilliseconds = Date.now() - new Date(change.time).valueOf();
-        const increaseFraction = this.getIncreaseFraction(elapsedMilliseconds, currentDistance, config);
 
-        // For all changes that pushed the target balance distance out of bounds, we calculate the resulting fee
-        // increase. In the end we choose the highest fee increase for each channel. This approach guarantees that
-        // we do the "right thing", even when there are conflicting increases from "emergency" measures and long
-        // term measures. For example, a channel could have had a balance slightly below the minimum for two weeks
-        // when another outgoing forward reduces the balance slightly more. When this code is run immediately
-        // afterwards, it will produce two fee increases. An "emergency" one (designed to curb further outflow) and
-        // a long term one, which is designed to slowly raise the fee to the point where rebalances are able to
-        // increase outgoing liquidity. In this case it is likely that the long term fee increase is higher than the
-        // immediate one. On the other hand, when the time span between the two outgoing forwards is much shorter,
-        // it is likely that the immediate fee increase is higher.
         if (currentDistance <= -config.minFeeIncreaseDistance) {
+            // For all changes that pushed the target balance distance below bounds, we calculate the resulting fee
+            // increase. In the end we choose the highest fee increase for each channel. This approach guarantees that
+            // we do the "right thing", even when there are conflicting increases from "emergency" measures and long
+            // term measures. For example, a channel could have had a balance slightly below the minimum for two weeks
+            // when another outgoing forward reduces the balance slightly more. When this code is run immediately
+            // afterwards, it will produce two fee increases. An "emergency" one (designed to curb further outflow) and
+            // a long term one, which is designed to slowly raise the fee to the point where rebalances are able to
+            // increase outgoing liquidity. In this case it is likely that the long term fee increase is higher than the
+            // immediate one. On the other hand, when the time span between the two outgoing forwards is much shorter,
+            // it is likely that the immediate fee increase is higher.
             if (change instanceof OutgoingForward) {
+                const addFraction = this.getIncreaseFraction(elapsedMilliseconds, currentDistance, config);
+
                 yield* this.getIncreaseFeeAction(
                     channel,
                     config,
-                    this.increaseFeeRate(change.amount, change.fee, channel.properties.base_fee, increaseFraction),
+                    this.increaseFeeRate(change.amount, change.fee, channel.properties.base_fee, addFraction),
                     `The outgoing forward at ${change.time} took the distance to the target balance to ` +
                     `${distance} and the distance is still not within bounds.`,
                 );
             }
-        } else if (currentDistance >= config.minFeeIncreaseDistance) {
-            // TODO: Implement
         } else if (change instanceof OutgoingForward) {
-            const subtractFraction = elapsedMilliseconds / 30 / 24 / 60 / 60 / 1000; // TODO: take days from settings
+            // If target balance distance is either within bounds or above, we simply look for the latest outgoing
+            // forward and drop the fee depending on how long ago it happened. There is no immediate component here,
+            // because lower fees are very unlikely to attract outgoing forwards for several hours.
+            const elapsedDays = (elapsedMilliseconds / 24 / 60 / 60 / 1000) - config.feeDecreaseWaitDays;
 
-            // TODO: Use feeDecreaseWaitDays
-            yield* this.getDecreaseFeeAction(
-                channel,
-                config,
-                this.decreaseFeeRate(change.amount, change.fee, channel.properties.base_fee, subtractFraction),
-                `The current distance from the target balance is ${currentDistance} and the most ` +
-                `recent outgoing forward took place on ${change.time}.`,
-            );
+            if (elapsedDays > 0) {
+                // TODO: take 30 days from settings
+                const subtractFraction = elapsedDays / 30;
+
+                yield* this.getDecreaseFeeAction(
+                    channel,
+                    config,
+                    this.decreaseFeeRate(change.amount, change.fee, channel.properties.base_fee, subtractFraction),
+                    `The current distance from the target balance is ${currentDistance} and the most ` +
+                    `recent outgoing forward took place on ${change.time}.`,
+                );
+            }
 
             return true;
         }
@@ -430,7 +436,7 @@ export class Actions {
         { maxFeeRate }: ActionsConfig,
         target: number,
         reason: string,
-    ) {
+    ): Action {
         return {
             entity: "channel",
             id,
@@ -441,7 +447,7 @@ export class Actions {
             target,
             max: maxFeeRate,
             reason,
-        } as const satisfies Action;
+        };
     }
 
     private constructor() { /* Intentionally empty */ }
