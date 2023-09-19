@@ -163,9 +163,9 @@ const verifyFlow = (
             if (change instanceof OutgoingForward) {
                 outgoingTokens += change.amount;
                 assert(change.fee);
+                assert(change.incomingChannel);
             } else if (change instanceof IncomingForward) {
                 incomingTokens -= change.amount;
-                assert(change.outgoingChannelId);
             }
         }
 

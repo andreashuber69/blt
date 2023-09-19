@@ -57,16 +57,20 @@ export class IncomingForward extends Forward {
      * @param time See {@linkcode Forward.constructor}.
      * @param amount See {@linkcode Forward.constructor}.
      * @param fee See {@linkcode Forward.constructor}.
-     * @param outgoingChannelId The id of the channel the amount was forwarded to.
      */
-    public constructor(time: string, amount: number, fee: number, public readonly outgoingChannelId: string) {
+    public constructor(time: string, amount: number, fee: number) {
         super(time, amount, fee);
     }
 }
 
 export class OutgoingForward extends Forward {
     /** See {@linkcode Forward.constructor}. */
-    public constructor(time: string, amount: number, fee: number) {
+    public constructor(
+        time: string,
+        amount: number,
+        fee: number,
+        public readonly incomingChannel: ChannelStats | undefined,
+    ) {
         super(time, amount, fee);
     }
 }
@@ -99,13 +103,13 @@ export class ChannelStats {
         return this.historyImpl;
     }
 
-    public addIncomingForward(time: string, amount: number, fee: number, outgoingChannelId: string) {
-        this.addToHistory(new IncomingForward(time, amount, fee, outgoingChannelId));
+    public addIncomingForward(time: string, amount: number, fee: number) {
+        this.addToHistory(new IncomingForward(time, amount, fee));
         this.updateStats(this.incomingForwardsImpl, amount);
     }
 
-    public addOutgoingForward(time: string, amount: number, fee: number) {
-        this.addToHistory(new OutgoingForward(time, amount, fee));
+    public addOutgoingForward(time: string, amount: number, fee: number, incomingChannel: ChannelStats | undefined) {
+        this.addToHistory(new OutgoingForward(time, amount, fee, incomingChannel));
         this.updateStats(this.outgoingForwardsImpl, amount);
     }
 
