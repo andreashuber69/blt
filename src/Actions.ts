@@ -1,7 +1,6 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import type { ChannelStats } from "./ChannelStats.js";
 import { OutgoingForward } from "./ChannelStats.js";
-import { getTargetBalanceDistance } from "./getTargetBalanceDistance.js";
 import type { YieldType } from "./lightning/YieldType.js";
 import type { INodeStats } from "./NodeStats.js";
 
@@ -141,15 +140,19 @@ export class Actions {
             yield* this.filterBalanceAction(action);
         }
 
-        const nodeBalanceAction = {
+        const nodeBalanceAction: Action = {
             entity: "node",
             variable: "balance",
-            priority: this.getPriority(4, getTargetBalanceDistance(actual, target, max), config.minRebalanceDistance),
+            priority: this.getPriority(
+                4,
+                this.getTargetBalanceDistance(actual, target, max),
+                config.minRebalanceDistance,
+            ),
             actual,
             target,
             max,
             reason: "This is the sum of the target balances of all channels.",
-        } satisfies Action;
+        } as const;
 
         yield* this.filterBalanceAction(nodeBalanceAction);
 
@@ -185,7 +188,7 @@ export class Actions {
                 alias: partnerAlias,
                 priority: this.getPriority(
                     2,
-                    getTargetBalanceDistance(local_balance, target, capacity),
+                    this.getTargetBalanceDistance(local_balance, target, capacity),
                     minRebalanceDistance,
                 ),
                 variable: "balance",
@@ -302,11 +305,11 @@ export class Actions {
         target: number,
         { minFeeIncreaseDistance }: ActionsConfig,
     ) {
-        const currentDistance = getTargetBalanceDistance(local_balance, target, capacity);
+        const currentDistance = this.getTargetBalanceDistance(local_balance, target, capacity);
         const isOutOfBounds = Math.abs(currentDistance) > minFeeIncreaseDistance;
 
         for (const change of history) {
-            const distance = getTargetBalanceDistance(change.balance, target, capacity);
+            const distance = this.getTargetBalanceDistance(change.balance, target, capacity);
 
             if (isOutOfBounds) {
                 if (Math.abs(distance) < minFeeIncreaseDistance) {
@@ -368,6 +371,10 @@ export class Actions {
         }
 
         return false;
+    }
+
+    private static getTargetBalanceDistance(balance: number, target: number, capacity: number) {
+        return balance <= target ? (balance / target) - 1 : (balance - target) / (capacity - target);
     }
 
     private static getIncreaseFraction(
