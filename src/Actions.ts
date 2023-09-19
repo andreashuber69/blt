@@ -311,17 +311,11 @@ export class Actions {
         for (const change of history) {
             const distance = this.getTargetBalanceDistance(change.balance, target, capacity);
 
-            if (isOutOfBounds) {
-                if (Math.abs(distance) < minFeeIncreaseDistance) {
-                    return; // We only need to go back to the point where we're back within bounds.
-                } else if (Math.sign(currentDistance) !== Math.sign(change.amount)) {
-                    // Only return the balance changes that contributed to the current out of bounds situation.
-                    yield { currentDistance, change } as const;
-                }
-            } else {
-                // If we're within bounds we return all balance changes.
-                yield { currentDistance, change } as const;
+            if (isOutOfBounds && Math.abs(distance) < minFeeIncreaseDistance) {
+                return; // We only need to go back to the point where we're back within bounds.
             }
+
+            yield { currentDistance, change } as const;
         }
     }
 
