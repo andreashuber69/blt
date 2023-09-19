@@ -49,13 +49,13 @@
   },
   "dependencies": {
     "capped-promise": "^1.0.3",
-    "lightning": "^9.13.2",
+    "lightning": "^9.13.3",
     "tslib": "^2.6.2"
   },
   "devDependencies": {
-    "@andreashuber69/eslint-config": "^1.1.54",
+    "@andreashuber69/eslint-config": "^1.1.55",
     "@tsconfig/node-lts-strictest-esm": "^18.12.1",
-    "@types/node": "^18.17.15",
+    "@types/node": "^18.17.17",
     "c8": "^8.0.1",
     "coveralls": "^3.1.1",
     "cspell": "^7.3.6",
