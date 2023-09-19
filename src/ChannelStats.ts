@@ -33,38 +33,41 @@ export abstract class BalanceChange {
 }
 
 export class Payment extends BalanceChange {
+    /** See {@linkcode BalanceChange.constructor}. */
     public constructor(time: string, amount: number) {
         super(time, amount);
     }
 }
 
-export class IncomingForward extends BalanceChange {
+export abstract class Forward extends BalanceChange {
     /**
-     * Initializes a new instance.
-     * @param time The ISO 8601 date &amp; time.
+     * See {@linkcode BalanceChange.constructor}.
+     * @param time See {@linkcode BalanceChange.constructor}.
      * @param amount See {@linkcode BalanceChange.constructor}.
      * @param fee The fee that was paid for the forward.
-     * @param outgoingChannelId The id of the channel the amount was forwarded to.
      */
-    public constructor(
-        time: string,
-        amount: number,
-        public readonly fee: number,
-        public readonly outgoingChannelId: string,
-    ) {
+    protected constructor(time: string, amount: number, public readonly fee: number) {
         super(time, amount);
     }
 }
 
-export class OutgoingForward extends BalanceChange {
+export class IncomingForward extends Forward {
     /**
-     * Initializes a new instance.
-     * @param time The ISO 8601 date &amp; time.
-     * @param amount See {@linkcode BalanceChange.constructor}.
-     * @param fee The fee that was paid for the forward.
+     * See {@linkcode Forward.constructor}.
+     * @param time See {@linkcode Forward.constructor}.
+     * @param amount See {@linkcode Forward.constructor}.
+     * @param fee See {@linkcode Forward.constructor}.
+     * @param outgoingChannelId The id of the channel the amount was forwarded to.
      */
-    public constructor(time: string, amount: number, public readonly fee: number) {
-        super(time, amount);
+    public constructor(time: string, amount: number, fee: number, public readonly outgoingChannelId: string) {
+        super(time, amount, fee);
+    }
+}
+
+export class OutgoingForward extends Forward {
+    /** See {@linkcode Forward.constructor}. */
+    public constructor(time: string, amount: number, fee: number) {
+        super(time, amount, fee);
     }
 }
 
