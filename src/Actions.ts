@@ -339,13 +339,14 @@ export class Actions {
             // it is likely that the immediate fee increase is higher.
             if (change instanceof OutgoingForward) {
                 const addFraction = this.getIncreaseFraction(elapsedMilliseconds, currentDistance, config);
+                const feeRate = this.getFeeRate(change.amount, change.fee, channel.properties.base_fee);
 
                 yield* this.getIncreaseFeeAction(
                     channel,
                     config,
-                    this.increaseFeeRate(change.amount, change.fee, channel.properties.base_fee, addFraction),
-                    `The current distance from the target balance is ${currentDistance} and the outgoing forward at ` +
-                    `${change.time} contributed to that situation.`,
+                    this.increaseFeeRate(feeRate, addFraction),
+                    `The current distance from the target balance is ${currentDistance}, the outgoing forward at ` +
+                    `${change.time} contributed to that situation and paid ${feeRate}ppm.`,
                 );
             }
         } else if (change instanceof OutgoingForward) {
@@ -357,13 +358,14 @@ export class Actions {
             if (elapsedDays > 0) {
                 // TODO: take 30 days from settings
                 const subtractFraction = elapsedDays / 30;
+                const feeRate = this.getFeeRate(change.amount, change.fee, channel.properties.base_fee);
 
                 yield* this.getDecreaseFeeAction(
                     channel,
                     config,
-                    this.decreaseFeeRate(change.amount, change.fee, channel.properties.base_fee, subtractFraction),
+                    this.decreaseFeeRate(feeRate, subtractFraction),
                     `The current distance from the target balance is ${currentDistance} and the most ` +
-                    `recent outgoing forward took place on ${change.time}.`,
+                    `recent outgoing forward took place on ${change.time} and paid ${feeRate}ppm.`,
                 );
             }
 
@@ -410,14 +412,14 @@ export class Actions {
         }
     }
 
-    private static increaseFeeRate(amount: number, fee: number, baseFee: number, addFraction: number) {
+    private static increaseFeeRate(feeRate: number, addFraction: number) {
         // If the fee rate has been really low then the formula wouldn't increase it meaningfully. An increase to
         // at least 30 seems like a good idea.
-        return Math.max(Math.round(this.getFeeRate(amount, fee, baseFee) * (1 + addFraction)), 30);
+        return Math.max(Math.round(feeRate * (1 + addFraction)), 30);
     }
 
-    private static decreaseFeeRate(amount: number, fee: number, baseFee: number, subtractFraction: number) {
-        return Math.max(Math.round(this.getFeeRate(amount, fee, baseFee) * (1 - subtractFraction)), 0);
+    private static decreaseFeeRate(feeRate: number, subtractFraction: number) {
+        return Math.max(Math.round(feeRate * (1 - subtractFraction)), 0);
     }
 
     private static getFeeRate(amount: number, fee: number, baseFee: number) {
