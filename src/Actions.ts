@@ -292,20 +292,30 @@ export class Actions {
             // increase outgoing liquidity. In this case it is likely that the long term fee increase is higher than the
             // immediate one. On the other hand, when the time span between the two outgoing forwards is much shorter,
             // it is likely that the immediate fee increase is higher.
-            const forwards = [
-                ...this.filterHistory(
-                    channel.history,
-                    OutgoingForward,
-                    ({ balance }) => getDistance(balance) > -config.minFeeIncreaseDistance,
-                ),
-            ];
+            const done = (c: Readonly<BalanceChange>) => getDistance(c.balance) > -config.minFeeIncreaseDistance;
+            const forwards = [...this.filterHistory(channel.history, OutgoingForward, done)];
 
             if (forwards.length === 0) {
                 // TODO: The below bounds balance is not due to outgoing forwards, there's nothing we can do with fees
                 return;
             }
 
-            const actions = forwards.map((f) => this.getIncreaseFeeAction(channel, f, currentDistance, config));
+            const getIncreaseFeeAction = (change: OutgoingForward) => {
+                const feeRate = this.getFeeRate(change.amount, change.fee, channel.properties.base_fee);
+                const elapsedMilliseconds = Date.now() - new Date(change.time).valueOf();
+                const addFraction = this.getIncreaseFraction(elapsedMilliseconds, currentDistance, config);
+                // If the fee rate has been really low then the formula wouldn't increase it meaningfully. An
+                // increase to at least 30 seems like a good idea.
+                const newFeeRate = Math.max(Math.round(feeRate * (1 + addFraction)), 30);
+
+                const reason =
+                    `The current distance from the target balance is ${currentDistance}, the outgoing forward at ` +
+                    `${change.time} contributed to that situation and paid ${feeRate}ppm.`;
+
+                return this.createFeeAction(channel, config, newFeeRate, reason);
+            };
+
+            const actions = forwards.map((forward) => getIncreaseFeeAction(forward));
             const action = actions.reduce((p, c) => (p.target > c.target ? p : c));
 
             if (action.target > channel.properties.fee_rate) {
@@ -318,7 +328,22 @@ export class Actions {
             const forward = this.filterHistory(channel.history, OutgoingForward, () => false).next().value;
 
             if (forward) {
-                yield* this.getDecreaseFeeAction(channel, forward, currentDistance, config);
+                const elapsedMilliseconds = Date.now() - new Date(forward.time).valueOf();
+                const elapsedDays = (elapsedMilliseconds / 24 / 60 / 60 / 1000) - config.feeDecreaseWaitDays;
+
+                if (elapsedDays > 0) {
+                    const feeRate = Actions.getFeeRate(forward.amount, forward.fee, channel.properties.base_fee);
+                    // TODO: take 30 days from settings
+                    const newFeeRate = Math.max(Math.round(feeRate * (1 - (elapsedDays / 30))), 0);
+
+                    if (newFeeRate < channel.properties.fee_rate) {
+                        const reason =
+                            `The current distance from the target balance is ${currentDistance} and the most ` +
+                            `recent outgoing forward took place on ${forward.time} and paid ${feeRate}ppm.`;
+
+                        yield Actions.createFeeAction(channel, config, feeRate, reason);
+                    }
+                }
             }
         }
     }
@@ -352,51 +377,6 @@ export class Actions {
         }
     }
 
-    private static getIncreaseFeeAction(
-        channel: ChannelStats,
-        change: OutgoingForward,
-        currentDistance: number,
-        config: ActionsConfig,
-    ) {
-        const elapsedMilliseconds = Date.now() - new Date(change.time).valueOf();
-        const addFraction = this.getIncreaseFraction(elapsedMilliseconds, currentDistance, config);
-        const feeRate = this.getFeeRate(change.amount, change.fee, channel.properties.base_fee);
-
-        return this.createFeeAction(
-            channel,
-            config,
-            this.increaseFeeRate(feeRate, addFraction),
-            `The current distance from the target balance is ${currentDistance}, the outgoing forward at ` +
-            `${change.time} contributed to that situation and paid ${feeRate}ppm.`,
-        );
-    }
-
-    private static *getDecreaseFeeAction(
-        channel: ChannelStats,
-        change: OutgoingForward,
-        currentDistance: number,
-        config: ActionsConfig,
-    ) {
-        const elapsedMilliseconds = Date.now() - new Date(change.time).valueOf();
-        const elapsedDays = (elapsedMilliseconds / 24 / 60 / 60 / 1000) - config.feeDecreaseWaitDays;
-
-        if (elapsedDays > 0) {
-            const feeRate = this.getFeeRate(change.amount, change.fee, channel.properties.base_fee);
-            // TODO: take 30 days from settings
-            const newFeeRate = this.decreaseFeeRate(feeRate, elapsedDays / 30);
-
-            if (newFeeRate < channel.properties.fee_rate) {
-                yield this.createFeeAction(
-                    channel,
-                    config,
-                    newFeeRate,
-                    `The current distance from the target balance is ${currentDistance} and the most ` +
-                    `recent outgoing forward took place on ${change.time} and paid ${feeRate}ppm.`,
-                );
-            }
-        }
-    }
-
     private static getTargetBalanceDistance(balance: number, target: number, capacity: number) {
         return balance <= target ? (balance / target) - 1 : (balance - target) / (capacity - target);
     }
@@ -410,16 +390,6 @@ export class Actions {
         const rawFraction = Math.abs(currentTargetBalanceDistance) - config.minFeeIncreaseDistance;
         // TODO: get days from config
         return isRecent ? rawFraction : rawFraction * (elapsedMilliseconds / 7 / 24 / 60 / 60 / 1000);
-    }
-
-    private static increaseFeeRate(feeRate: number, addFraction: number) {
-        // If the fee rate has been really low then the formula wouldn't increase it meaningfully. An increase to
-        // at least 30 seems like a good idea.
-        return Math.max(Math.round(feeRate * (1 + addFraction)), 30);
-    }
-
-    private static decreaseFeeRate(feeRate: number, subtractFraction: number) {
-        return Math.max(Math.round(feeRate * (1 - subtractFraction)), 0);
     }
 
     private static getFeeRate(amount: number, fee: number, baseFee: number) {
