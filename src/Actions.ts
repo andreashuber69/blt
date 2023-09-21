@@ -126,18 +126,19 @@ export interface Action {
  */
 export class Actions {
     public static *get(stats: INodeStats, config: ActionsConfig) {
-        const channels = [...stats.channels.values()];
-        const channelBalanceActions = channels.map((channel) => this.getChannelBalanceAction(channel, config));
+        const channels = new Map([...stats.channels.values()].map(
+            (channel) => ([channel, this.getChannelBalanceAction(channel, config)]),
+        ));
 
         let actual = 0;
         let target = 0;
         let max = 0;
 
-        for (const action of channelBalanceActions) {
-            actual += action.actual;
-            target += action.target;
-            max += action.max;
-            yield* this.filterBalanceAction(action);
+        for (const balanceAction of channels.values()) {
+            actual += balanceAction.actual;
+            target += balanceAction.target;
+            max += balanceAction.max;
+            yield* this.filterBalanceAction(balanceAction);
         }
 
         const nodeBalanceAction: Action = {
@@ -156,12 +157,8 @@ export class Actions {
 
         yield* this.filterBalanceAction(nodeBalanceAction);
 
-        for (const [index, channel] of channels.entries()) {
-            const action = channelBalanceActions[index];
-
-            if (action) {
-                yield* this.getFeeActions(channel, action.target, config);
-            }
+        for (const [channel, balanceAction] of channels.entries()) {
+            yield* this.getFeeActions(channel, balanceAction.target, config);
         }
     }
 
