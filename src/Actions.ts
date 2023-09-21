@@ -304,9 +304,9 @@ export class Actions {
                 return;
             }
 
-            yield* this.getMaxIncreaseFeeAction(channel, currentDistance, config, forwards);
+            yield* this.getMaxIncreaseFeeAction(channel, currentDistance, forwards, config);
         } else {
-            yield* this.getFeeDecreaseAction(channel, config, currentDistance);
+            yield* this.getFeeDecreaseAction(channel, currentDistance, config);
         }
     }
 
@@ -332,8 +332,8 @@ export class Actions {
     private static *getMaxIncreaseFeeAction(
         channel: ChannelStats,
         currentDistance: number,
-        config: ActionsConfig,
         forwards: OutgoingForward[],
+        config: ActionsConfig,
     ) {
         // For all changes that pushed the target balance distance below bounds, we calculate the resulting fee
         // increase. In the end we choose the highest fee increase. This approach guarantees that we do the "right
@@ -368,7 +368,7 @@ export class Actions {
         }
     }
 
-    private static *getFeeDecreaseAction(channel: ChannelStats, config: ActionsConfig, currentDistance: number) {
+    private static *getFeeDecreaseAction(channel: ChannelStats, currentDistance: number, config: ActionsConfig) {
         // If target balance distance is either within bounds or above, we simply look for the latest outgoing
         // forward and drop the fee depending on how long ago it happened. There is no immediate component here,
         // because lower fees are very unlikely to attract outgoing forwards for several hours.
@@ -398,13 +398,9 @@ export class Actions {
         return Math.round((fee - baseFee) / amount * 1_000_000);
     }
 
-    private static getIncreaseFraction(
-        elapsedMilliseconds: number,
-        currentTargetBalanceDistance: number,
-        config: ActionsConfig,
-    ) {
+    private static getIncreaseFraction(elapsedMilliseconds: number, currentDistance: number, config: ActionsConfig) {
         const isRecent = elapsedMilliseconds < 5 * 60 * 1000;
-        const rawFraction = Math.abs(currentTargetBalanceDistance) - config.minFeeIncreaseDistance;
+        const rawFraction = Math.abs(currentDistance) - config.minFeeIncreaseDistance;
         // TODO: get days from config
         return isRecent ? rawFraction : rawFraction * (elapsedMilliseconds / 7 / 24 / 60 / 60 / 1000);
     }
