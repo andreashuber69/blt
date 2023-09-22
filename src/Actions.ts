@@ -156,10 +156,7 @@ export class Actions {
         };
 
         yield* this.filterBalanceAction(nodeBalanceAction);
-
-        for (const [channel, balanceAction] of channels.entries()) {
-            yield* this.getFeeActions(channel, balanceAction.target, config);
-        }
+        yield* this.getFeeActions(channels, config);
     }
 
     private static getChannelBalanceAction(
@@ -281,29 +278,31 @@ export class Actions {
         return base ** Math.floor(Math.abs(distance) / minRebalanceDistance);
     }
 
-    private static *getFeeActions(channel: ChannelStats, target: number, config: ActionsConfig) {
-        if (channel.history.length === 0) {
-            // TODO channel without any forwards or payments
-            return;
-        }
-
-        const getDistance = (balance: number) =>
-            this.getTargetBalanceDistance(balance, target, channel.properties.capacity);
-
-        const currentDistance = getDistance(channel.properties.local_balance);
-
-        if (currentDistance <= -config.minFeeIncreaseDistance) {
-            const done = (c: Readonly<BalanceChange>) => getDistance(c.balance) > -config.minFeeIncreaseDistance;
-            const forwards = [...this.filterHistory(channel.history, OutgoingForward, done)];
-
-            if (forwards.length === 0) {
-                // TODO: The below bounds balance is not due to outgoing forwards, there's nothing we can do with fees
-                return;
+    private static *getFeeActions(channels: ReadonlyMap<ChannelStats, Action>, config: ActionsConfig) {
+        for (const [channel, { target }] of channels.entries()) {
+            if (channel.history.length === 0) {
+                // TODO channel without any forwards or payments
+                break;
             }
 
-            yield* this.getMaxIncreaseFeeAction(channel, currentDistance, forwards, config);
-        } else {
-            yield* this.getFeeDecreaseAction(channel, currentDistance, config);
+            const getDistance = (balance: number) =>
+                this.getTargetBalanceDistance(balance, target, channel.properties.capacity);
+
+            const currentDistance = getDistance(channel.properties.local_balance);
+
+            if (currentDistance <= -config.minFeeIncreaseDistance) {
+                const done = (c: Readonly<BalanceChange>) => getDistance(c.balance) > -config.minFeeIncreaseDistance;
+                const forwards = [...this.filterHistory(channel.history, OutgoingForward, done)];
+
+                if (forwards.length > 0) {
+                    yield* this.getMaxIncreaseFeeAction(channel, currentDistance, forwards, config);
+                } else {
+                    // TODO: The below bounds balance is not due to outgoing forwards, there's nothing we can do with
+                    // fees.
+                }
+            } else {
+                yield* this.getFeeDecreaseAction(channel, currentDistance, config);
+            }
         }
     }
 
