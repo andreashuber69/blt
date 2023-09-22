@@ -58,7 +58,12 @@ export class IncomingForward extends Forward {
      * @param amount See {@linkcode Forward.constructor}.
      * @param fee See {@linkcode Forward.constructor}.
      */
-    public constructor(time: string, amount: number, fee: number) {
+    public constructor(
+        time: string,
+        amount: number,
+        fee: number,
+        public readonly outgoingChannel: ChannelStats | undefined,
+    ) {
         super(time, amount, fee);
     }
 }
@@ -103,8 +108,8 @@ export class ChannelStats {
         return this.historyImpl;
     }
 
-    public addIncomingForward(time: string, amount: number, fee: number) {
-        this.addToHistory(new IncomingForward(time, amount, fee));
+    public addIncomingForward(time: string, amount: number, fee: number, outgoingChannel: ChannelStats | undefined) {
+        this.addToHistory(new IncomingForward(time, amount, fee, outgoingChannel));
         this.updateStats(this.incomingForwardsImpl, amount);
     }
 
