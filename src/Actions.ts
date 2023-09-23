@@ -332,8 +332,7 @@ export class Actions {
                 const ratio = aboveBoundsInflow / totalOutflow;
 
                 if (ratio > config.minFeeIncreaseDistance) {
-                    const [{ amount, fee }] = outgoingForwards;
-                    const feeRate = this.getFeeRate(amount, fee, channel.properties.base_fee);
+                    const feeRate = this.getFeeRate(outgoingForwards[0], channel);
 
                     const newFeeRate = Math.min(
                         Math.round(feeRate * (1 + (ratio - config.minFeeIncreaseDistance))),
@@ -393,7 +392,7 @@ export class Actions {
         // the other hand, when the time span between the two outgoing forwards is much shorter, it is likely that
         // the immediate fee increase is higher.
         const getIncreaseFeeAction = (change: OutgoingForward) => {
-            const feeRate = this.getFeeRate(change.amount, change.fee, channel.properties.base_fee);
+            const feeRate = this.getFeeRate(change, channel);
             const elapsedMilliseconds = Date.now() - new Date(change.time).valueOf();
             const addFraction = this.getIncreaseFraction(elapsedMilliseconds, currentDistance, config);
             // If the fee rate has been really low then the formula wouldn't increase it meaningfully. An
@@ -439,8 +438,9 @@ export class Actions {
         return { earliestTime, amount };
     }
 
-    private static getFeeRate(amount: number, fee: number, baseFee: number) {
-        return Math.round((fee - baseFee) / amount * 1_000_000);
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    private static getFeeRate({ amount, fee }: OutgoingForward, { properties: { base_fee } }: ChannelStats) {
+        return Math.round((fee - base_fee) / amount * 1_000_000);
     }
 
     private static createFeeAction(
@@ -474,7 +474,7 @@ export class Actions {
             const elapsedDays = (elapsedMilliseconds / 24 / 60 / 60 / 1000) - config.feeDecreaseWaitDays;
 
             if (elapsedDays > 0) {
-                const feeRate = this.getFeeRate(forward.amount, forward.fee, channel.properties.base_fee);
+                const feeRate = this.getFeeRate(forward, channel);
                 // TODO: take 30 days from settings
                 const newFeeRate = Math.max(Math.round(feeRate * (1 - (elapsedDays / 30))), 0);
 
