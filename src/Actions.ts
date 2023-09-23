@@ -335,7 +335,7 @@ export class Actions {
                     const [{ amount, fee }] = outgoingForwards;
                     const feeRate = this.getFeeRate(amount, fee, channel.properties.base_fee);
 
-                    const newFeeRate = Math.max(
+                    const newFeeRate = Math.min(
                         Math.round(feeRate * (1 + (ratio - config.minFeeIncreaseDistance))),
                         config.maxFeeRate,
                     );
