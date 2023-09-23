@@ -357,56 +357,6 @@ export class Actions {
         }
     }
 
-    private static getAllWeightedAboveBoundsInflow(
-        outgoingChannel: ChannelStats,
-        incomingChannels: ChannelStats[],
-        allChannels: ReadonlyMap<ChannelStats, Action>,
-        config: ActionsConfig,
-    ) {
-        let earliestTime = new Date(Date.now()).toISOString();
-        let amount = 0;
-
-        for (const incomingChannel of incomingChannels) {
-            const { target } = allChannels.get(incomingChannel) ?? {};
-
-            if (!target) {
-                throw new Error("Channel not found!");
-            }
-
-            const channelData = this.getWeightedAboveBoundsInflow(outgoingChannel, incomingChannel, target, config);
-            earliestTime = channelData.earliestTime < earliestTime ? channelData.earliestTime : earliestTime;
-            amount += channelData.amount;
-        }
-
-        return { earliestTime, amount };
-    }
-
-    private static getWeightedAboveBoundsInflow(
-        outgoingChannel: ChannelStats,
-        // eslint-disable-next-line @typescript-eslint/naming-convention
-        { properties: { local_balance, capacity }, history }: ChannelStats,
-        incomingTarget: number,
-        { minFeeIncreaseDistance }: ActionsConfig,
-    ) {
-        let earliestTime = new Date(Date.now()).toISOString();
-        let amount = 0;
-        const getDistance = (balance: number) => this.getTargetBalanceDistance(balance, incomingTarget, capacity);
-        const currentDistance = getDistance(local_balance);
-
-        if (currentDistance >= minFeeIncreaseDistance) {
-            const done = (c: Readonly<BalanceChange>) => getDistance(c.balance) < minFeeIncreaseDistance;
-
-            for (const forward of this.filterHistory(history, IncomingForward, done)) {
-                if (forward.outgoingChannel === outgoingChannel) {
-                    earliestTime = forward.time < earliestTime ? forward.time : earliestTime;
-                    amount += forward.amount;
-                }
-            }
-        }
-
-        return { earliestTime, amount: amount * currentDistance };
-    }
-
     // Provides the already filtered history relevant to choose a new fee for the given channel.
     // For a channel with a negative target balance distance, returns all changes that lowered the balance below (or
     // further below) minFeeIncreaseDistance up to the point where the target balance distance goes back below
@@ -465,6 +415,54 @@ export class Actions {
         }
     }
 
+    private static getAllWeightedAboveBoundsInflow(
+        outgoingChannel: ChannelStats,
+        incomingChannels: ChannelStats[],
+        allChannels: ReadonlyMap<ChannelStats, Action>,
+        config: ActionsConfig,
+    ) {
+        let earliestTime = new Date(Date.now()).toISOString();
+        let amount = 0;
+
+        for (const incomingChannel of incomingChannels) {
+            const { target } = allChannels.get(incomingChannel) ?? {};
+
+            if (!target) {
+                throw new Error("Channel not found!");
+            }
+
+            const channelData = this.getWeightedAboveBoundsInflow(outgoingChannel, incomingChannel, target, config);
+            earliestTime = channelData.earliestTime < earliestTime ? channelData.earliestTime : earliestTime;
+            amount += channelData.amount;
+        }
+
+        return { earliestTime, amount };
+    }
+
+    private static getFeeRate(amount: number, fee: number, baseFee: number) {
+        return Math.round((fee - baseFee) / amount * 1_000_000);
+    }
+
+    private static createFeeAction(
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        { properties: { id, partnerAlias, fee_rate } }: ChannelStats,
+        { maxFeeRate }: ActionsConfig,
+        target: number,
+        reason: string,
+    ): Action {
+        return {
+            entity: "channel",
+            id,
+            alias: partnerAlias,
+            priority: 1,
+            variable: "feeRate",
+            actual: fee_rate,
+            target,
+            max: maxFeeRate,
+            reason,
+        };
+    }
+
     private static *getFeeDecreaseAction(channel: ChannelStats, currentDistance: number, config: ActionsConfig) {
         // If target balance distance is either within bounds or above, we simply look for the latest outgoing
         // forward and drop the fee depending on how long ago it happened. There is no immediate component here,
@@ -491,10 +489,6 @@ export class Actions {
         }
     }
 
-    private static getFeeRate(amount: number, fee: number, baseFee: number) {
-        return Math.round((fee - baseFee) / amount * 1_000_000);
-    }
-
     private static getIncreaseFraction(elapsedMilliseconds: number, currentDistance: number, config: ActionsConfig) {
         const isRecent = elapsedMilliseconds < 5 * 60 * 1000;
         const rawFraction = Math.abs(currentDistance) - config.minFeeIncreaseDistance;
@@ -502,24 +496,30 @@ export class Actions {
         return isRecent ? rawFraction : rawFraction * (elapsedMilliseconds / 7 / 24 / 60 / 60 / 1000);
     }
 
-    private static createFeeAction(
+    private static getWeightedAboveBoundsInflow(
+        outgoingChannel: ChannelStats,
         // eslint-disable-next-line @typescript-eslint/naming-convention
-        { properties: { id, partnerAlias, fee_rate } }: ChannelStats,
-        { maxFeeRate }: ActionsConfig,
-        target: number,
-        reason: string,
-    ): Action {
-        return {
-            entity: "channel",
-            id,
-            alias: partnerAlias,
-            priority: 1,
-            variable: "feeRate",
-            actual: fee_rate,
-            target,
-            max: maxFeeRate,
-            reason,
-        };
+        { properties: { local_balance, capacity }, history }: ChannelStats,
+        incomingTarget: number,
+        { minFeeIncreaseDistance }: ActionsConfig,
+    ) {
+        let earliestTime = new Date(Date.now()).toISOString();
+        let amount = 0;
+        const getDistance = (balance: number) => this.getTargetBalanceDistance(balance, incomingTarget, capacity);
+        const currentDistance = getDistance(local_balance);
+
+        if (currentDistance >= minFeeIncreaseDistance) {
+            const done = (c: Readonly<BalanceChange>) => getDistance(c.balance) < minFeeIncreaseDistance;
+
+            for (const forward of this.filterHistory(history, IncomingForward, done)) {
+                if (forward.outgoingChannel === outgoingChannel) {
+                    earliestTime = forward.time < earliestTime ? forward.time : earliestTime;
+                    amount += forward.amount;
+                }
+            }
+        }
+
+        return { earliestTime, amount: amount * currentDistance };
     }
 
     private constructor() { /* Intentionally empty */ }
