@@ -5,7 +5,7 @@ import { getChannels as lndGetChannels } from "lightning";
 import { arrayPick } from "./arrayPick.js";
 import { getArrayData } from "./getArrayData.js";
 
-const properties = ["capacity", "id", "local_balance", "partner_public_key", "remote_balance"] as const;
+const properties = ["capacity", "id", "local_balance", "partner_public_key"] as const;
 
 export const getChannels = async (args: GetChannelsArgs) =>
     arrayPick(await getArrayData(lndGetChannels, args, "channels"), properties);

@@ -3,7 +3,7 @@ import type { GetNodeArgs } from "lightning";
 import { getNode as lndGetNode } from "lightning";
 import { pick } from "./pick.js";
 
-const properties = ["alias", "color", "features", "sockets", "updated_at"] as const;
+const properties = ["alias"] as const;
 
 export const getNode = async (args: GetNodeArgs) => pick(await lndGetNode(args), properties);
 
