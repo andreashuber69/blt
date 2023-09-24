@@ -1,4 +1,5 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
+import type { IChannelStats } from "./ChannelStats.js";
 import { ChannelStats } from "./ChannelStats.js";
 import type { INodeInfo } from "./info/NodeInfo.js";
 
@@ -49,7 +50,7 @@ export class NodeStats {
         return { rawTokens: Number(mtokens) / 1000, fee: Number(fee_mtokens) / 1000 };
     }
 
-    private constructor(public readonly channels: ReadonlyMap<string, ChannelStats>) {}
+    private constructor(public readonly channels: ReadonlyMap<string, IChannelStats>) {}
 }
 
 export type INodeStats = Pick<NodeStats, "channels">;

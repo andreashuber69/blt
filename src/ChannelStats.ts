@@ -149,3 +149,5 @@ export class ChannelStats {
         stats.totalTokens += absoluteTokens;
     }
 }
+
+export type IChannelStats = Pick<ChannelStats, "history" | "incomingForwards" | "outgoingForwards" | "properties">;

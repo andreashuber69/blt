@@ -1,5 +1,5 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
-import type { BalanceChange, ChannelStats } from "./ChannelStats.js";
+import type { BalanceChange, ChannelStats, IChannelStats } from "./ChannelStats.js";
 import { IncomingForward, OutgoingForward } from "./ChannelStats.js";
 import type { DeepReadonly } from "./DeepReadonly.js";
 import type { INodeStats } from "./NodeStats.js";
@@ -165,7 +165,7 @@ export class Actions {
             properties: { id, partnerAlias, capacity, local_balance },
             incomingForwards: incoming,
             outgoingForwards: outgoing,
-        }: ChannelStats,
+        }: IChannelStats,
         {
             minChannelBalanceFraction,
             minRebalanceDistance,
@@ -278,7 +278,7 @@ export class Actions {
         return base ** Math.floor(Math.abs(distance) / minRebalanceDistance);
     }
 
-    private static *getFeeActions(channels: ReadonlyMap<ChannelStats, Action>, config: ActionsConfig) {
+    private static *getFeeActions(channels: ReadonlyMap<IChannelStats, Action>, config: ActionsConfig) {
         for (const [channel, { target }] of channels.entries()) {
             if (channel.history.length === 0) {
                 // TODO channel without any forwards or payments
@@ -376,7 +376,7 @@ export class Actions {
     }
 
     private static *getMaxIncreaseFeeAction(
-        channel: ChannelStats,
+        channel: IChannelStats,
         currentDistance: number,
         forwards: OutgoingForward[],
         config: ActionsConfig,
@@ -415,9 +415,9 @@ export class Actions {
     }
 
     private static getAllWeightedAboveBoundsInflow(
-        outgoingChannel: ChannelStats,
-        incomingChannels: ChannelStats[],
-        allChannels: ReadonlyMap<ChannelStats, Action>,
+        outgoingChannel: IChannelStats,
+        incomingChannels: IChannelStats[],
+        allChannels: ReadonlyMap<IChannelStats, Action>,
         config: ActionsConfig,
     ) {
         let earliestTime = new Date(Date.now()).toISOString();
@@ -439,13 +439,13 @@ export class Actions {
     }
 
     // eslint-disable-next-line @typescript-eslint/naming-convention
-    private static getFeeRate({ amount, fee }: OutgoingForward, { properties: { base_fee } }: ChannelStats) {
+    private static getFeeRate({ amount, fee }: OutgoingForward, { properties: { base_fee } }: IChannelStats) {
         return Math.round((fee - base_fee) / amount * 1_000_000);
     }
 
     private static createFeeAction(
         // eslint-disable-next-line @typescript-eslint/naming-convention
-        { properties: { id, partnerAlias, fee_rate } }: ChannelStats,
+        { properties: { id, partnerAlias, fee_rate } }: IChannelStats,
         { maxFeeRate }: ActionsConfig,
         target: number,
         reason: string,
@@ -463,7 +463,7 @@ export class Actions {
         };
     }
 
-    private static *getFeeDecreaseAction(channel: ChannelStats, currentDistance: number, config: ActionsConfig) {
+    private static *getFeeDecreaseAction(channel: IChannelStats, currentDistance: number, config: ActionsConfig) {
         // If target balance distance is either within bounds or above, we simply look for the latest outgoing
         // forward and drop the fee depending on how long ago it happened. There is no immediate component here,
         // because lower fees are very unlikely to attract outgoing forwards for several hours.
@@ -497,9 +497,9 @@ export class Actions {
     }
 
     private static getWeightedAboveBoundsInflow(
-        outgoingChannel: ChannelStats,
+        outgoingChannel: IChannelStats,
         // eslint-disable-next-line @typescript-eslint/naming-convention
-        { properties: { local_balance, capacity }, history }: ChannelStats,
+        { properties: { local_balance, capacity }, history }: IChannelStats,
         incomingTarget: number,
         { minFeeIncreaseDistance }: ActionsConfig,
     ) {

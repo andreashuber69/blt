@@ -2,7 +2,7 @@
 import assert from "node:assert";
 import { describe, it } from "node:test";
 
-import type { ChannelStats } from "./ChannelStats.js";
+import type { IChannelStats } from "./ChannelStats.js";
 import { IncomingForward, OutgoingForward } from "./ChannelStats.js";
 import type { INodeInfo } from "./info/NodeInfo.js";
 import { NodeStats } from "./NodeStats.js";
@@ -136,7 +136,7 @@ const nodeInfo: INodeInfo = {
 };
 
 const verifyFlow = (
-    channels: ReadonlyMap<string, Readonly<ChannelStats>>,
+    channels: ReadonlyMap<string, IChannelStats>,
     channelId: string,
     incomingMaxTokens: number,
     incomingCount: number,
