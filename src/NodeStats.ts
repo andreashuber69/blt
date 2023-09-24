@@ -53,4 +53,5 @@ export class NodeStats {
     private constructor(public readonly channels: ReadonlyMap<string, IChannelStats>) {}
 }
 
+/** See {@linkcode NodeStats}. */
 export type INodeStats = Pick<NodeStats, "channels">;

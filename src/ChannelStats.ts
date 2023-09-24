@@ -150,4 +150,5 @@ export class ChannelStats {
     }
 }
 
+/** See {@linkcode ChannelStats}. */
 export type IChannelStats = Pick<ChannelStats, "history" | "incomingForwards" | "outgoingForwards" | "properties">;
