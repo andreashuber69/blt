@@ -4,6 +4,18 @@ import { IncomingForward, OutgoingForward } from "./ChannelStats.js";
 import type { DeepReadonly } from "./DeepReadonly.js";
 import type { INodeStats } from "./NodeStats.js";
 
+/**
+ * Exposes various configuration variables that are used by {@linkcode Actions.get} to propose changes.
+ * @description Some variables refer to the distance of the local balance from the target balance. This is a
+ * normalized value to make algorithms independent from the channel capacity. A distance of 0 means that the local
+ * balance is equal to the target balance. -1 signifies the local balance being 0, 1 means that the balance is equal
+ * to the capacity of the channel. So, a value of -0.3 equates to the current balance being 30% less than the target.
+ * However, a value of +0.3 means that the current balance is equal to the target balance + 30% of the (capacity -
+ * target balance). This different calculation of negative and positive distance "automatically" introduces different
+ * limits for channels with a target balance far below or above 50% of the capacity. For example, a channel with a
+ * local target balance of 70% and {@linkcode ActionsConfig.minFeeIncreaseDistance} of 0.5 could have a local balance
+ * varying between 35% and 85% without any fee increases ever being proposed.
+ */
 export interface ActionsConfig {
     /** The minimum number of past forwards routed through a channel to consider it as indicative for future flow. */
     readonly minChannelForwards: number;
@@ -30,7 +42,7 @@ export interface ActionsConfig {
      * The minimum absolute distance from the target a channel balance can have before fee increase actions are
      * suggested. A value close to 0 means that the proposed fee changes are rather large (0 itself is not allowed as
      * that equates to the {@linkcode ActionsConfig.maxFeeRate} being suggested for every fee increase. 1 means that no
-     * fee increases are ever suggested. 0.3 is probably a sensible value.
+     * fee increases are ever suggested. Values around 0.4 are probably sensible.
      */
     readonly minFeeIncreaseDistance: number;
 
@@ -109,15 +121,14 @@ export interface Action {
  * impossible by low liquidity. This is why the suggested actions will not let channel balance go below or above a given
  * limit (e.g. 25% and 75%).</li>
  * <li>Set the target of the total local balance of the node to the sum of the target balances of all channels.</li>
- * <li>Monitor individual channel balance. If the balance falls below certain thresholds, this means that the fee on the
- * channel itself is too low and should therefore be raised immediately. If channel balance raises above certain
- * thresholds, this means that the recent incoming flow was forwarded to channels with fees too low and the fees on
- * those channels should be raised immediately.</li>
- * <li>If the local balance stays close to or above the target and no forwarding flow is outgoing over long periods of
- * time, this means that the fee on the channel is too high and should be reduced slowly until it either reaches 0 or
- * outgoing flow reduces the balance.</li>
- * <li>If the local balance stays substantially below the target and rebalancing success is very low, the fee is likely
- * too low (as rebalancing sets the current fee as an upper limit) and should be increased slowly.</li>
+ * <li>Monitor individual channel balance. If the distance of the local balance to the target falls below
+ * -{@linkcode ActionsConfig.minFeeIncreaseDistance}, this means that the fee on the channel itself is too low and
+ * should therefore be raised. If channel balance raises above +{@linkcode ActionsConfig.minFeeIncreaseDistance}, this
+ * means that incoming flow was forwarded to channels with fees too low and the fees on those channels should be raised.
+ * </li>
+ * <li>If the target balance distance stays above -{@linkcode ActionsConfig.minFeeIncreaseDistance} and no forwarding
+ * flow is outgoing for more than {@linkcode ActionsConfig.feeDecreaseWaitDays}, this means that the fee on the channel
+ * is too high and should be reduced slowly until it either reaches 0 or outgoing flow reduces the balance.</li>
  * </ul>
  * Note that the actions suggested by this class deliberately do not define how the targets should be reached. Some
  * targets can be trivially reached with automation (e.g. fees) others are much harder (e.g. individual channel
@@ -297,8 +308,8 @@ export class Actions {
                 if (forwards.length > 0) {
                     yield* this.getMaxIncreaseFeeAction(channel, currentDistance, forwards, config);
                 } else {
-                    // TODO: The below bounds balance is not due to outgoing forwards, there's nothing we can do with
-                    // fees.
+                    // TODO: The below bounds balance is not due to outgoing forwards, still raise the fees to help
+                    // rebalancing?
                 }
             } else {
                 // For any channel with outgoing forwards, it is possible that the majority of the outgoing flow is
