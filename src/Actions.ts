@@ -1,5 +1,5 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
-import type { BalanceChange, ChannelStats, IChannelStats } from "./ChannelStats.js";
+import type { BalanceChange, IChannelStats } from "./ChannelStats.js";
 import { IncomingForward, OutgoingForward } from "./ChannelStats.js";
 import type { DeepReadonly } from "./DeepReadonly.js";
 import type { INodeStats } from "./NodeStats.js";
@@ -313,7 +313,7 @@ export class Actions {
                 }
 
                 // eslint-disable-next-line unicorn/prefer-native-coercion-functions
-                const filter = (c: ChannelStats | undefined): c is ChannelStats => Boolean(c);
+                const filter = (c: IChannelStats | undefined): c is IChannelStats => Boolean(c);
                 // eslint-disable-next-line unicorn/no-array-callback-reference
                 const incomingChannels = [...new Set(outgoingForwards.map((f) => f.incomingChannel).filter(filter))];
 
