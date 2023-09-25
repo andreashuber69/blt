@@ -293,7 +293,8 @@ export class Actions {
         for (const [channel, { target }] of channels.entries()) {
             if (channel.history.length === 0) {
                 // TODO channel without any forwards or payments
-                break;
+                // eslint-disable-next-line no-continue
+                continue;
             }
 
             const getDistance = (balance: number) =>
@@ -311,7 +312,12 @@ export class Actions {
                     // TODO: The below bounds balance is not due to outgoing forwards, still raise the fees to help
                     // rebalancing?
                 }
-            } else {
+
+                // eslint-disable-next-line no-continue
+                continue;
+            // Potentially raising the fee due to forwards coming in through channels that are above bounds only makes
+            // sense if this channel itself is within bounds.
+            } else if (currentDistance < config.minFeeIncreaseDistance) {
                 // For any channel with outgoing forwards, it is possible that the majority of the outgoing flow is
                 // coming from channels with a balance above bounds. Apparently, ongoing efforts at rebalancing
                 // (see assumptions) are unable to rebalance this excess balance back into this channel, which means
@@ -320,7 +326,8 @@ export class Actions {
 
                 if (!outgoingForwards[0]) {
                     // TODO: Drop the fee to zero if the channel has been open for more than 30 days.
-                    break;
+                    // eslint-disable-next-line no-continue
+                    continue;
                 }
 
                 // eslint-disable-next-line unicorn/prefer-native-coercion-functions
@@ -360,10 +367,15 @@ export class Actions {
 
                         yield this.createFeeAction(channel, config, newFeeRate, reason);
                     }
-                } else {
-                    yield* this.getFeeDecreaseAction(channel, currentDistance, config);
+
+                    // eslint-disable-next-line no-continue
+                    continue;
                 }
             }
+
+            // We get here only if we're either above bounds *or* within bounds *and* no forwards routed out
+            // through this channel contributed substantially to the incoming channel being above bounds.
+            yield* this.getFeeDecreaseAction(channel, currentDistance, config);
         }
     }
 
