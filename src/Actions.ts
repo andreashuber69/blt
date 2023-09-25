@@ -334,13 +334,13 @@ export class Actions {
                     this.getAllWeightedAboveBoundsInflow(channel, incomingChannels, channels, config);
 
                 const totalOutflow =
-                    outgoingForwards.filter((f) => f.time > earliestTime).reduce((p, c) => p + c.amount, 0);
+                    outgoingForwards.filter((f) => f.time >= earliestTime).reduce((p, c) => p + c.amount, 0);
 
                 // When all above bounds inflow of a single channel went out through this channel, the following ratio
                 // can be as low as config.minFeeIncreaseDistance (because the inflow is weighted with the current
                 // target balance distance of the incoming channel). When the balance of the incoming channel is as
                 // close to the capacity as possible, the ratio will approach 1.
-                const ratio = aboveBoundsInflow / totalOutflow;
+                const ratio = Math.abs(aboveBoundsInflow / totalOutflow);
 
                 if (ratio > config.minFeeIncreaseDistance) {
                     const feeRate = this.getFeeRate(outgoingForwards[0], channel);
@@ -358,7 +358,7 @@ export class Actions {
                             `Outflow coming in through the channel(s) ${channelNames.join(", ")} since ` +
                             `${earliestTime} moved the balance in those channels above bounds.`;
 
-                        yield this.createFeeAction(channel, config, feeRate, reason);
+                        yield this.createFeeAction(channel, config, newFeeRate, reason);
                     }
                 } else {
                     yield* this.getFeeDecreaseAction(channel, currentDistance, config);
