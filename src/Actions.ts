@@ -410,13 +410,12 @@ export class Actions {
     private static getWeightedAboveBoundsInflow(
         outgoingChannel: IChannelStats,
         // eslint-disable-next-line @typescript-eslint/naming-convention
-        { properties: { local_balance, capacity }, history }: IChannelStats,
-        incomingTarget: number,
+        [{ properties: { local_balance, capacity }, history }, { target }]: readonly [IChannelStats, Action],
         { minFeeIncreaseDistance }: ActionsConfig,
     ) {
         let earliestTime = new Date(Date.now()).toISOString();
         let amount = 0;
-        const getDistance = (balance: number) => this.getTargetBalanceDistance(balance, incomingTarget, capacity);
+        const getDistance = (balance: number) => this.getTargetBalanceDistance(balance, target, capacity);
         const currentDistance = getDistance(local_balance);
 
         if (currentDistance >= minFeeIncreaseDistance) {
@@ -445,7 +444,7 @@ export class Actions {
         }
     }
 
-    private *getFeeAction([channel, { target }]: [IChannelStats, Action]) {
+    private *getFeeAction([channel, { target }]: readonly [IChannelStats, Action]) {
         const getDistance =
             (balance: number) => Actions.getTargetBalanceDistance(balance, target, channel.properties.capacity);
 
@@ -478,9 +477,12 @@ export class Actions {
             }
 
             // eslint-disable-next-line unicorn/prefer-native-coercion-functions
-            const filter = (c: IChannelStats | undefined): c is IChannelStats => Boolean(c);
-            // eslint-disable-next-line unicorn/no-array-callback-reference
-            const incomingChannels = [...new Set(outgoingForwards.map((f) => f.incomingChannel).filter(filter))];
+            const filter = <T extends NonNullable<unknown>>(c: T | undefined): c is T => Boolean(c);
+
+            const incomingChannels = [...new Set(outgoingForwards.map((f) => f.incomingChannel))].
+                map((c) => this.getChannel(c)).
+                // eslint-disable-next-line unicorn/no-array-callback-reference
+                filter(filter);
 
             // We consider all above bounds inflow and compare that to the outflow that happened in the same
             // time window.
@@ -506,7 +508,7 @@ export class Actions {
 
                 if (newFeeRate > channel.properties.fee_rate) {
                     const channelNames =
-                        incomingChannels.map(({ properties: { id, partnerAlias } }) => `${id} (${partnerAlias})`);
+                        incomingChannels.map(([{ properties: { id, partnerAlias } }]) => `${id} (${partnerAlias})`);
 
                     const reason = `Outflow coming in through the channel(s) ${channelNames.join(", ")} since ` +
                         `${earliestTime} moved the balance in those channels above bounds.`;
@@ -523,20 +525,29 @@ export class Actions {
         yield* Actions.getFeeDecreaseAction(channel, currentDistance, this.config);
     }
 
-    private getAllWeightedAboveBoundsInflow(outgoingChannel: IChannelStats, incomingChannels: IChannelStats[]) {
+    private getChannel(channel: IChannelStats | undefined) {
+        if (channel) {
+            const action = this.channels.get(channel);
+
+            if (!action) {
+                throw new Error("Channel not found!");
+            }
+
+            return [channel, action] as const;
+        }
+
+        return undefined;
+    }
+
+    private getAllWeightedAboveBoundsInflow(
+        outgoingChannel: IChannelStats,
+        incomingChannels: ReadonlyArray<readonly [IChannelStats, Action]>,
+    ) {
         let earliestTime = new Date(Date.now()).toISOString();
         let amount = 0;
 
         for (const incomingChannel of incomingChannels) {
-            const { target } = this.channels.get(incomingChannel) ?? {};
-
-            if (!target) {
-                throw new Error("Channel not found!");
-            }
-
-            const channelData =
-                Actions.getWeightedAboveBoundsInflow(outgoingChannel, incomingChannel, target, this.config);
-
+            const channelData = Actions.getWeightedAboveBoundsInflow(outgoingChannel, incomingChannel, this.config);
             earliestTime = channelData.earliestTime < earliestTime ? channelData.earliestTime : earliestTime;
             amount += channelData.amount;
         }
