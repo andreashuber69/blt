@@ -349,30 +349,6 @@ export class Actions {
         }
     }
 
-    private static getAllWeightedAboveBoundsInflow(
-        outgoingChannel: IChannelStats,
-        incomingChannels: IChannelStats[],
-        allChannels: ReadonlyMap<IChannelStats, Action>,
-        config: ActionsConfig,
-    ) {
-        let earliestTime = new Date(Date.now()).toISOString();
-        let amount = 0;
-
-        for (const incomingChannel of incomingChannels) {
-            const { target } = allChannels.get(incomingChannel) ?? {};
-
-            if (!target) {
-                throw new Error("Channel not found!");
-            }
-
-            const channelData = this.getWeightedAboveBoundsInflow(outgoingChannel, incomingChannel, target, config);
-            earliestTime = channelData.earliestTime < earliestTime ? channelData.earliestTime : earliestTime;
-            amount += channelData.amount;
-        }
-
-        return { earliestTime, amount };
-    }
-
     // eslint-disable-next-line @typescript-eslint/naming-convention
     private static getFeeRate({ amount, fee }: OutgoingForward, { properties: { base_fee } }: IChannelStats) {
         return Math.round((fee - base_fee) / amount * 1_000_000);
@@ -509,7 +485,7 @@ export class Actions {
             // We consider all above bounds inflow and compare that to the outflow that happened in the same
             // time window.
             const { earliestTime, amount: aboveBoundsInflow } =
-                Actions.getAllWeightedAboveBoundsInflow(channel, incomingChannels, this.channels, this.config);
+                this.getAllWeightedAboveBoundsInflow(channel, incomingChannels);
 
             const totalOutflow =
                 outgoingForwards.filter((f) => f.time >= earliestTime).reduce((p, c) => p + c.amount, 0);
@@ -545,5 +521,26 @@ export class Actions {
         // We get here only if we're either above bounds *or* within bounds *and* no forwards routed out
         // through this channel contributed substantially to the incoming channel being above bounds.
         yield* Actions.getFeeDecreaseAction(channel, currentDistance, this.config);
+    }
+
+    private getAllWeightedAboveBoundsInflow(outgoingChannel: IChannelStats, incomingChannels: IChannelStats[]) {
+        let earliestTime = new Date(Date.now()).toISOString();
+        let amount = 0;
+
+        for (const incomingChannel of incomingChannels) {
+            const { target } = this.channels.get(incomingChannel) ?? {};
+
+            if (!target) {
+                throw new Error("Channel not found!");
+            }
+
+            const channelData =
+                Actions.getWeightedAboveBoundsInflow(outgoingChannel, incomingChannel, target, this.config);
+
+            earliestTime = channelData.earliestTime < earliestTime ? channelData.earliestTime : earliestTime;
+            amount += channelData.amount;
+        }
+
+        return { earliestTime, amount };
     }
 }
