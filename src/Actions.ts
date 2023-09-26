@@ -453,36 +453,6 @@ export class Actions {
         yield* this.getFeeDecreaseAction(channel, currentDistance);
     }
 
-    private getChannel(channel: IChannelStats | undefined) {
-        if (channel) {
-            const action = this.channels.get(channel);
-
-            if (!action) {
-                throw new Error("Channel not found!");
-            }
-
-            return [channel, action] as const;
-        }
-
-        return undefined;
-    }
-
-    private getAllWeightedAboveBoundsInflow(
-        outgoingChannel: IChannelStats,
-        incomingChannels: ReadonlyArray<readonly [IChannelStats, Action]>,
-    ) {
-        let earliestTime = new Date(Date.now()).toISOString();
-        let amount = 0;
-
-        for (const incomingChannel of incomingChannels) {
-            const channelData = Actions.getWeightedAboveBoundsInflow(outgoingChannel, incomingChannel, this.config);
-            earliestTime = channelData.earliestTime < earliestTime ? channelData.earliestTime : earliestTime;
-            amount += channelData.amount;
-        }
-
-        return { earliestTime, amount };
-    }
-
     private *getMaxIncreaseFeeAction(channel: IChannelStats, currentDistance: number, forwards: OutgoingForward[]) {
         // For all changes that pushed the target balance distance below bounds, we calculate the resulting fee
         // increase. In the end we choose the highest fee increase. This approach guarantees that we do the "right
@@ -515,6 +485,36 @@ export class Actions {
         if (action.target > channel.properties.fee_rate) {
             yield action;
         }
+    }
+
+    private getChannel(channel: IChannelStats | undefined) {
+        if (channel) {
+            const action = this.channels.get(channel);
+
+            if (!action) {
+                throw new Error("Channel not found!");
+            }
+
+            return [channel, action] as const;
+        }
+
+        return undefined;
+    }
+
+    private getAllWeightedAboveBoundsInflow(
+        outgoingChannel: IChannelStats,
+        incomingChannels: ReadonlyArray<readonly [IChannelStats, Action]>,
+    ) {
+        let earliestTime = new Date(Date.now()).toISOString();
+        let amount = 0;
+
+        for (const incomingChannel of incomingChannels) {
+            const channelData = Actions.getWeightedAboveBoundsInflow(outgoingChannel, incomingChannel, this.config);
+            earliestTime = channelData.earliestTime < earliestTime ? channelData.earliestTime : earliestTime;
+            amount += channelData.amount;
+        }
+
+        return { earliestTime, amount };
     }
 
     private *getFeeDecreaseAction(channel: IChannelStats, currentDistance: number) {
