@@ -53,14 +53,14 @@
     "tslib": "^2.6.2"
   },
   "devDependencies": {
-    "@andreashuber69/eslint-config": "^1.1.55",
+    "@andreashuber69/eslint-config": "^1.1.56",
     "@tsconfig/node-lts-strictest-esm": "^18.12.1",
     "@types/node": "^18.17.17",
     "c8": "^8.0.1",
     "coveralls": "^3.1.1",
     "cspell": "^7.3.6",
-    "markdownlint-cli": "^0.36.0",
-    "tsx": "^3.12.10",
+    "markdownlint-cli": "^0.37.0",
+    "tsx": "^3.13.0",
     "typedoc": "^0.25.1",
     "typescript": "^5.2.2",
     "vite": "^4.4.9"
