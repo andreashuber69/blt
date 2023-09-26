@@ -335,31 +335,6 @@ export class Actions {
         };
     }
 
-    private static getWeightedAboveBoundsInflow(
-        outgoingChannel: IChannelStats,
-        // eslint-disable-next-line @typescript-eslint/naming-convention
-        [{ properties: { local_balance, capacity }, history }, { target }]: readonly [IChannelStats, Action],
-        { minFeeIncreaseDistance }: ActionsConfig,
-    ) {
-        let earliestTime = new Date(Date.now()).toISOString();
-        let amount = 0;
-        const getDistance = (balance: number) => this.getTargetBalanceDistance(balance, target, capacity);
-        const currentDistance = getDistance(local_balance);
-
-        if (currentDistance >= minFeeIncreaseDistance) {
-            const done = (c: Readonly<BalanceChange>) => getDistance(c.balance) < minFeeIncreaseDistance;
-
-            for (const forward of this.filterHistory(history, IncomingForward, done)) {
-                if (forward.outgoingChannel === outgoingChannel) {
-                    earliestTime = forward.time < earliestTime ? forward.time : earliestTime;
-                    amount += forward.amount;
-                }
-            }
-        }
-
-        return { earliestTime, amount: amount * currentDistance };
-    }
-
     private readonly channels: ReadonlyMap<IChannelStats, Action>;
 
     private *getFeeActions() {
@@ -509,7 +484,7 @@ export class Actions {
         let amount = 0;
 
         for (const incomingChannel of incomingChannels) {
-            const channelData = Actions.getWeightedAboveBoundsInflow(outgoingChannel, incomingChannel, this.config);
+            const channelData = this.getWeightedAboveBoundsInflow(outgoingChannel, incomingChannel);
             earliestTime = channelData.earliestTime < earliestTime ? channelData.earliestTime : earliestTime;
             amount += channelData.amount;
         }
@@ -548,5 +523,29 @@ export class Actions {
         const rawFraction = Math.abs(currentDistance) - this.config.minFeeIncreaseDistance;
         // TODO: get days from config
         return isRecent ? rawFraction : rawFraction * (elapsedMilliseconds / 7 / 24 / 60 / 60 / 1000);
+    }
+
+    private getWeightedAboveBoundsInflow(
+        outgoingChannel: IChannelStats,
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        [{ properties: { local_balance, capacity }, history }, { target }]: readonly [IChannelStats, Action],
+    ) {
+        let earliestTime = new Date(Date.now()).toISOString();
+        let amount = 0;
+        const getDistance = (balance: number) => Actions.getTargetBalanceDistance(balance, target, capacity);
+        const currentDistance = getDistance(local_balance);
+
+        if (currentDistance >= this.config.minFeeIncreaseDistance) {
+            const done = (c: Readonly<BalanceChange>) => getDistance(c.balance) < this.config.minFeeIncreaseDistance;
+
+            for (const forward of Actions.filterHistory(history, IncomingForward, done)) {
+                if (forward.outgoingChannel === outgoingChannel) {
+                    earliestTime = forward.time < earliestTime ? forward.time : earliestTime;
+                    amount += forward.amount;
+                }
+            }
+        }
+
+        return { earliestTime, amount: amount * currentDistance };
     }
 }
