@@ -315,26 +315,6 @@ export class Actions {
         return Math.round((fee - base_fee) / amount * 1_000_000);
     }
 
-    private static createFeeAction(
-        // eslint-disable-next-line @typescript-eslint/naming-convention
-        { properties: { id, partnerAlias, fee_rate } }: IChannelStats,
-        { maxFeeRate }: ActionsConfig,
-        target: number,
-        reason: string,
-    ): Action {
-        return {
-            entity: "channel",
-            id,
-            alias: partnerAlias,
-            priority: 1,
-            variable: "feeRate",
-            actual: fee_rate,
-            target,
-            max: maxFeeRate,
-            reason,
-        };
-    }
-
     private readonly channels: ReadonlyMap<IChannelStats, Action>;
 
     private *getFeeActions() {
@@ -416,7 +396,7 @@ export class Actions {
                     const reason = `Outflow coming in through the channel(s) ${channelNames.join(", ")} since ` +
                         `${earliestTime} moved the balance in those channels above bounds.`;
 
-                    yield Actions.createFeeAction(channel, this.config, newFeeRate, reason);
+                    yield this.createFeeAction(channel, newFeeRate, reason);
                 }
 
                 return;
@@ -451,7 +431,7 @@ export class Actions {
                 `The current distance from the target balance is ${currentDistance}, the outgoing forward at ` +
                 `${change.time} contributed to that situation and paid ${feeRate}ppm.`;
 
-            return Actions.createFeeAction(channel, this.config, newFeeRate, reason);
+            return this.createFeeAction(channel, newFeeRate, reason);
         };
 
         const actions = forwards.map((forward) => getIncreaseFeeAction(forward));
@@ -492,6 +472,25 @@ export class Actions {
         return { earliestTime, amount };
     }
 
+    private createFeeAction(
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        { properties: { id, partnerAlias, fee_rate } }: IChannelStats,
+        target: number,
+        reason: string,
+    ): Action {
+        return {
+            entity: "channel",
+            id,
+            alias: partnerAlias,
+            priority: 1,
+            variable: "feeRate",
+            actual: fee_rate,
+            target,
+            max: this.config.maxFeeRate,
+            reason,
+        };
+    }
+
     private *getFeeDecreaseAction(channel: IChannelStats, currentDistance: number) {
         // If target balance distance is either within bounds or above, we simply look for the latest outgoing
         // forward and drop the fee depending on how long ago it happened. There is no immediate component here,
@@ -512,7 +511,7 @@ export class Actions {
                         `The current distance from the target balance is ${currentDistance} and the most recent ` +
                         `outgoing forward took place on ${forward.time} and paid ${feeRate}ppm.`;
 
-                    yield Actions.createFeeAction(channel, this.config, newFeeRate, reason);
+                    yield this.createFeeAction(channel, newFeeRate, reason);
                 }
             }
         }
