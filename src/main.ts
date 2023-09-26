@@ -80,7 +80,7 @@ while (true) {
                 maxFeeRate: 2500,
             };
 
-            const actions = [...Actions.get(stats, config)];
+            const actions = [...new Actions(stats, config).get()];
             log(JSON.stringify(actions, undefined, 2));
 
             try {

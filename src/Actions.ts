@@ -136,29 +136,31 @@ export interface Action {
  * should therefore define how these actions should be implemented.
  */
 export class Actions {
-    public static *get(stats: INodeStats, config: ActionsConfig) {
-        const channels = new Map([...stats.channels.values()].map(
-            (channel) => ([channel, this.getChannelBalanceAction(channel, config)]),
+    public constructor(stats: INodeStats, private readonly config: ActionsConfig) {
+        this.channels = new Map([...stats.channels.values()].map(
+            (channel) => ([channel, Actions.getChannelBalanceAction(channel, config)]),
         ));
+    }
 
+    public *get() {
         let actual = 0;
         let target = 0;
         let max = 0;
 
-        for (const balanceAction of channels.values()) {
+        for (const balanceAction of this.channels.values()) {
             actual += balanceAction.actual;
             target += balanceAction.target;
             max += balanceAction.max;
-            yield* this.filterBalanceAction(balanceAction);
+            yield* Actions.filterBalanceAction(balanceAction);
         }
 
         const nodeBalanceAction: Action = {
             entity: "node",
             variable: "balance",
-            priority: this.getPriority(
+            priority: Actions.getPriority(
                 4,
-                this.getTargetBalanceDistance(actual, target, max),
-                config.minRebalanceDistance,
+                Actions.getTargetBalanceDistance(actual, target, max),
+                this.config.minRebalanceDistance,
             ),
             actual,
             target,
@@ -166,8 +168,8 @@ export class Actions {
             reason: "This is the sum of the target balances of all channels.",
         };
 
-        yield* this.filterBalanceAction(nodeBalanceAction);
-        yield* this.getFeeActions(channels, config);
+        yield* Actions.filterBalanceAction(nodeBalanceAction);
+        yield* Actions.getFeeActions(this.channels, this.config);
     }
 
     private static getChannelBalanceAction(
@@ -545,5 +547,5 @@ export class Actions {
         return { earliestTime, amount: amount * currentDistance };
     }
 
-    private constructor() { /* Intentionally empty */ }
+    private readonly channels: ReadonlyMap<IChannelStats, Action>;
 }
