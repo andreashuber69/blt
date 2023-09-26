@@ -372,8 +372,10 @@ export class Actions {
             const { earliestTime, amount: aboveBoundsInflow } =
                 this.getAllWeightedAboveBoundsInflow(channel, incomingChannels);
 
+            const earliestIsoTime = new Date(earliestTime).toISOString();
+
             const totalOutflow =
-                outgoingForwards.filter((f) => f.time >= earliestTime).reduce((p, c) => p + c.amount, 0);
+                outgoingForwards.filter((f) => f.time >= earliestIsoTime).reduce((p, c) => p + c.amount, 0);
 
             // When all above bounds inflow of a single channel went out through this channel, the following ratio
             // can be as low as config.minFeeIncreaseDistance (because the inflow is weighted with the current
@@ -460,12 +462,12 @@ export class Actions {
         outgoingChannel: IChannelStats,
         incomingChannels: ReadonlyArray<readonly [IChannelStats, Action]>,
     ) {
-        let earliestTime = new Date(Date.now()).toISOString();
+        let earliestTime = Date.now();
         let amount = 0;
 
         for (const incomingChannel of incomingChannels) {
             const channelData = this.getWeightedAboveBoundsInflow(outgoingChannel, incomingChannel);
-            earliestTime = channelData.earliestTime < earliestTime ? channelData.earliestTime : earliestTime;
+            earliestTime = Math.min(earliestTime, channelData.earliestTime);
             amount += channelData.amount;
         }
 
@@ -529,7 +531,7 @@ export class Actions {
         // eslint-disable-next-line @typescript-eslint/naming-convention
         [{ properties: { local_balance, capacity }, history }, { target }]: readonly [IChannelStats, Action],
     ) {
-        let earliestTime = new Date(Date.now()).toISOString();
+        let earliestTime = Date.now();
         let amount = 0;
         const getDistance = (balance: number) => Actions.getTargetBalanceDistance(balance, target, capacity);
         const currentDistance = getDistance(local_balance);
@@ -539,7 +541,7 @@ export class Actions {
 
             for (const forward of Actions.filterHistory(history, IncomingForward, done)) {
                 if (forward.outgoingChannel === outgoingChannel) {
-                    earliestTime = forward.time < earliestTime ? forward.time : earliestTime;
+                    earliestTime = Math.min(earliestTime, new Date(forward.time).valueOf());
                     amount += forward.amount;
                 }
             }
