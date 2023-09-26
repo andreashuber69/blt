@@ -118,8 +118,8 @@ export interface Action {
  * the balance target to half their capacity. On the other hand, it neither makes sense to target a local balance of
  * &gt;90% or &lt;10% (depending on flow direction), as doing so would preclude most routing in the other direction.
  * Such bidirectional routing is highly desirable (because it reduces rebalancing) and should therefore not be made
- * impossible by low liquidity. This is why the suggested actions will not let channel balance go below or above a given
- * limit (e.g. 25% and 75%).</li>
+ * impossible by low liquidity. This is why the suggested actions will not let channel balance go below or above
+ * {@linkcode ActionsConfig.minChannelBalanceFraction} (e.g. 25% and 75%).</li>
  * <li>Set the target of the total local balance of the node to the sum of the target balances of all channels.</li>
  * <li>Monitor individual channel balance. If the distance of the local balance to the target falls below
  * -{@linkcode ActionsConfig.minFeeIncreaseDistance}, this means that the fee on the channel itself is too low and
