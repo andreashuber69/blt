@@ -391,16 +391,12 @@ export class Actions {
                     const newFeeRate = Math.min(Math.round(feeRate * (1 + increaseFraction)), this.config.maxFeeRate);
 
                     if (newFeeRate > channel.properties.fee_rate) {
-                        const aboveBoundsInflow =
-                            Math.round(inflowStats.map((i) => i.channel).reduce((p, c) => p + c));
-
-                        const stats = inflowStats.
-                            map((i) => this.getChannelStats(i, totalOutflow)).
-                            reduce((p, c) => p + c);
+                        const aboveBoundsInflow = Math.round(inflowStats.map((i) => i.channel).reduce((p, c) => p + c));
 
                         const reason =
                             `Total forwards of ${aboveBoundsInflow}sats incoming from above bounds channels\n` +
-                            `contributed to the total outflow from this channel as follows:\n${stats}`;
+                            "contributed to the total outflow from this channel as follows:\n" +
+                            `${inflowStats.map((i) => this.getChannelStats(i, totalOutflow)).reduce((p, c) => p + c)}`;
 
                         yield this.createFeeAction(channel, newFeeRate, reason);
                     }
