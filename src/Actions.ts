@@ -433,7 +433,8 @@ export class Actions {
         const getIncreaseFeeAction = (change: OutgoingForward) => {
             const feeRate = Actions.getFeeRate(change, channel);
             const elapsedMilliseconds = Date.now() - new Date(change.time).valueOf();
-            const addFraction = this.getIncreaseFraction(elapsedMilliseconds, currentDistance);
+            const rawFraction = Math.abs(currentDistance) - this.config.minFeeIncreaseDistance;
+            const addFraction = this.getIncreaseFraction(elapsedMilliseconds, rawFraction);
             // If the fee rate has been really low then the formula wouldn't increase it meaningfully. An
             // increase to at least 30 seems like a good idea.
             const newFeeRate = Math.max(Math.round(feeRate * (1 + addFraction)), 30);
@@ -521,9 +522,8 @@ export class Actions {
         }
     }
 
-    private getIncreaseFraction(elapsedMilliseconds: number, currentDistance: number) {
+    private getIncreaseFraction(elapsedMilliseconds: number, rawFraction: number) {
         const isRecent = elapsedMilliseconds < 5 * 60 * 1000;
-        const rawFraction = Math.abs(currentDistance) - this.config.minFeeIncreaseDistance;
         // TODO: get days from config
         return isRecent ? rawFraction : rawFraction * (elapsedMilliseconds / 7 / 24 / 60 / 60 / 1000);
     }
