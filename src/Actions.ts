@@ -369,40 +369,44 @@ export class Actions {
                 // eslint-disable-next-line unicorn/no-array-callback-reference
                 filter(filter);
 
-            const aboveBoundsInflowStats = [...this.getAllAboveBoundsInflowStats(channel, incomingChannels)];
-            const aboveBoundsInflow = Math.round(aboveBoundsInflowStats.map((i) => i.channel).reduce((p, c) => p + c));
-            const weightedAboveBoundsInflow = aboveBoundsInflowStats.map((i) => i.channel * i.currentDistance);
-            const earliestIsoTime = new Date(Math.min(...aboveBoundsInflowStats.map((i) => i.earliest))).toISOString();
+            if (incomingChannels.length > 0) {
+                const inflowStats = [...this.getAllAboveBoundsInflowStats(channel, incomingChannels)];
+                const earliestIsoTime = new Date(Math.min(...inflowStats.map((i) => i.earliest))).toISOString();
+                const weightedAboveBoundsInflow = inflowStats.map((i) => i.channel * i.currentDistance);
 
-            const totalOutflow =
-                outgoingForwards.filter((f) => f.time >= earliestIsoTime).reduce((p, c) => p + c.amount, 0);
+                const totalOutflow =
+                    outgoingForwards.filter((f) => f.time >= earliestIsoTime).reduce((p, c) => p + c.amount, 0);
 
-            // When all above bounds inflow of a single channel went out through this channel and this channel had no
-            // other outflows, the following ratio can be as low as config.minFeeIncreaseDistance (because the inflow is
-            // weighted with the current target balance distance of the incoming channel). When the balance of the
-            // incoming channel is as close to the capacity as possible, the ratio will approach 1.
-            const ratio = weightedAboveBoundsInflow.reduce((p, c) => p + c) / totalOutflow;
+                // When all above bounds inflow of a single channel went out through this channel and this channel had
+                // no other outflows, the following ratio can be as low as config.minFeeIncreaseDistance (because the
+                // inflow is weighted with the current target balance distance of the incoming channel). When the
+                // balance of the incoming channel is as close to the capacity as possible, the ratio will approach 1.
+                const ratio = weightedAboveBoundsInflow.reduce((p, c) => p + c) / totalOutflow;
 
-            if (ratio > this.config.minFeeIncreaseDistance) {
-                // We only increase the fee to degree that the total outflows in this channel were caused by incoming
-                // forwards into above bounds channels and the current target balance distance.
-                const increaseFraction = (ratio - this.config.minFeeIncreaseDistance) * Math.abs(currentDistance);
-                const feeRate = Actions.getFeeRate(outgoingForwards[0], channel);
-                const newFeeRate = Math.min(Math.round(feeRate * (1 + increaseFraction)), this.config.maxFeeRate);
+                if (ratio > this.config.minFeeIncreaseDistance) {
+                    // We only increase the fee to degree that the total outflows in this channel were caused by
+                    // incoming forwards into above bounds channels and the current target balance distance.
+                    const increaseFraction = (ratio - this.config.minFeeIncreaseDistance) * Math.abs(currentDistance);
+                    const feeRate = Actions.getFeeRate(outgoingForwards[0], channel);
+                    const newFeeRate = Math.min(Math.round(feeRate * (1 + increaseFraction)), this.config.maxFeeRate);
 
-                if (newFeeRate > channel.properties.fee_rate) {
-                    const stats = aboveBoundsInflowStats.
-                        map((i) => this.getChannelStats(i, totalOutflow)).
-                        reduce((p, c) => p + c);
+                    if (newFeeRate > channel.properties.fee_rate) {
+                        const aboveBoundsInflow =
+                            Math.round(inflowStats.map((i) => i.channel).reduce((p, c) => p + c));
 
-                    const reason =
-                        `Total forwards of ${aboveBoundsInflow}sats incoming from above bounds channels contributed\n` +
-                        `to the total outflow from this channel as follows:\n${stats}`;
+                        const stats = inflowStats.
+                            map((i) => this.getChannelStats(i, totalOutflow)).
+                            reduce((p, c) => p + c);
 
-                    yield this.createFeeAction(channel, newFeeRate, reason);
+                        const reason =
+                            `Total forwards of ${aboveBoundsInflow}sats incoming from above bounds channels\n` +
+                            `contributed to the total outflow from this channel as follows:\n${stats}`;
+
+                        yield this.createFeeAction(channel, newFeeRate, reason);
+                    }
+
+                    return;
                 }
-
-                return;
             }
         }
 
