@@ -396,7 +396,7 @@ export class Actions {
                         const reason =
                             `Total forwards of ${aboveBoundsInflow}sats incoming from above bounds channels\n` +
                             "contributed to the total outflow from this channel as follows:\n" +
-                            `${inflowStats.map((i) => this.getChannelStats(i, totalOutflow)).reduce((p, c) => p + c)}`;
+                            `${inflowStats.map((i) => this.getChannelStats(i, totalOutflow)).join("\n")}`;
 
                         yield this.createFeeAction(channel, newFeeRate, reason);
                     }
@@ -416,7 +416,7 @@ export class Actions {
         totalOutflow: number,
     ) {
         return `${name}: ${currentDistance.toFixed(2)} ${Math.round(channel / totalOutflow * 100)}% ` +
-            `(${new Date(earliest).toISOString()} - ${new Date(latest).toISOString()})\n`;
+            `(${new Date(earliest).toISOString()} - ${new Date(latest).toISOString()})`;
     }
 
     private *getMaxIncreaseFeeAction(channel: IChannelStats, currentDistance: number, forwards: OutgoingForward[]) {
