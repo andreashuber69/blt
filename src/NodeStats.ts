@@ -8,7 +8,7 @@ export class NodeStats {
         {
             channels: { data: channels },
             nodes: { data: nodes },
-            forwards: { data: forwards },
+            forwards: { data: forwards, days },
             payments: { data: payments },
         }: INodeInfo,
     ): INodeStats {
@@ -42,7 +42,7 @@ export class NodeStats {
             }
         }
 
-        return new NodeStats(channelsImpl);
+        return new NodeStats(channelsImpl, days);
     }
 
     // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -50,8 +50,8 @@ export class NodeStats {
         return { rawTokens: Number(mtokens) / 1000, fee: Number(fee_mtokens) / 1000 };
     }
 
-    private constructor(public readonly channels: ReadonlyMap<string, IChannelStats>) {}
+    private constructor(public readonly channels: ReadonlyMap<string, IChannelStats>, public readonly days: number) {}
 }
 
 /** See {@linkcode NodeStats}. */
-export type INodeStats = Pick<NodeStats, "channels">;
+export type INodeStats = Pick<NodeStats, "channels" | "days">;

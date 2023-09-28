@@ -137,10 +137,12 @@ export interface Action {
  * should therefore define how these actions should be implemented.
  */
 export class Actions {
-    public constructor(stats: INodeStats, private readonly config: ActionsConfig) {
-        this.channels = new Map([...stats.channels.values()].map(
+    public constructor({ channels, days }: INodeStats, config: ActionsConfig) {
+        this.channels = new Map([...channels.values()].map(
             (channel) => ([channel, Actions.getChannelBalanceAction(channel, config)]),
         ));
+
+        this.config = { ...config, days };
     }
 
     public *get() {
@@ -317,6 +319,7 @@ export class Actions {
     }
 
     private readonly channels: ReadonlyMap<IChannelStats, Action>;
+    private readonly config: ActionsConfig & { readonly days: number };
 
     private *getFeeActions() {
         for (const channelEntry of this.channels.entries()) {
