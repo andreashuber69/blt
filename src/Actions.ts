@@ -511,8 +511,7 @@ export class Actions {
 
             if (elapsedDays > 0) {
                 const feeRate = Actions.getFeeRate(forward, channel);
-                // TODO: take 30 days from settings
-                const newFeeRate = Math.max(Math.round(feeRate * (1 - (elapsedDays / 30))), 0);
+                const newFeeRate = Math.max(Math.round(feeRate * (1 - (elapsedDays / this.config.days))), 0);
 
                 if (newFeeRate < channel.properties.fee_rate) {
                     const reason =
