@@ -49,7 +49,7 @@
   },
   "dependencies": {
     "capped-promise": "^1.0.3",
-    "lightning": "^9.13.3",
+    "lightning": "^9.14.0",
     "tslib": "^2.6.2"
   },
   "devDependencies": {
@@ -58,7 +58,7 @@
     "@types/node": "^18.17.17",
     "c8": "^8.0.1",
     "coveralls": "^3.1.1",
-    "cspell": "^7.3.6",
+    "cspell": "^7.3.7",
     "markdownlint-cli": "^0.37.0",
     "tsx": "^3.13.0",
     "typedoc": "^0.25.1",
