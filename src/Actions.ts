@@ -32,7 +32,7 @@ export interface ActionsConfig {
      * The minimum absolute distance from the target a channel or node balance can have before balance actions are
      * suggested. A value close to 0 means that rebalancing is proposed even if the target deviates very little (0
      * itself is not allowed as that equates to infinite priority for a difference of even 1 satoshi). 1 means that no
-     * rebalancing is ever suggested.
+     * rebalancing is ever suggested. Values around 0.05 are probably sensible.
      */
     readonly minRebalanceDistance: number;
 
@@ -40,14 +40,37 @@ export interface ActionsConfig {
     readonly largestForwardMarginFraction: number;
 
     /**
-     * The minimum absolute distance from the target a channel balance can have before fee increase actions are
-     * suggested. A value close to 0 means that the proposed fee changes are rather large (0 itself is not allowed as
-     * that equates to the {@linkcode ActionsConfig.maxFeeRate} being suggested for every fee increase. 1 means that no
-     * fee increases are ever suggested. Values around 0.4 are probably sensible.
+     * The minimum absolute distance from the target a channel balance must have before fee increase actions are
+     * suggested. This value must be considerably larger than {@linkcode ActionsConfig.minRebalanceDistance}, so that
+     * rebalancing is attempted before fee increases are proposed. A value close to 0 means that fee changes are
+     * suggested even for small deviations from the target balance. 1 means that no fee increases are ever suggested.
+     * Values around 0.4 are probably sensible. If the balance is below the target with `currentDistance` being the
+     * current target balance distance and `feeRate` being the rate paid by the last outgoing forward, the new fee is
+     * calculated as follows:
+     *
+     * ```
+     * const newFeeRate = Math.round(feeRate * (1 + Math.abs(currentDistance) - minFeeIncreaseDistance));
+     * ```
+     *
+     * For immediate fee increases (e.g. when an outgoing forward happened within the last few minutes), this new fee
+     * rate is directly applied. When the last outgoing forward happened earlier, the fee is slowly increased depending
+     * on the time passed since the forward, see {@linkcode ActionsConfig.feeIncreaseMultiplier}
      */
     readonly minFeeIncreaseDistance: number;
 
-    /** The number of days a channel can be without outgoing forwards before fee decrease actions are suggested. */
+    /**
+     * Determines how fast the fee rate is raised for long term fee increases. A value of 1 means that the calculated
+     * fee rate (see {@linkcode ActionsConfig.minFeeIncreaseDistance}) is only suggested after
+     * {@linkcode INodeStats.days} have passed since the last forward and linearly interpolated in between. A value of
+     * a least 2 is probably sensible.
+     */
+    readonly feeIncreaseMultiplier: number;
+
+    /**
+     * The number of days a channel can be without outgoing forwards before fee decrease actions are suggested. Fee
+     * decreases are always proposed linearly over the course of {@linkcode INodeStats.days} -
+     * {@linkcode ActionsConfig.feeDecreaseWaitDays}.
+     */
     readonly feeDecreaseWaitDays: number;
 
     /** The maximum fee rate on a channel in PPM. */
@@ -511,7 +534,8 @@ export class Actions {
 
             if (elapsedDays > 0) {
                 const feeRate = Actions.getFeeRate(forward, channel);
-                const newFeeRate = Math.max(Math.round(feeRate * (1 - (elapsedDays / this.config.days))), 0);
+                const decreaseFraction = elapsedDays / (this.config.days - this.config.feeDecreaseWaitDays);
+                const newFeeRate = Math.max(Math.round(feeRate * (1 - decreaseFraction)), 0);
 
                 if (newFeeRate < channel.properties.fee_rate) {
                     const reason =
@@ -526,8 +550,8 @@ export class Actions {
 
     private getIncreaseFraction(elapsedMilliseconds: number, rawFraction: number) {
         const isRecent = elapsedMilliseconds < 5 * 60 * 1000;
-        // TODO: get days from config
-        return isRecent ? rawFraction : rawFraction * (elapsedMilliseconds / 7 / 24 / 60 / 60 / 1000);
+        const elapsedDays = elapsedMilliseconds / 24 / 60 / 60 / 1000 * this.config.feeIncreaseMultiplier;
+        return isRecent ? rawFraction : rawFraction * elapsedDays / this.config.days;
     }
 
     private *getAboveBoundsInflowStats(

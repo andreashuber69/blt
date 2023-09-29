@@ -76,6 +76,7 @@ while (true) {
                 minRebalanceDistance: 0.05,
                 largestForwardMarginFraction: 0.1,
                 minFeeIncreaseDistance: 0.3,
+                feeIncreaseMultiplier: 3,
                 feeDecreaseWaitDays: 4,
                 maxFeeRate: 2500,
             };
