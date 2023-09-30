@@ -375,66 +375,75 @@ export class Actions {
         // Potentially raising the fee due to forwards coming in through channels that are above bounds only makes
         // sense if this channel itself is at least as much below the target balance such that it will be targeted by
         // rebalancing.
-        } else if (currentDistance <= -this.config.minRebalanceDistance) {
-            // For any channel with outgoing forwards, it is possible that the majority of the outgoing flow is
-            // coming from channels with a balance above bounds. Apparently, ongoing efforts at rebalancing
-            // (see assumptions) are unable to rebalance this excess balance back into this channel, which means
-            // that the fee for this channel is too low.
-            const outgoingForwards = [...Actions.filterHistory(channel.history, OutgoingForward, () => false)];
-
-            if (!outgoingForwards[0]) {
-                // TODO: Drop the fee to zero if the channel has been open for more than 30 days.
-                return;
-            }
-
-            // eslint-disable-next-line unicorn/prefer-native-coercion-functions
-            const filter = <T extends NonNullable<unknown>>(c: T | undefined): c is T => Boolean(c);
-
-            const incomingChannels = [...new Set(outgoingForwards.map((f) => f.incomingChannel))].
-                map((c) => this.getChannel(c)).
-                // eslint-disable-next-line unicorn/no-array-callback-reference
-                filter(filter);
-
-            if (incomingChannels.length > 0) {
-                const inflowStats = [...this.getAllAboveBoundsInflowStats(channel, incomingChannels)];
-                const earliestIsoTime = new Date(Math.min(...inflowStats.map((i) => i.earliest))).toISOString();
-                const weightedAboveBoundsInflow = inflowStats.map((i) => i.channel * i.currentDistance);
-
-                const totalOutflow =
-                    outgoingForwards.filter((f) => f.time >= earliestIsoTime).reduce((p, c) => p + c.amount, 0);
-
-                // When all above bounds inflow of a single channel went out through this channel and this channel had
-                // no other outflows, the following ratio can be as low as config.minFeeIncreaseDistance (because the
-                // inflow is weighted with the current target balance distance of the incoming channel). When the
-                // balance of the incoming channel is as close to the capacity as possible, the ratio will approach 1.
-                const ratio = weightedAboveBoundsInflow.reduce((p, c) => p + c) / totalOutflow;
-
-                if (ratio > this.config.minFeeIncreaseDistance) {
-                    // We only increase the fee to degree that the total outflows in this channel were caused by
-                    // incoming forwards into above bounds channels and the current target balance distance.
-                    const increaseFraction = (ratio - this.config.minFeeIncreaseDistance) * Math.abs(currentDistance);
-                    const feeRate = Actions.getFeeRate(outgoingForwards[0], channel);
-                    const newFeeRate = Math.min(Math.round(feeRate * (1 + increaseFraction)), this.config.maxFeeRate);
-
-                    if (newFeeRate > channel.properties.fee_rate) {
-                        const aboveBoundsInflow = Math.round(inflowStats.map((i) => i.channel).reduce((p, c) => p + c));
-
-                        const reason =
-                            `Total forwards of ${aboveBoundsInflow}sats incoming from above bounds channels\n` +
-                            "contributed to the total outflow from this channel as follows:\n" +
-                            `${inflowStats.map((i) => this.getChannelStats(i, totalOutflow)).join("\n")}`;
-
-                        yield this.createFeeAction(channel, newFeeRate, reason);
-                    }
-
-                    return;
-                }
-            }
+        } else if (
+            currentDistance <= -this.config.minRebalanceDistance &&
+            (yield* this.getAboveBoundsFeeIncreaseAction(channel, currentDistance))
+        ) {
+            return;
         }
 
         // We get here only if we're either above bounds *or* within bounds *and* no forwards routed out
         // through this channel contributed substantially to incoming channels being above bounds.
         yield* this.getFeeDecreaseAction(channel, currentDistance);
+    }
+
+    private *getAboveBoundsFeeIncreaseAction(channel: IChannelStats, currentDistance: number) {
+        // For any channel with outgoing forwards, it is possible that the majority of the outgoing flow is
+        // coming from channels with a balance above bounds. Apparently, ongoing efforts at rebalancing
+        // (see assumptions) are unable to rebalance this excess balance back into this channel, which means
+        // that the fee for this channel is too low.
+        const outgoingForwards = [...Actions.filterHistory(channel.history, OutgoingForward, () => false)];
+
+        if (!outgoingForwards[0]) {
+            // TODO: Drop the fee to zero if the channel has been open for more than 30 days.
+            return false;
+        }
+
+        // eslint-disable-next-line unicorn/prefer-native-coercion-functions, unicorn/consistent-function-scoping
+        const filter = <T extends NonNullable<unknown>>(c: T | undefined): c is T => Boolean(c);
+
+        const incomingChannels = [...new Set(outgoingForwards.map((f) => f.incomingChannel))].
+            map((c) => this.getChannel(c)).
+            // eslint-disable-next-line unicorn/no-array-callback-reference
+            filter(filter);
+
+        if (incomingChannels.length > 0) {
+            const inflowStats = [...this.getAllAboveBoundsInflowStats(channel, incomingChannels)];
+            const earliestIsoTime = new Date(Math.min(...inflowStats.map((i) => i.earliest))).toISOString();
+            const weightedAboveBoundsInflow = inflowStats.map((i) => i.channel * i.currentDistance);
+
+            const totalOutflow =
+                outgoingForwards.filter((f) => f.time >= earliestIsoTime).reduce((p, c) => p + c.amount, 0);
+
+            // When all above bounds inflow of a single channel went out through this channel and this channel had
+            // no other outflows, the following ratio can be as low as config.minFeeIncreaseDistance (because the
+            // inflow is weighted with the current target balance distance of the incoming channel). When the
+            // balance of the incoming channel is as close to the capacity as possible, the ratio will approach 1.
+            const ratio = weightedAboveBoundsInflow.reduce((p, c) => p + c) / totalOutflow;
+
+            if (ratio > this.config.minFeeIncreaseDistance) {
+                // We only increase the fee to degree that the total outflows in this channel were caused by
+                // incoming forwards into above bounds channels and the current target balance distance.
+                const increaseFraction = (ratio - this.config.minFeeIncreaseDistance) * Math.abs(currentDistance);
+                const feeRate = Actions.getFeeRate(outgoingForwards[0], channel);
+                const newFeeRate = Math.min(Math.round(feeRate * (1 + increaseFraction)), this.config.maxFeeRate);
+
+                if (newFeeRate > channel.properties.fee_rate) {
+                    const aboveBoundsInflow = Math.round(inflowStats.map((i) => i.channel).reduce((p, c) => p + c));
+
+                    const reason =
+                        `Total forwards of ${aboveBoundsInflow}sats incoming from above bounds channels\n` +
+                        "contributed to the total outflow from this channel as follows:\n" +
+                        `${inflowStats.map((i) => this.getChannelStats(i, totalOutflow)).join("\n")}`;
+
+                    yield this.createFeeAction(channel, newFeeRate, reason);
+                }
+
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private getChannelStats(
