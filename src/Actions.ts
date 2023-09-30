@@ -387,6 +387,41 @@ export class Actions {
         yield* this.getFeeDecreaseAction(channel, currentDistance);
     }
 
+    private *getMaxIncreaseFeeAction(channel: IChannelStats, currentDistance: number, forwards: OutgoingForward[]) {
+        // For all changes that pushed the target balance distance below bounds, we calculate the resulting fee
+        // increase. In the end we choose the highest fee increase. This approach guarantees that we do the "right
+        // thing", even when there are conflicting increases from "emergency" measures and long term measures. For
+        // example, a channel could have had a balance slightly below the minimum for two weeks when another
+        // outgoing forward reduces the balance slightly more. When this code is run immediately afterwards, it will
+        // produce two fee increases. An "emergency" one (designed to curb further outflow) and a long term one,
+        // which is designed to slowly raise the fee to the point where rebalances are able to increase outgoing
+        // liquidity. In this case it is likely that the long term fee increase is higher than the immediate one. On
+        // the other hand, when the time span between the two outgoing forwards is much shorter, it is likely that
+        // the immediate fee increase is higher.
+        const getIncreaseFeeAction = (change: OutgoingForward) => {
+            const feeRate = Actions.getFeeRate(change, channel);
+            const elapsedMilliseconds = Date.now() - new Date(change.time).valueOf();
+            const rawFraction = Math.abs(currentDistance) - this.config.minFeeIncreaseDistance;
+            const addFraction = this.getIncreaseFraction(elapsedMilliseconds, rawFraction);
+            // If the fee rate has been really low then the formula wouldn't increase it meaningfully. An
+            // increase to at least 30 seems like a good idea.
+            const newFeeRate = Math.max(Math.round(feeRate * (1 + addFraction)), 30);
+
+            const reason =
+                `The current distance from the target balance is ${currentDistance}, the outgoing forward at ` +
+                `${change.time} contributed to that situation and paid ${feeRate}ppm.`;
+
+            return this.createFeeAction(channel, newFeeRate, reason);
+        };
+
+        const actions = forwards.map((forward) => getIncreaseFeeAction(forward));
+        const action = actions.reduce((p, c) => (p.target > c.target ? p : c));
+
+        if (action.target > channel.properties.fee_rate) {
+            yield action;
+        }
+    }
+
     private *getAboveBoundsFeeIncreaseAction(channel: IChannelStats, currentDistance: number) {
         // For any channel with outgoing forwards, it is possible that the majority of the outgoing flow is
         // coming from channels with a balance above bounds. Apparently, ongoing efforts at rebalancing
@@ -446,91 +481,6 @@ export class Actions {
         return false;
     }
 
-    private getChannelStats(
-        { name, currentDistance, earliest, latest, channel }: YieldType<typeof this.getAboveBoundsInflowStats>,
-        totalOutflow: number,
-    ) {
-        return `${name}: ${currentDistance.toFixed(2)} ${Math.round(channel / totalOutflow * 100)}% ` +
-            `(${new Date(earliest).toISOString()} - ${new Date(latest).toISOString()})`;
-    }
-
-    private *getMaxIncreaseFeeAction(channel: IChannelStats, currentDistance: number, forwards: OutgoingForward[]) {
-        // For all changes that pushed the target balance distance below bounds, we calculate the resulting fee
-        // increase. In the end we choose the highest fee increase. This approach guarantees that we do the "right
-        // thing", even when there are conflicting increases from "emergency" measures and long term measures. For
-        // example, a channel could have had a balance slightly below the minimum for two weeks when another
-        // outgoing forward reduces the balance slightly more. When this code is run immediately afterwards, it will
-        // produce two fee increases. An "emergency" one (designed to curb further outflow) and a long term one,
-        // which is designed to slowly raise the fee to the point where rebalances are able to increase outgoing
-        // liquidity. In this case it is likely that the long term fee increase is higher than the immediate one. On
-        // the other hand, when the time span between the two outgoing forwards is much shorter, it is likely that
-        // the immediate fee increase is higher.
-        const getIncreaseFeeAction = (change: OutgoingForward) => {
-            const feeRate = Actions.getFeeRate(change, channel);
-            const elapsedMilliseconds = Date.now() - new Date(change.time).valueOf();
-            const rawFraction = Math.abs(currentDistance) - this.config.minFeeIncreaseDistance;
-            const addFraction = this.getIncreaseFraction(elapsedMilliseconds, rawFraction);
-            // If the fee rate has been really low then the formula wouldn't increase it meaningfully. An
-            // increase to at least 30 seems like a good idea.
-            const newFeeRate = Math.max(Math.round(feeRate * (1 + addFraction)), 30);
-
-            const reason =
-                `The current distance from the target balance is ${currentDistance}, the outgoing forward at ` +
-                `${change.time} contributed to that situation and paid ${feeRate}ppm.`;
-
-            return this.createFeeAction(channel, newFeeRate, reason);
-        };
-
-        const actions = forwards.map((forward) => getIncreaseFeeAction(forward));
-        const action = actions.reduce((p, c) => (p.target > c.target ? p : c));
-
-        if (action.target > channel.properties.fee_rate) {
-            yield action;
-        }
-    }
-
-    private getChannel(channel: IChannelStats | undefined) {
-        if (channel) {
-            const action = this.channels.get(channel);
-
-            if (!action) {
-                throw new Error("Channel not found!");
-            }
-
-            return [channel, action] as const;
-        }
-
-        return undefined;
-    }
-
-    private *getAllAboveBoundsInflowStats(
-        outgoingChannel: IChannelStats,
-        incomingChannels: ReadonlyArray<readonly [IChannelStats, Action]>,
-    ) {
-        for (const incomingChannel of incomingChannels) {
-            yield* this.getAboveBoundsInflowStats(outgoingChannel, incomingChannel);
-        }
-    }
-
-    private createFeeAction(
-        // eslint-disable-next-line @typescript-eslint/naming-convention
-        { properties: { id, partnerAlias, fee_rate } }: IChannelStats,
-        target: number,
-        reason: string,
-    ): Action {
-        return {
-            entity: "channel",
-            id,
-            alias: partnerAlias,
-            priority: 1,
-            variable: "feeRate",
-            actual: fee_rate,
-            target,
-            max: this.config.maxFeeRate,
-            reason,
-        };
-    }
-
     private *getFeeDecreaseAction(channel: IChannelStats, currentDistance: number) {
         // If target balance distance is either within bounds or above, we simply look for the latest outgoing
         // forward and drop the fee depending on how long ago it happened. There is no immediate component here,
@@ -561,6 +511,56 @@ export class Actions {
         const isRecent = elapsedMilliseconds < 5 * 60 * 1000;
         const elapsedDays = elapsedMilliseconds / 24 / 60 / 60 / 1000 * this.config.feeIncreaseMultiplier;
         return isRecent ? rawFraction : rawFraction * elapsedDays / this.config.days;
+    }
+
+    private createFeeAction(
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        { properties: { id, partnerAlias, fee_rate } }: IChannelStats,
+        target: number,
+        reason: string,
+    ): Action {
+        return {
+            entity: "channel",
+            id,
+            alias: partnerAlias,
+            priority: 1,
+            variable: "feeRate",
+            actual: fee_rate,
+            target,
+            max: this.config.maxFeeRate,
+            reason,
+        };
+    }
+
+    private getChannel(channel: IChannelStats | undefined) {
+        if (channel) {
+            const action = this.channels.get(channel);
+
+            if (!action) {
+                throw new Error("Channel not found!");
+            }
+
+            return [channel, action] as const;
+        }
+
+        return undefined;
+    }
+
+    private *getAllAboveBoundsInflowStats(
+        outgoingChannel: IChannelStats,
+        incomingChannels: ReadonlyArray<readonly [IChannelStats, Action]>,
+    ) {
+        for (const incomingChannel of incomingChannels) {
+            yield* this.getAboveBoundsInflowStats(outgoingChannel, incomingChannel);
+        }
+    }
+
+    private getChannelStats(
+        { name, currentDistance, earliest, latest, channel }: YieldType<typeof this.getAboveBoundsInflowStats>,
+        totalOutflow: number,
+    ) {
+        return `${name}: ${currentDistance.toFixed(2)} ${Math.round(channel / totalOutflow * 100)}% ` +
+            `(${new Date(earliest).toISOString()} - ${new Date(latest).toISOString()})`;
     }
 
     private *getAboveBoundsInflowStats(
