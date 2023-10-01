@@ -416,6 +416,47 @@ export class Actions {
         }
     }
 
+    private *getFeeDecreaseAction(channel: IChannelStats, currentDistance: number) {
+        // If target balance distance is either within bounds or above, we simply look for the latest outgoing
+        // forward and drop the fee depending on how long ago it happened. There is no immediate component here,
+        // because lower fees are very unlikely to attract outgoing forwards for several hours.
+        const forward = Actions.filterHistory(channel.history, OutgoingForward, () => false).next().value;
+
+        if (forward) {
+            const elapsedMilliseconds = Date.now() - new Date(forward.time).valueOf();
+            const elapsedDays = (elapsedMilliseconds / 24 / 60 / 60 / 1000) - this.config.feeDecreaseWaitDays;
+
+            if (elapsedDays > 0) {
+                const feeRate = Actions.getFeeRate(forward, channel);
+                const decreaseFraction = elapsedDays / (this.config.days - this.config.feeDecreaseWaitDays);
+                const newFeeRate = Math.max(Math.round(feeRate * (1 - decreaseFraction)), 0);
+
+                if (newFeeRate < channel.properties.fee_rate) {
+                    const reason =
+                        `The current distance from the target balance is ${currentDistance} and the most recent ` +
+                        `outgoing forward took place on ${forward.time} and paid ${feeRate}ppm.`;
+
+                    yield this.createFeeAction(channel, newFeeRate, reason);
+                }
+
+                return true;
+            }
+        } else {
+            if (channel.properties.fee_rate > 0) {
+                // TODO: Check whether the channel has been open for this long
+                const reason =
+                    `The current distance from the target balance is ${currentDistance} and no outgoing forwards ` +
+                    `have been observed in the last ${this.config.days} days.`;
+
+                yield this.createFeeAction(channel, 0, reason);
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
     private *getAboveBoundsFeeIncreaseAction(channel: IChannelStats, currentDistance: number) {
         // For any channel with outgoing forwards, it is possible that the majority of the outgoing flow is
         // coming from channels with a balance above bounds. Apparently, ongoing efforts at rebalancing
@@ -468,53 +509,8 @@ export class Actions {
 
                     yield this.createFeeAction(channel, newFeeRate, reason);
                 }
-
-                return true;
             }
         }
-
-        return false;
-    }
-
-    private *getFeeDecreaseAction(channel: IChannelStats, currentDistance: number) {
-        // If target balance distance is either within bounds or above, we simply look for the latest outgoing
-        // forward and drop the fee depending on how long ago it happened. There is no immediate component here,
-        // because lower fees are very unlikely to attract outgoing forwards for several hours.
-        const forward = Actions.filterHistory(channel.history, OutgoingForward, () => false).next().value;
-
-        if (forward) {
-            const elapsedMilliseconds = Date.now() - new Date(forward.time).valueOf();
-            const elapsedDays = (elapsedMilliseconds / 24 / 60 / 60 / 1000) - this.config.feeDecreaseWaitDays;
-
-            if (elapsedDays > 0) {
-                const feeRate = Actions.getFeeRate(forward, channel);
-                const decreaseFraction = elapsedDays / (this.config.days - this.config.feeDecreaseWaitDays);
-                const newFeeRate = Math.max(Math.round(feeRate * (1 - decreaseFraction)), 0);
-
-                if (newFeeRate < channel.properties.fee_rate) {
-                    const reason =
-                        `The current distance from the target balance is ${currentDistance} and the most recent ` +
-                        `outgoing forward took place on ${forward.time} and paid ${feeRate}ppm.`;
-
-                    yield this.createFeeAction(channel, newFeeRate, reason);
-                }
-
-                return true;
-            }
-        } else {
-            if (channel.properties.fee_rate > 0) {
-                // TODO: Check whether the channel has been open for this long
-                const reason =
-                    `The current distance from the target balance is ${currentDistance} and no outgoing forwards ` +
-                    `have been observed in the last ${this.config.days} days.`;
-
-                yield this.createFeeAction(channel, 0, reason);
-            }
-
-            return true;
-        }
-
-        return false;
     }
 
     private getIncreaseFraction(elapsedMilliseconds: number, rawFraction: number) {
