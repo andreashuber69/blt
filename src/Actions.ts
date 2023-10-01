@@ -355,14 +355,14 @@ export class Actions {
     }
 
     private *getFeeAction([channel, { target }]: readonly [IChannelStats, Action]) {
-        const getDistance =
-            (balance: number) => Actions.getTargetBalanceDistance(balance, target, channel.properties.capacity);
-
-        const currentDistance = getDistance(channel.properties.local_balance);
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        const { properties: { local_balance, capacity }, history } = channel;
+        const getDistance = (balance: number) => Actions.getTargetBalanceDistance(balance, target, capacity);
+        const currentDistance = getDistance(local_balance);
 
         if (currentDistance <= -this.config.minFeeIncreaseDistance) {
             const done = (c: Readonly<BalanceChange>) => getDistance(c.balance) > -this.config.minFeeIncreaseDistance;
-            const forwards = [...Actions.filterHistory(channel.history, OutgoingForward, done)];
+            const forwards = [...Actions.filterHistory(history, OutgoingForward, done)];
 
             if (forwards.length > 0) {
                 yield* this.getMaxIncreaseFeeAction(channel, currentDistance, forwards);
@@ -370,21 +370,15 @@ export class Actions {
                 // TODO: The below bounds balance is not due to outgoing forwards, still raise the fees to help
                 // rebalancing?
             }
-
-            return;
-        // Potentially raising the fee due to forwards coming in through channels that are above bounds only makes
-        // sense if this channel itself is at least as much below the target balance such that it will be targeted by
-        // rebalancing.
         } else if (
-            currentDistance <= -this.config.minRebalanceDistance &&
-            (yield* this.getAboveBoundsFeeIncreaseAction(channel, currentDistance))
+            !(yield* this.getFeeDecreaseAction(channel, currentDistance)) &&
+            // Potentially raising the fee due to forwards coming in through channels that are above bounds only makes
+            // sense if this channel itself is at least as much below the target balance such that it will be targeted
+            // by rebalancing.
+            (currentDistance <= -this.config.minRebalanceDistance)
         ) {
-            return;
+            yield* this.getAboveBoundsFeeIncreaseAction(channel, currentDistance);
         }
-
-        // We get here only if we're either above bounds *or* within bounds *and* no forwards routed out
-        // through this channel contributed substantially to incoming channels being above bounds.
-        yield* this.getFeeDecreaseAction(channel, currentDistance);
     }
 
     private *getMaxIncreaseFeeAction(channel: IChannelStats, currentDistance: number, forwards: OutgoingForward[]) {
@@ -430,10 +424,11 @@ export class Actions {
         const outgoingForwards = [...Actions.filterHistory(channel.history, OutgoingForward, () => false)];
 
         if (!outgoingForwards[0]) {
-            // TODO: Drop the fee to zero if the channel has been open for more than 30 days.
-            return false;
+            // TODO: Have the caller get the outgoing forwards and pass them in
+            throw new Error("Unexpected zero outgoing forwards");
         }
 
+        // TODO
         // eslint-disable-next-line unicorn/prefer-native-coercion-functions, unicorn/consistent-function-scoping
         const filter = <T extends NonNullable<unknown>>(c: T | undefined): c is T => Boolean(c);
 
@@ -503,8 +498,23 @@ export class Actions {
 
                     yield this.createFeeAction(channel, newFeeRate, reason);
                 }
+
+                return true;
             }
+        } else {
+            if (channel.properties.fee_rate > 0) {
+                // TODO: Check whether the channel has been open for this long
+                const reason =
+                    `The current distance from the target balance is ${currentDistance} and no outgoing forwards ` +
+                    `have been observed in the last ${this.config.days} days.`;
+
+                yield this.createFeeAction(channel, 0, reason);
+            }
+
+            return true;
         }
+
+        return false;
     }
 
     private getIncreaseFraction(elapsedMilliseconds: number, rawFraction: number) {
