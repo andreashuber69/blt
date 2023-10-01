@@ -402,8 +402,8 @@ export class Actions {
             const newFeeRate = Math.max(Math.round(feeRate * (1 + addFraction)), 30);
 
             const reason =
-                `The current distance from the target balance is ${currentDistance}, the outgoing forward at ` +
-                `${change.time} contributed to that situation and paid ${feeRate}ppm.`;
+                `The current distance from the target balance is ${currentDistance.toFixed(2)} and the outgoing ` +
+                `forward at ${change.time} contributed to that situation and paid ${feeRate}ppm.`;
 
             return this.createFeeAction(channel, newFeeRate, reason);
         };
@@ -433,8 +433,8 @@ export class Actions {
 
                 if (newFeeRate < channel.properties.fee_rate) {
                     const reason =
-                        `The current distance from the target balance is ${currentDistance} and the most recent ` +
-                        `outgoing forward took place on ${forward.time} and paid ${feeRate}ppm.`;
+                        `The current distance from the target balance is ${currentDistance.toFixed(2)} and the most ` +
+                        `recent outgoing forward took place on ${forward.time} and paid ${feeRate}ppm.`;
 
                     yield this.createFeeAction(channel, newFeeRate, reason);
                 }
@@ -445,8 +445,8 @@ export class Actions {
             if (channel.properties.fee_rate > 0) {
                 // TODO: Check whether the channel has been open for this long
                 const reason =
-                    `The current distance from the target balance is ${currentDistance} and no outgoing forwards ` +
-                    `have been observed in the last ${this.config.days} days.`;
+                    `The current distance from the target balance is ${currentDistance.toFixed(2)} and no outgoing ` +
+                    `forwards have been observed in the last ${this.config.days} days.`;
 
                 yield this.createFeeAction(channel, 0, reason);
             }
@@ -503,7 +503,7 @@ export class Actions {
                     const aboveBoundsInflow = Math.round(inflowStats.map((i) => i.channel).reduce((p, c) => p + c));
 
                     const reason =
-                        `Total forwards of ${aboveBoundsInflow}sats incoming from above bounds channels\n` +
+                        `Total forwards of ${aboveBoundsInflow}sats incoming from above bounds channels ` +
                         "contributed to the total outflow from this channel as follows:\n" +
                         `${inflowStats.map((i) => this.getChannelStats(i, totalOutflow)).join("\n")}`;
 
