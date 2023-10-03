@@ -199,7 +199,7 @@ export class Actions {
     }
 
     private static only<T extends Readonly<BalanceChange>>(ctor: new (...args: never[]) => T) {
-        return (change: Readonly<BalanceChange>): change is T => change instanceof ctor;
+        return (change: Readonly<BalanceChange>): change is Readonly<T> => change instanceof ctor;
     }
 
     private static getChannelBalanceAction(
@@ -328,7 +328,7 @@ export class Actions {
     // changes for all other channels.
     private static *filterHistory<T extends Readonly<BalanceChange>>(
         history: DeepReadonly<BalanceChange[]>,
-        filter: (change: Readonly<BalanceChange>) => change is T,
+        filter: (change: Readonly<BalanceChange>) => change is Readonly<T>,
         done?: (change: Readonly<BalanceChange>) => boolean,
     ) {
         for (const change of history) {
