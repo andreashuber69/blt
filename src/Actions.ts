@@ -116,8 +116,11 @@ export interface Action {
  * rate paid by past forwards.</li>
  * <li>If there are past outgoing forwards for a channel, the fee rate paid by the last forward is assumed to have
  * been in effect up to the point when {@linkcode Actions.get} is run. If no outgoing forwards were made in the past
- * 30 days and the channel has been open for that length of time, this class can only suggest to drop the fee rate to
- * zero, due to the fact that there is no way to determine whether the fee has been lowered before, see above.</li>
+ * 30 days and the channel has been open for that length of time, this class can only suggest to either drop the fee
+ * rate to zero or raise it to {@linkcode ActionsConfig.maxFeeRate} (depending on the current channel balance), due to
+ * the fact that there is no way to determine whether the fee has been changed before, see above. Doing so will
+ * encourage outflows or enable rebalancing. In both cases outgoing forwards will eventually materialize for most
+ * channels. After that the regular fee algorithm will be able to change the fee more gradually.</li>
  * <li>Payments sent to or received from other nodes are neither expected to occur regularly nor is any attempt made to
  * anticipate them. While a single payment can skew fee calculation only in the short to medium term, regular
  * substantial payments will probably lower the profitability of the node.</li>
@@ -196,10 +199,6 @@ export class Actions {
 
         yield* Actions.filterBalanceAction(nodeBalanceAction);
         yield* this.getFeeActions();
-    }
-
-    private static only<T extends Readonly<BalanceChange>>(ctor: new (...args: never[]) => T) {
-        return (change: Readonly<BalanceChange>): change is Readonly<T> => change instanceof ctor;
     }
 
     private static getChannelBalanceAction(
@@ -321,6 +320,10 @@ export class Actions {
         return base ** Math.floor(Math.abs(distance) / minRebalanceDistance);
     }
 
+    private static only<T extends Readonly<BalanceChange>>(ctor: new (...args: never[]) => T) {
+        return (change: Readonly<BalanceChange>): change is Readonly<T> => change instanceof ctor;
+    }
+
     // Provides the already filtered history relevant to choose a new fee for the given channel.
     // For a channel with a negative target balance distance, returns all changes that lowered the balance below (or
     // further below) minFeeIncreaseDistance up to the point where the target balance distance goes back below
@@ -419,6 +422,15 @@ export class Actions {
         }
     }
 
+    private *getNoForwardsFeeAction(channel: IChannelStats, currentDistance: number, feeRate: number) {
+        // TODO: Check whether the channel has been open for this long
+        const reason =
+            `The current distance from the target balance is ${currentDistance.toFixed(2)} and no outgoing ` +
+            `forwards have been observed in the last ${this.config.days} days.`;
+
+        yield this.createFeeAction(channel, feeRate, reason);
+    }
+
     private *getFeeDecreaseAction(channel: IChannelStats, currentDistance: number) {
         // If target balance distance is either within bounds or above, we simply look for the latest outgoing
         // forward and drop the fee depending on how long ago it happened. There is no immediate component here,
@@ -455,15 +467,6 @@ export class Actions {
         }
 
         return false;
-    }
-
-    private *getNoForwardsFeeAction(channel: IChannelStats, currentDistance: number, feeRate: number) {
-        // TODO: Check whether the channel has been open for this long
-        const reason =
-            `The current distance from the target balance is ${currentDistance.toFixed(2)} and no outgoing ` +
-            `forwards have been observed in the last ${this.config.days} days.`;
-
-        yield this.createFeeAction(channel, feeRate, reason);
     }
 
     private *getAboveBoundsFeeIncreaseAction(channel: IChannelStats, currentDistance: number) {
