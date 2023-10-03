@@ -341,7 +341,7 @@ export class Actions {
     }
 
     // eslint-disable-next-line @typescript-eslint/naming-convention
-    private static getFeeRate({ amount, fee }: OutgoingForward, { properties: { base_fee } }: IChannelStats) {
+    private static getFeeRate({ amount, fee }: Readonly<OutgoingForward>, { properties: { base_fee } }: IChannelStats) {
         return Math.round((fee - base_fee) / amount * 1_000_000);
     }
 
@@ -350,11 +350,7 @@ export class Actions {
 
     private *getFeeActions() {
         for (const channelEntry of this.channels.entries()) {
-            if (channelEntry[0].history.length > 0) {
-                yield* this.getFeeAction(channelEntry);
-            } else {
-                // TODO: channel without any forwards or payments
-            }
+            yield* this.getFeeAction(channelEntry);
         }
     }
 
@@ -385,7 +381,11 @@ export class Actions {
         }
     }
 
-    private *getMaxIncreaseFeeAction(channel: IChannelStats, currentDistance: number, forwards: OutgoingForward[]) {
+    private *getMaxIncreaseFeeAction(
+        channel: IChannelStats,
+        currentDistance: number,
+        forwards: DeepReadonly<OutgoingForward[]>,
+    ) {
         // For all changes that pushed the target balance distance below bounds, we calculate the resulting fee
         // increase. In the end we choose the highest fee increase. This approach guarantees that we do the "right
         // thing", even when there are conflicting increases from "emergency" measures and long term measures. For
@@ -396,7 +396,7 @@ export class Actions {
         // liquidity. In this case it is likely that the long term fee increase is higher than the immediate one. On
         // the other hand, when the time span between the two outgoing forwards is much shorter, it is likely that
         // the immediate fee increase is higher.
-        const getIncreaseFeeAction = (change: OutgoingForward) => {
+        const getIncreaseFeeAction = (change: Readonly<OutgoingForward>) => {
             const feeRate = Actions.getFeeRate(change, channel);
             const elapsedMilliseconds = Date.now() - new Date(change.time).valueOf();
             const rawFraction = Math.abs(currentDistance) - this.config.minFeeIncreaseDistance;
