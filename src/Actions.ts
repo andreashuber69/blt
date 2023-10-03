@@ -426,6 +426,8 @@ export class Actions {
         // If target balance distance is either within bounds or above, we simply look for the latest outgoing
         // forward and drop the fee depending on how long ago it happened. There is no immediate component here,
         // because lower fees are very unlikely to attract outgoing forwards for several hours.
+        // TODO: Also determine since when the channel has been within bounds or above and use that or the latest
+        // forward.
         const forward =
             Actions.filterHistory(channel.history, Actions.outgoingForwardsFilter, () => false).next().value;
 
@@ -597,21 +599,23 @@ export class Actions {
             for (const { time, amount, outgoingChannel } of
                 Actions.filterHistory(history, Actions.incomingForwardsFilter, done)
             ) {
-                const timeMilliseconds = new Date(time).valueOf();
-                earliest = Math.min(earliest, timeMilliseconds);
-                latest = Math.max(latest, timeMilliseconds);
-
                 if (outgoingChannel === forOutgoingChannel) {
+                    const timeMilliseconds = new Date(time).valueOf();
+                    earliest = Math.min(earliest, timeMilliseconds);
+                    latest = Math.max(latest, timeMilliseconds);
+
                     // Amounts of incoming forwards are always negative.
                     channel -= amount;
                 }
             }
 
-            const aliasMax = 30;
-            const alias = (rawAlias?.length ?? 0) > aliasMax ? `${rawAlias?.slice(0, aliasMax - 3)}...` : rawAlias;
-            const idMax = 14;
-            const name = `${id.padStart(idMax)} ${`(${alias})`.padEnd(aliasMax + 2)}`;
-            yield { name, currentDistance, earliest, latest, channel } as const;
+            if (latest !== 0) {
+                const aliasMax = 30;
+                const alias = (rawAlias?.length ?? 0) > aliasMax ? `${rawAlias?.slice(0, aliasMax - 3)}...` : rawAlias;
+                const idMax = 14;
+                const name = `${id.padStart(idMax)} ${`(${alias})`.padEnd(aliasMax + 2)}`;
+                yield { name, currentDistance, earliest, latest, channel } as const;
+            }
         }
     }
 }
