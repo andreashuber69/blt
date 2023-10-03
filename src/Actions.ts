@@ -469,14 +469,11 @@ export class Actions {
             throw new Error("Unexpected zero outgoing forwards");
         }
 
-        // TODO
-        // eslint-disable-next-line unicorn/prefer-native-coercion-functions, unicorn/consistent-function-scoping
-        const filter = <T extends NonNullable<unknown>>(c: T | undefined): c is T => Boolean(c);
-
         const incomingChannels = [...new Set(outgoingForwards.map((f) => f.incomingChannel))].
             map((c) => this.getChannel(c)).
-            // eslint-disable-next-line unicorn/no-array-callback-reference
-            filter(filter);
+            // False positive, this is a user-defined type guard.
+            // eslint-disable-next-line unicorn/prefer-native-coercion-functions
+            filter(<T extends NonNullable<unknown>>(c: T | undefined): c is T => Boolean(c));
 
         if (incomingChannels.length > 0) {
             const inflowStats = [...this.getAllAboveBoundsInflowStats(channel, incomingChannels)];
