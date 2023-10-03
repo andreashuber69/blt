@@ -198,6 +198,12 @@ export class Actions {
         yield* this.getFeeActions();
     }
 
+    private static readonly outgoingForwardsFilter =
+        (change: Readonly<BalanceChange>): change is OutgoingForward => change instanceof OutgoingForward;
+
+    private static readonly incomingForwardsFilter =
+        (change: Readonly<BalanceChange>): change is IncomingForward => change instanceof IncomingForward;
+
     private static getChannelBalanceAction(
         {
             // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -322,15 +328,15 @@ export class Actions {
     // further below) minFeeIncreaseDistance up to the point where the target balance distance goes back below
     // minFeeIncreaseDistance. Returns the opposite for a channel with a positive target balance distance. Returns all
     // changes for all other channels.
-    private static *filterHistory<T extends BalanceChange>(
+    private static *filterHistory<T extends Readonly<BalanceChange>>(
         history: DeepReadonly<BalanceChange[]>,
-        ctor: new (...args: never[]) => T,
+        filter: (change: Readonly<BalanceChange>) => change is T,
         done: (change: Readonly<BalanceChange>) => boolean,
     ) {
         for (const change of history) {
             if (done(change)) {
                 return;
-            } else if (change instanceof ctor) {
+            } else if (filter(change)) {
                 yield change;
             }
         }
@@ -362,7 +368,7 @@ export class Actions {
 
         if (currentDistance <= -this.config.minFeeIncreaseDistance) {
             const done = (c: Readonly<BalanceChange>) => getDistance(c.balance) > -this.config.minFeeIncreaseDistance;
-            const forwards = [...Actions.filterHistory(history, OutgoingForward, done)];
+            const forwards = [...Actions.filterHistory(history, Actions.outgoingForwardsFilter, done)];
 
             if (forwards.length > 0) {
                 yield* this.getMaxIncreaseFeeAction(channel, currentDistance, forwards);
@@ -420,7 +426,8 @@ export class Actions {
         // If target balance distance is either within bounds or above, we simply look for the latest outgoing
         // forward and drop the fee depending on how long ago it happened. There is no immediate component here,
         // because lower fees are very unlikely to attract outgoing forwards for several hours.
-        const forward = Actions.filterHistory(channel.history, OutgoingForward, () => false).next().value;
+        const forward =
+            Actions.filterHistory(channel.history, Actions.outgoingForwardsFilter, () => false).next().value;
 
         if (forward) {
             const elapsedMilliseconds = Date.now() - new Date(forward.time).valueOf();
@@ -462,7 +469,8 @@ export class Actions {
         // coming from channels with a balance above bounds. Apparently, ongoing efforts at rebalancing
         // (see assumptions) are unable to rebalance this excess balance back into this channel, which means
         // that the fee for this channel is too low.
-        const outgoingForwards = [...Actions.filterHistory(channel.history, OutgoingForward, () => false)];
+        const outgoingForwards =
+            [...Actions.filterHistory(channel.history, Actions.outgoingForwardsFilter, () => false)];
 
         if (!outgoingForwards[0]) {
             // TODO: Have the caller get the outgoing forwards and pass them in
@@ -586,7 +594,9 @@ export class Actions {
             let latest = 0;
             let channel = 0;
 
-            for (const { time, amount, outgoingChannel } of Actions.filterHistory(history, IncomingForward, done)) {
+            for (const { time, amount, outgoingChannel } of
+                Actions.filterHistory(history, Actions.incomingForwardsFilter, done)
+            ) {
                 const timeMilliseconds = new Date(time).valueOf();
                 earliest = Math.min(earliest, timeMilliseconds);
                 latest = Math.max(latest, timeMilliseconds);
