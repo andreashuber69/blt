@@ -362,24 +362,25 @@ export class Actions {
         const { properties: { local_balance, capacity, fee_rate }, history } = channel;
         const getDistance = (balance: number) => Actions.getTargetBalanceDistance(balance, target, capacity);
         const currentDistance = getDistance(local_balance);
+        const outgoingForwards = [...Actions.filterHistory(history, Actions.only(OutgoingForward))] as const;
 
         if (currentDistance <= -this.config.minFeeIncreaseDistance) {
-            const done = (c: Readonly<BalanceChange>) => getDistance(c.balance) > -this.config.minFeeIncreaseDistance;
-            const forwards = [...Actions.filterHistory(history, Actions.only(OutgoingForward), done)];
+            if (outgoingForwards.length > 0) {
+                const belowBoundsForwards =
+                    outgoingForwards.filter((f) => getDistance(f.balance) <= -this.config.minFeeIncreaseDistance);
 
-            if (forwards.length > 0) {
-                yield* this.getMaxIncreaseFeeAction(channel, currentDistance, forwards);
+                yield* this.getMaxIncreaseFeeAction(channel, currentDistance, belowBoundsForwards);
             } else if (fee_rate < this.config.maxFeeRate) {
                 yield* this.getNoForwardsFeeAction(channel, currentDistance, this.config.maxFeeRate);
             }
         } else if (
-            !(yield* this.getFeeDecreaseAction(channel, currentDistance)) &&
+            !(yield* this.getFeeDecreaseAction(channel, currentDistance, outgoingForwards)) &&
             // Potentially raising the fee due to forwards coming in through channels that are above bounds only makes
             // sense if this channel itself is at least as much below the target balance such that it will be targeted
             // by rebalancing.
             (currentDistance <= -this.config.minRebalanceDistance)
         ) {
-            yield* this.getAboveBoundsFeeIncreaseAction(channel, currentDistance);
+            yield* this.getAboveBoundsFeeIncreaseAction(channel, currentDistance, outgoingForwards);
         }
     }
 
@@ -431,14 +432,16 @@ export class Actions {
         yield this.createFeeAction(channel, feeRate, reason);
     }
 
-    private *getFeeDecreaseAction(channel: IChannelStats, currentDistance: number) {
+    private *getFeeDecreaseAction(
+        channel: IChannelStats,
+        currentDistance: number,
+        [forward]: DeepReadonly<OutgoingForward[]>,
+    ) {
         // If target balance distance is either within bounds or above, we simply look for the latest outgoing
         // forward and drop the fee depending on how long ago it happened. There is no immediate component here,
         // because lower fees are very unlikely to attract outgoing forwards for several hours.
         // TODO: Also determine since when the channel has been within bounds or above and use that or the latest
         // forward.
-        const forward = Actions.filterHistory(channel.history, Actions.only(OutgoingForward)).next().value;
-
         if (forward) {
             const elapsedMilliseconds = Date.now() - new Date(forward.time).valueOf();
             const elapsedDays = (elapsedMilliseconds / 24 / 60 / 60 / 1000) - this.config.feeDecreaseWaitDays;
@@ -469,13 +472,15 @@ export class Actions {
         return false;
     }
 
-    private *getAboveBoundsFeeIncreaseAction(channel: IChannelStats, currentDistance: number) {
+    private *getAboveBoundsFeeIncreaseAction(
+        channel: IChannelStats,
+        currentDistance: number,
+        outgoingForwards: DeepReadonly<OutgoingForward[]>,
+    ) {
         // For any channel with outgoing forwards, it is possible that the majority of the outgoing flow is
         // coming from channels with a balance above bounds. Apparently, ongoing efforts at rebalancing
         // (see assumptions) are unable to rebalance this excess balance back into this channel, which means
         // that the fee for this channel is too low.
-        const outgoingForwards = [...Actions.filterHistory(channel.history, Actions.only(OutgoingForward))];
-
         if (!outgoingForwards[0]) {
             // TODO: Have the caller get the outgoing forwards and pass them in
             throw new Error("Unexpected zero outgoing forwards");
