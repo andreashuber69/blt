@@ -356,7 +356,7 @@ export class Actions {
 
     private *getFeeAction([channel, { target }]: readonly [IChannelStats, Action]) {
         // eslint-disable-next-line @typescript-eslint/naming-convention
-        const { properties: { local_balance, capacity }, history } = channel;
+        const { properties: { local_balance, capacity, fee_rate }, history } = channel;
         const getDistance = (balance: number) => Actions.getTargetBalanceDistance(balance, target, capacity);
         const currentDistance = getDistance(local_balance);
 
@@ -366,9 +366,8 @@ export class Actions {
 
             if (forwards.length > 0) {
                 yield* this.getMaxIncreaseFeeAction(channel, currentDistance, forwards);
-            } else {
-                // TODO: The below bounds balance is not due to outgoing forwards, still raise the fees to help
-                // rebalancing?
+            } else if (fee_rate < this.config.maxFeeRate) {
+                yield* this.getNoForwardsFeeAction(channel, currentDistance, this.config.maxFeeRate);
             }
         } else if (
             !(yield* this.getFeeDecreaseAction(channel, currentDistance)) &&
@@ -449,18 +448,22 @@ export class Actions {
             }
         } else {
             if (channel.properties.fee_rate > 0) {
-                // TODO: Check whether the channel has been open for this long
-                const reason =
-                    `The current distance from the target balance is ${currentDistance.toFixed(2)} and no outgoing ` +
-                    `forwards have been observed in the last ${this.config.days} days.`;
-
-                yield this.createFeeAction(channel, 0, reason);
+                yield* this.getNoForwardsFeeAction(channel, currentDistance, 0);
             }
 
             return true;
         }
 
         return false;
+    }
+
+    private *getNoForwardsFeeAction(channel: IChannelStats, currentDistance: number, feeRate: number) {
+        // TODO: Check whether the channel has been open for this long
+        const reason =
+            `The current distance from the target balance is ${currentDistance.toFixed(2)} and no outgoing ` +
+            `forwards have been observed in the last ${this.config.days} days.`;
+
+        yield this.createFeeAction(channel, feeRate, reason);
     }
 
     private *getAboveBoundsFeeIncreaseAction(channel: IChannelStats, currentDistance: number) {
