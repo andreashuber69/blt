@@ -5,6 +5,8 @@ import type { DeepReadonly } from "./DeepReadonly.js";
 import type { YieldType } from "./lightning/YieldType.js";
 import type { INodeStats } from "./NodeStats.js";
 
+type ReadonlyNonEmptyArray<T> = readonly [Readonly<T>, ...ReadonlyArray<Readonly<T>>];
+
 /**
  * Exposes various configuration variables that are used by {@linkcode Actions.get} to propose changes.
  * @description Some variables refer to the distance of the local balance from the target balance. This is a
@@ -325,10 +327,6 @@ export class Actions {
     }
 
     // Provides the already filtered history relevant to choose a new fee for the given channel.
-    // For a channel with a negative target balance distance, returns all changes that lowered the balance below (or
-    // further below) minFeeIncreaseDistance up to the point where the target balance distance goes back below
-    // minFeeIncreaseDistance. Returns the opposite for a channel with a positive target balance distance. Returns all
-    // changes for all other channels.
     private static *filterHistory<T extends Readonly<BalanceChange>>(
         history: DeepReadonly<BalanceChange[]>,
         filter: (change: Readonly<BalanceChange>) => change is Readonly<T>,
@@ -371,10 +369,14 @@ export class Actions {
 
         if (Actions.hasOneOrMoreElements(outgoingForwards)) {
             if (isBelowBounds) {
-                const belowBoundsForwards =
-                    outgoingForwards.filter((f) => getDistance(f.balance) <= -this.config.minFeeIncreaseDistance);
+                const firstNotBelowBoundsIndex =
+                    outgoingForwards.findIndex((f) => getDistance(f.balance) > -this.config.minFeeIncreaseDistance);
 
-                yield* this.getMaxIncreaseFeeAction(channel, currentDistance, belowBoundsForwards);
+                const belowBoundsOutgoingForwards = outgoingForwards.slice(0, firstNotBelowBoundsIndex);
+
+                if (Actions.hasOneOrMoreElements(belowBoundsOutgoingForwards)) {
+                    yield* this.getMaxIncreaseFeeAction(channel, currentDistance, belowBoundsOutgoingForwards);
+                }
             } else if (
                 !(yield* this.getFeeDecreaseAction(channel, currentDistance, outgoingForwards)) &&
                 // Potentially raising the fee due to forwards coming in through channels that are above bounds only
@@ -396,7 +398,7 @@ export class Actions {
     private *getMaxIncreaseFeeAction(
         channel: IChannelStats,
         currentDistance: number,
-        forwards: DeepReadonly<OutgoingForward[]>,
+        forwards: ReadonlyNonEmptyArray<OutgoingForward>,
     ) {
         // For all changes that pushed the target balance distance below bounds, we calculate the resulting fee
         // increase. In the end we choose the highest fee increase. This approach guarantees that we do the "right
@@ -432,19 +434,10 @@ export class Actions {
         }
     }
 
-    private *getNoForwardsFeeAction(channel: IChannelStats, currentDistance: number, feeRate: number) {
-        // TODO: Check whether the channel has been open for this long
-        const reason =
-            `The current distance from the target balance is ${currentDistance.toFixed(2)} and no outgoing ` +
-            `forwards have been observed in the last ${this.config.days} days.`;
-
-        yield this.createFeeAction(channel, feeRate, reason);
-    }
-
     private *getFeeDecreaseAction(
         channel: IChannelStats,
         currentDistance: number,
-        [forward]: readonly [Readonly<OutgoingForward>, ...ReadonlyArray<Readonly<OutgoingForward>>],
+        [forward]: ReadonlyNonEmptyArray<OutgoingForward>,
     ) {
         // If target balance distance is either within bounds or above, we simply look for the latest outgoing
         // forward and drop the fee depending on how long ago it happened. There is no immediate component here,
@@ -476,7 +469,7 @@ export class Actions {
     private *getAboveBoundsFeeIncreaseAction(
         channel: IChannelStats,
         currentDistance: number,
-        outgoingForwards: readonly [Readonly<OutgoingForward>, ...ReadonlyArray<Readonly<OutgoingForward>>],
+        outgoingForwards: ReadonlyNonEmptyArray<OutgoingForward>,
     ) {
         // For any channel with outgoing forwards, it is possible that the majority of the outgoing flow is
         // coming from channels with a balance above bounds. Apparently, ongoing efforts at rebalancing
@@ -521,6 +514,15 @@ export class Actions {
                 }
             }
         }
+    }
+
+    private *getNoForwardsFeeAction(channel: IChannelStats, currentDistance: number, feeRate: number) {
+        // TODO: Check whether the channel has been open for this long
+        const reason =
+            `The current distance from the target balance is ${currentDistance.toFixed(2)} and no outgoing ` +
+            `forwards have been observed in the last ${this.config.days} days.`;
+
+        yield this.createFeeAction(channel, feeRate, reason);
     }
 
     private getIncreaseFraction(elapsedMilliseconds: number, rawFraction: number) {
