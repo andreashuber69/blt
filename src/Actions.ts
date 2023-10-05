@@ -1,11 +1,9 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
-import type { BalanceChange, IChannelStats } from "./ChannelStats.js";
-import { IncomingForward, OutgoingForward } from "./ChannelStats.js";
+import type { IChannelStats } from "./ChannelStats.js";
+import { BalanceChange, IncomingForward, OutgoingForward } from "./ChannelStats.js";
 import type { DeepReadonly } from "./DeepReadonly.js";
 import type { YieldType } from "./lightning/YieldType.js";
 import type { INodeStats } from "./NodeStats.js";
-
-type ReadonlyNonEmptyArray<T> = readonly [Readonly<T>, ...ReadonlyArray<Readonly<T>>];
 
 /**
  * Exposes various configuration variables that are used by {@linkcode Actions.get} to propose changes.
@@ -337,10 +335,6 @@ export class Actions {
         }
     }
 
-    private static hasOneOrMoreElements<T>(array: readonly T[]): array is readonly [T, ...T[]] {
-        return array.length > 0;
-    }
-
     // eslint-disable-next-line @typescript-eslint/naming-convention
     private static getFeeRate({ amount, fee }: Readonly<OutgoingForward>, { properties: { base_fee } }: IChannelStats) {
         return Math.round((fee - base_fee) / amount * 1_000_000);
@@ -359,31 +353,33 @@ export class Actions {
         // eslint-disable-next-line @typescript-eslint/naming-convention
         const { properties: { local_balance, capacity, fee_rate }, history } = channel;
         const getDistance = (balance: number) => Actions.getTargetBalanceDistance(balance, target, capacity);
+        const { value: lastOutgoing } = Actions.filterHistory(history, OutgoingForward).next();
         const currentDistance = getDistance(local_balance);
-        const outgoingForwards = [...Actions.filterHistory(history, OutgoingForward)] as const;
-        const isBelowBounds = currentDistance <= -this.config.minFeeIncreaseDistance;
+        const { minRebalanceDistance, minFeeIncreaseDistance, maxFeeRate } = this.config;
+        const isBelowBounds = currentDistance <= -minFeeIncreaseDistance;
 
-        if (Actions.hasOneOrMoreElements(outgoingForwards)) {
+        if (lastOutgoing) {
             if (isBelowBounds) {
-                const firstNotBelowBoundsIndex =
-                    outgoingForwards.findIndex((f) => getDistance(f.balance) > -this.config.minFeeIncreaseDistance);
+                const done = (c: Readonly<BalanceChange>) => getDistance(c.balance) > -minFeeIncreaseDistance;
+                const belowBoundsOutgoingForwards = [...Actions.filterHistory(history, OutgoingForward, done)] as const;
+                yield* this.getMaxIncreaseFeeAction(channel, currentDistance, belowBoundsOutgoingForwards);
+            } else {
+                const done = (c: Readonly<BalanceChange>) => getDistance(c.balance) <= -minFeeIncreaseDistance;
+                const notBelowChanges = [...Actions.filterHistory(history, BalanceChange, done)] as const;
 
-                const belowBoundsOutgoingForwards = outgoingForwards.slice(0, firstNotBelowBoundsIndex);
-
-                if (Actions.hasOneOrMoreElements(belowBoundsOutgoingForwards)) {
-                    yield* this.getMaxIncreaseFeeAction(channel, currentDistance, belowBoundsOutgoingForwards);
+                if (
+                    !(yield* this.getFeeDecreaseAction(channel, currentDistance, lastOutgoing, notBelowChanges)) &&
+                    // Potentially raising the fee due to forwards coming in through channels that are above bounds only
+                    // makes sense if this channel itself is at least as much below the target balance such that it will
+                    // be targeted by rebalancing.
+                    (currentDistance <= -minRebalanceDistance)
+                ) {
+                    const allOutgoing = [...Actions.filterHistory(history, OutgoingForward)] as const;
+                    yield* this.getAboveBoundsFeeIncreaseAction(channel, currentDistance, lastOutgoing, allOutgoing);
                 }
-            } else if (
-                !(yield* this.getFeeDecreaseAction(channel, currentDistance, outgoingForwards)) &&
-                // Potentially raising the fee due to forwards coming in through channels that are above bounds only
-                // makes sense if this channel itself is at least as much below the target balance such that it will
-                // be targeted by rebalancing.
-                (currentDistance <= -this.config.minRebalanceDistance)
-            ) {
-                yield* this.getAboveBoundsFeeIncreaseAction(channel, currentDistance, outgoingForwards);
             }
         } else {
-            const newFeeRate = isBelowBounds ? this.config.maxFeeRate : 0;
+            const newFeeRate = isBelowBounds ? maxFeeRate : 0;
 
             if (fee_rate !== newFeeRate) {
                 yield* this.getNoForwardsFeeAction(channel, currentDistance, newFeeRate);
@@ -394,7 +390,7 @@ export class Actions {
     private *getMaxIncreaseFeeAction(
         channel: IChannelStats,
         currentDistance: number,
-        forwards: ReadonlyNonEmptyArray<OutgoingForward>,
+        forwards: DeepReadonly<OutgoingForward[]>,
     ) {
         // For all changes that pushed the target balance distance below bounds, we calculate the resulting fee
         // increase. In the end we choose the highest fee increase. This approach guarantees that we do the "right
@@ -433,25 +429,26 @@ export class Actions {
     private *getFeeDecreaseAction(
         channel: IChannelStats,
         currentDistance: number,
-        [forward]: ReadonlyNonEmptyArray<OutgoingForward>,
+        lastOutgoing: Readonly<OutgoingForward>,
+        _changes: DeepReadonly<BalanceChange[]>,
     ) {
         // If target balance distance is either within bounds or above, we simply look for the latest outgoing
         // forward and drop the fee depending on how long ago it happened. There is no immediate component here,
         // because lower fees are very unlikely to attract outgoing forwards for several hours.
         // TODO: Also determine since when the channel has been within bounds or above and use that or the latest
         // forward.
-        const elapsedMilliseconds = Date.now() - new Date(forward.time).valueOf();
+        const elapsedMilliseconds = Date.now() - new Date(lastOutgoing.time).valueOf();
         const elapsedDays = (elapsedMilliseconds / 24 / 60 / 60 / 1000) - this.config.feeDecreaseWaitDays;
 
         if (elapsedDays > 0) {
-            const feeRate = Actions.getFeeRate(forward, channel);
+            const feeRate = Actions.getFeeRate(lastOutgoing, channel);
             const decreaseFraction = elapsedDays / (this.config.days - this.config.feeDecreaseWaitDays);
             const newFeeRate = Math.max(Math.round(feeRate * (1 - decreaseFraction)), 0);
 
             if (newFeeRate < channel.properties.fee_rate) {
                 const reason =
                     `The current distance from the target balance is ${currentDistance.toFixed(2)} and the most ` +
-                    `recent outgoing forward took place on ${forward.time} and paid ${feeRate}ppm.`;
+                    `recent outgoing forward took place on ${lastOutgoing.time} and paid ${feeRate}ppm.`;
 
                 yield this.createFeeAction(channel, newFeeRate, reason);
             }
@@ -465,13 +462,14 @@ export class Actions {
     private *getAboveBoundsFeeIncreaseAction(
         channel: IChannelStats,
         currentDistance: number,
-        outgoingForwards: ReadonlyNonEmptyArray<OutgoingForward>,
+        lastOutgoing: Readonly<OutgoingForward>,
+        allOutgoing: DeepReadonly<OutgoingForward[]>,
     ) {
         // For any channel with outgoing forwards, it is possible that the majority of the outgoing flow is
         // coming from channels with a balance above bounds. Apparently, ongoing efforts at rebalancing
         // (see assumptions) are unable to rebalance this excess balance back into this channel, which means
         // that the fee for this channel is too low.
-        const incomingChannels = [...new Set(outgoingForwards.map((f) => f.incomingChannel))].
+        const incomingChannels = [...new Set(allOutgoing.map((f) => f.incomingChannel))].
             map((c) => this.getChannel(c)).
             // False positive, this is a user-defined type guard.
             // eslint-disable-next-line unicorn/prefer-native-coercion-functions
@@ -483,7 +481,7 @@ export class Actions {
             const weightedAboveBoundsInflow = inflowStats.map((i) => i.channel * i.currentDistance);
 
             const totalOutflow =
-                outgoingForwards.filter((f) => f.time >= earliestIsoTime).reduce((p, c) => p + c.amount, 0);
+                allOutgoing.filter((f) => f.time >= earliestIsoTime).reduce((p, c) => p + c.amount, 0);
 
             // When all above bounds inflow of a single channel went out through this channel and this channel had
             // no other outflows, the following ratio can be as low as config.minFeeIncreaseDistance (because the
@@ -495,7 +493,7 @@ export class Actions {
                 // We only increase the fee to degree that the total outflows in this channel were caused by
                 // incoming forwards into above bounds channels and the current target balance distance.
                 const increaseFraction = (ratio - this.config.minFeeIncreaseDistance) * Math.abs(currentDistance);
-                const feeRate = Actions.getFeeRate(outgoingForwards[0], channel);
+                const feeRate = Actions.getFeeRate(lastOutgoing, channel);
                 const newFeeRate = Math.min(Math.round(feeRate * (1 + increaseFraction)), this.config.maxFeeRate);
 
                 if (newFeeRate > channel.properties.fee_rate) {
