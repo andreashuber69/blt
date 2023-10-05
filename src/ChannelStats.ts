@@ -4,6 +4,14 @@ import type { ChannelsElement } from "./info/ChannelsRefresher.js";
 
 /** Contains information about a balance change in a channel. */
 export abstract class BalanceChange {
+    /**
+     * Initializes a new instance.
+     * @param time The ISO 8601 date &amp; time.
+     * @param amount By what amount did the channel balance change? A positive value means that the channel balance
+     * decreased; a negative value means that it increased.
+     */
+    public constructor(public readonly time: string, public readonly amount: number) {}
+
     /** Gets the local channel balance after the change. */
     public get balance() {
         if (this.balanceImpl === undefined) {
@@ -20,14 +28,6 @@ export abstract class BalanceChange {
 
         this.balanceImpl = value;
     }
-
-    /**
-     * Initializes a new instance.
-     * @param time The ISO 8601 date &amp; time.
-     * @param amount By what amount did the channel balance change? A positive value means that the channel balance
-     * decreased; a negative value means that it increased.
-     */
-    protected constructor(public readonly time: string, public readonly amount: number) {}
 
     private balanceImpl: number | undefined;
 }

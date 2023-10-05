@@ -325,7 +325,7 @@ export class Actions {
     // Provides the already filtered history relevant to choose a new fee for the given channel.
     private static *filterHistory<T extends BalanceChange>(
         history: DeepReadonly<BalanceChange[]>,
-        ctor: new (...args: never[]) => T,
+        ctor: abstract new (...args: never[]) => T,
         done?: (change: Readonly<BalanceChange>) => boolean,
     ): Generator<Readonly<T>, void> {
         for (const change of history) {
