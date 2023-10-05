@@ -322,20 +322,16 @@ export class Actions {
         return base ** Math.floor(Math.abs(distance) / minRebalanceDistance);
     }
 
-    private static only<T extends Readonly<BalanceChange>>(ctor: new (...args: never[]) => T) {
-        return (change: Readonly<BalanceChange>): change is Readonly<T> => change instanceof ctor;
-    }
-
     // Provides the already filtered history relevant to choose a new fee for the given channel.
-    private static *filterHistory<T extends Readonly<BalanceChange>>(
+    private static *filterHistory<T extends BalanceChange>(
         history: DeepReadonly<BalanceChange[]>,
-        filter: (change: Readonly<BalanceChange>) => change is Readonly<T>,
+        ctor: new (...args: never[]) => T,
         done?: (change: Readonly<BalanceChange>) => boolean,
-    ) {
+    ): Generator<Readonly<T>, void> {
         for (const change of history) {
             if (done?.(change)) {
                 return;
-            } else if (filter(change)) {
+            } else if (change instanceof ctor) {
                 yield change;
             }
         }
@@ -364,7 +360,7 @@ export class Actions {
         const { properties: { local_balance, capacity, fee_rate }, history } = channel;
         const getDistance = (balance: number) => Actions.getTargetBalanceDistance(balance, target, capacity);
         const currentDistance = getDistance(local_balance);
-        const outgoingForwards = [...Actions.filterHistory(history, Actions.only(OutgoingForward))] as const;
+        const outgoingForwards = [...Actions.filterHistory(history, OutgoingForward)] as const;
         const isBelowBounds = currentDistance <= -this.config.minFeeIncreaseDistance;
 
         if (Actions.hasOneOrMoreElements(outgoingForwards)) {
@@ -601,9 +597,7 @@ export class Actions {
             let latest = 0;
             let channel = 0;
 
-            for (const { time, amount, outgoingChannel } of
-                Actions.filterHistory(history, Actions.only(IncomingForward), done)
-            ) {
+            for (const { time, amount, outgoingChannel } of Actions.filterHistory(history, IncomingForward, done)) {
                 if (outgoingChannel === forOutgoingChannel) {
                     const timeMilliseconds = new Date(time).valueOf();
                     earliest = Math.min(earliest, timeMilliseconds);
