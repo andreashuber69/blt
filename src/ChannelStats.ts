@@ -62,7 +62,7 @@ export class InForward extends Forward {
         time: string,
         amount: number,
         fee: number,
-        public readonly outgoingChannel: IChannelStats | undefined,
+        public readonly outChannel: IChannelStats | undefined,
     ) {
         super(time, amount, fee);
     }
@@ -74,7 +74,7 @@ export class OutForward extends Forward {
         time: string,
         amount: number,
         fee: number,
-        public readonly incomingChannel: IChannelStats | undefined,
+        public readonly inChannel: IChannelStats | undefined,
     ) {
         super(time, amount, fee);
     }
@@ -108,13 +108,13 @@ export class ChannelStats {
         return this.historyImpl;
     }
 
-    public addInForward(time: string, amount: number, fee: number, outgoingChannel: IChannelStats | undefined) {
-        this.addToHistory(new InForward(time, amount, fee, outgoingChannel));
+    public addInForward(time: string, amount: number, fee: number, outChannel: IChannelStats | undefined) {
+        this.addToHistory(new InForward(time, amount, fee, outChannel));
         this.updateStats(this.inForwardsImpl, amount);
     }
 
-    public addOutForward(time: string, amount: number, fee: number, incomingChannel: IChannelStats | undefined) {
-        this.addToHistory(new OutForward(time, amount, fee, incomingChannel));
+    public addOutForward(time: string, amount: number, fee: number, inChannel: IChannelStats | undefined) {
+        this.addToHistory(new OutForward(time, amount, fee, inChannel));
         this.updateStats(this.outForwardsImpl, amount);
     }
 

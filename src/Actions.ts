@@ -202,12 +202,8 @@ export class Actions {
     }
 
     private static getChannelBalanceAction(
-        {
-            // eslint-disable-next-line @typescript-eslint/naming-convention
-            properties: { id, partnerAlias, capacity, local_balance },
-            inForwards: incoming,
-            outForwards: outgoing,
-        }: IChannelStats,
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        { properties: { id, partnerAlias, capacity, local_balance }, inForwards, outForwards }: IChannelStats,
         {
             minChannelBalanceFraction,
             minRebalanceDistance,
@@ -236,13 +232,13 @@ export class Actions {
         };
 
         const optimalBalance =
-            Math.round(outgoing.totalTokens / (incoming.totalTokens + outgoing.totalTokens) * capacity);
+            Math.round(outForwards.totalTokens / (inForwards.totalTokens + outForwards.totalTokens) * capacity);
 
-        if (Number.isNaN(optimalBalance) || incoming.count + outgoing.count < minChannelForwards) {
+        if (Number.isNaN(optimalBalance) || inForwards.count + outForwards.count < minChannelForwards) {
             return createAction(
                 0.5 * capacity,
-                `There are fewer forwards (${incoming.count + outgoing.count}) than required (${minChannelForwards}) ` +
-                "to predict future flow, defaulting to half the capacity.",
+                `There are fewer forwards (${inForwards.count + outForwards.count}) than required ` +
+                `(${minChannelForwards}) to predict future flow, defaulting to half the capacity.`,
             );
         }
 
@@ -250,11 +246,11 @@ export class Actions {
 
         // What minimum balance do we need to have in the channel to accommodate the largest outgoing forward?
         // To accommodate still larger future forwards, we apply the multiplier.
-        const minLargestForwardBalance = Math.round(outgoing.maxTokens * largestForwardMarginMultiplier);
+        const minLargestForwardBalance = Math.round(outForwards.maxTokens * largestForwardMarginMultiplier);
 
         // What maximum balance can we have in the channel to accommodate the largest incoming forward? To
         // accommodate still larger future forwards, we apply the multiplier.
-        const maxLargestForwardBalance = Math.round(capacity - (incoming.maxTokens * largestForwardMarginMultiplier));
+        const maxLargestForwardBalance = Math.round(capacity - (inForwards.maxTokens * largestForwardMarginMultiplier));
 
         const marginPercent = Math.round(largestForwardMarginFraction * 100);
 
@@ -262,7 +258,7 @@ export class Actions {
             // TODO: "Increase" the channel capacity?
             return createAction(
                 0.5 * capacity,
-                `The sum of the largest incoming (${incoming.maxTokens}) and outgoing (${outgoing.maxTokens}) ` +
+                `The sum of the largest incoming (${inForwards.maxTokens}) and outgoing (${outForwards.maxTokens}) ` +
                 `forwards + ${marginPercent}% exceeds the capacity of ${capacity}, defaulting to half the capacity.`,
             );
         }
@@ -290,7 +286,7 @@ export class Actions {
             return createAction(
                 minLargestForwardBalance,
                 `The optimal balance according to flow (${optimalBalance}) is below the minimum balance to route ` +
-                `the largest past outgoing forward of ${outgoing.maxTokens} + ${marginPercent}%.`,
+                `the largest past outgoing forward of ${outForwards.maxTokens} + ${marginPercent}%.`,
             );
         }
 
@@ -299,7 +295,7 @@ export class Actions {
             return createAction(
                 maxLargestForwardBalance,
                 `The optimal balance according to flow (${optimalBalance}) is above the maximum balance to route ` +
-                `the largest past incoming forward of ${incoming.maxTokens} + ${marginPercent}%.`,
+                `the largest past incoming forward of ${inForwards.maxTokens} + ${marginPercent}%.`,
             );
         }
 
@@ -463,14 +459,14 @@ export class Actions {
         // coming from channels with a balance above bounds. Apparently, ongoing efforts at rebalancing
         // (see assumptions) are unable to rebalance this excess balance back into this channel, which means
         // that the fee for this channel is too low.
-        const incomingChannels = [...new Set(allOut.map((f) => f.incomingChannel))].
+        const inChannels = [...new Set(allOut.map((f) => f.inChannel))].
             map((c) => this.getChannel(c)).
             // False positive, this is a user-defined type guard.
             // eslint-disable-next-line unicorn/prefer-native-coercion-functions
             filter(<T extends NonNullable<unknown>>(c: T | undefined): c is T => Boolean(c));
 
-        if (incomingChannels.length > 0) {
-            const inflowStats = [...this.getAllAboveBoundsInflowStats(channel, incomingChannels)];
+        if (inChannels.length > 0) {
+            const inflowStats = [...this.getAllAboveBoundsInflowStats(channel, inChannels)];
             const earliestIsoTime = new Date(Math.min(...inflowStats.map((i) => i.earliest))).toISOString();
             const weightedAboveBoundsInflow = inflowStats.map((i) => i.channel * i.currentDistance);
 
@@ -576,11 +572,11 @@ export class Actions {
     }
 
     private *getAllAboveBoundsInflowStats(
-        outgoingChannel: IChannelStats,
-        incomingChannels: ReadonlyArray<readonly [IChannelStats, Action]>,
+        outChannel: IChannelStats,
+        inChannels: ReadonlyArray<readonly [IChannelStats, Action]>,
     ) {
-        for (const incomingChannel of incomingChannels) {
-            yield* this.getAboveBoundsInflowStats(outgoingChannel, incomingChannel);
+        for (const inChannel of inChannels) {
+            yield* this.getAboveBoundsInflowStats(outChannel, inChannel);
         }
     }
 
@@ -612,8 +608,8 @@ export class Actions {
             let latest = 0;
             let channel = 0;
 
-            for (const { time, amount, outgoingChannel } of Actions.filterHistory(history, InForward, done)) {
-                if (outgoingChannel === forOutChannel) {
+            for (const { time, amount, outChannel } of Actions.filterHistory(history, InForward, done)) {
+                if (outChannel === forOutChannel) {
                     const timeMilliseconds = new Date(time).valueOf();
                     earliest = Math.min(earliest, timeMilliseconds);
                     latest = Math.max(latest, timeMilliseconds);

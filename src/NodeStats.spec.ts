@@ -138,39 +138,39 @@ const nodeInfo: INodeInfo = {
 const verifyFlow = (
     channels: ReadonlyMap<string, IChannelStats>,
     channelId: string,
-    incomingMaxTokens: number,
-    incomingCount: number,
-    incomingTotalTokens: number,
-    outgoingMaxTokens: number,
-    outgoingCount: number,
-    outgoingTotalTokens: number,
+    inMaxTokens: number,
+    inCount: number,
+    inTotalTokens: number,
+    outMaxTokens: number,
+    outCount: number,
+    outTotalTokens: number,
 ) => {
     it(channelId, () => {
         const channel = channels.get(channelId);
         assert(channel);
-        const { inForwards: incoming, outForwards: outgoing, history } = channel;
-        assert(incoming.maxTokens === incomingMaxTokens);
-        assert(incoming.count === incomingCount);
-        assert(incoming.totalTokens === incomingTotalTokens);
-        assert(outgoing.maxTokens === outgoingMaxTokens);
-        assert(outgoing.count === outgoingCount);
-        assert(outgoing.totalTokens === outgoingTotalTokens);
+        const { inForwards, outForwards, history } = channel;
+        assert(inForwards.maxTokens === inMaxTokens);
+        assert(inForwards.count === inCount);
+        assert(inForwards.totalTokens === inTotalTokens);
+        assert(outForwards.maxTokens === outMaxTokens);
+        assert(outForwards.count === outCount);
+        assert(outForwards.totalTokens === outTotalTokens);
 
-        let outgoingTokens = 0;
-        let incomingTokens = 0;
+        let outTokens = 0;
+        let inTokens = 0;
 
         for (const change of history) {
             if (change instanceof OutForward) {
-                outgoingTokens += change.amount;
+                outTokens += change.amount;
                 assert(change.fee);
-                assert(change.incomingChannel);
+                assert(change.inChannel);
             } else if (change instanceof InForward) {
-                incomingTokens -= change.amount;
+                inTokens -= change.amount;
             }
         }
 
-        assert(outgoingTokens === outgoingTotalTokens);
-        assert(incomingTokens === incomingTotalTokens);
+        assert(outTokens === outTotalTokens);
+        assert(inTokens === inTotalTokens);
     });
 };
 

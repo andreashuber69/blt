@@ -22,10 +22,10 @@ export class NodeStats {
             // eslint-disable-next-line @typescript-eslint/naming-convention
             const { created_at, incoming_channel, outgoing_channel } = forward;
             const { rawTokens, fee } = this.getTokens(forward);
-            const incoming = channelsImpl.get(incoming_channel);
-            const outgoing = channelsImpl.get(outgoing_channel);
-            incoming?.addInForward(created_at, -rawTokens - fee, fee, outgoing);
-            outgoing?.addOutForward(created_at, rawTokens, fee, incoming);
+            const inChannel = channelsImpl.get(incoming_channel);
+            const outChannel = channelsImpl.get(outgoing_channel);
+            inChannel?.addInForward(created_at, -rawTokens - fee, fee, outChannel);
+            outChannel?.addOutForward(created_at, rawTokens, fee, inChannel);
         }
 
         // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -34,10 +34,10 @@ export class NodeStats {
             for (const { is_confirmed, route } of attempts) {
                 if (is_confirmed) {
                     const { rawTokens, fee } = this.getTokens(route);
-                    const outgoing = channelsImpl.get(route.hops.at(0)?.channel ?? "");
-                    outgoing?.addPayment(confirmed_at, rawTokens);
-                    const incoming = channelsImpl.get(route.hops.at(-1)?.channel ?? "");
-                    incoming?.addPayment(confirmed_at, -rawTokens + fee);
+                    const outChannel = channelsImpl.get(route.hops.at(0)?.channel ?? "");
+                    outChannel?.addPayment(confirmed_at, rawTokens);
+                    const inChannel = channelsImpl.get(route.hops.at(-1)?.channel ?? "");
+                    inChannel?.addPayment(confirmed_at, -rawTokens + fee);
                 }
             }
         }
