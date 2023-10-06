@@ -361,8 +361,8 @@ export class Actions {
         if (lastOutgoing) {
             if (isBelowBounds) {
                 const done = (c: Readonly<BalanceChange>) => getDistance(c.balance) > -minFeeIncreaseDistance;
-                const belowBoundsOutgoingForwards = [...Actions.filterHistory(history, OutgoingForward, done)] as const;
-                yield* this.getMaxIncreaseFeeAction(channel, currentDistance, belowBoundsOutgoingForwards);
+                const belowOutgoingForwards = [...Actions.filterHistory(history, OutgoingForward, done)] as const;
+                yield* this.getMaxIncreaseFeeAction(channel, currentDistance, belowOutgoingForwards);
             } else {
                 const done = (c: Readonly<BalanceChange>) => getDistance(c.balance) <= -minFeeIncreaseDistance;
                 const notBelowChanges = [...Actions.filterHistory(history, BalanceChange, done)] as const;
