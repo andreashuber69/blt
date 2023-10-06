@@ -451,29 +451,6 @@ export class Actions {
         return yield* this.createFeeDecreaseAction(channel, feeRate, lastOutgoing, reason);
     }
 
-    private *createFeeDecreaseAction(
-        channel: IChannelStats,
-        feeRate: number,
-        { time }: Readonly<BalanceChange>,
-        reason: string,
-    ) {
-        const elapsedMilliseconds = Date.now() - new Date(time).valueOf();
-        const elapsedDays = (elapsedMilliseconds / 24 / 60 / 60 / 1000) - this.config.feeDecreaseWaitDays;
-
-        if (elapsedDays > 0) {
-            const decreaseFraction = elapsedDays / (this.config.days - this.config.feeDecreaseWaitDays);
-            const newFeeRate = Math.max(Math.round(feeRate * (1 - decreaseFraction)), 0);
-
-            if (newFeeRate < channel.properties.fee_rate) {
-                yield this.createFeeAction(channel, newFeeRate, reason);
-            }
-
-            return true;
-        }
-
-        return false;
-    }
-
     private *getAboveBoundsFeeIncreaseAction(
         channel: IChannelStats,
         currentDistance: number,
@@ -557,6 +534,29 @@ export class Actions {
             max: this.config.maxFeeRate,
             reason,
         };
+    }
+
+    private *createFeeDecreaseAction(
+        channel: IChannelStats,
+        feeRate: number,
+        { time }: Readonly<BalanceChange>,
+        reason: string,
+    ) {
+        const elapsedMilliseconds = Date.now() - new Date(time).valueOf();
+        const elapsedDays = (elapsedMilliseconds / 24 / 60 / 60 / 1000) - this.config.feeDecreaseWaitDays;
+
+        if (elapsedDays > 0) {
+            const decreaseFraction = elapsedDays / (this.config.days - this.config.feeDecreaseWaitDays);
+            const newFeeRate = Math.max(Math.round(feeRate * (1 - decreaseFraction)), 0);
+
+            if (newFeeRate < channel.properties.fee_rate) {
+                yield this.createFeeAction(channel, newFeeRate, reason);
+            }
+
+            return true;
+        }
+
+        return false;
     }
 
     private getChannel(channel: IChannelStats | undefined) {
