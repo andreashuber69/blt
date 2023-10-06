@@ -437,19 +437,29 @@ export class Actions {
         // because lower fees are very unlikely to attract outgoing forwards for several hours.
         // TODO: Also determine since when the channel has been within bounds or above and use that or the latest
         // forward.
-        const elapsedMilliseconds = Date.now() - new Date(lastOutgoing.time).valueOf();
+        const feeRate = Actions.getFeeRate(lastOutgoing, channel);
+
+        const reason =
+            `The current distance from the target balance is ${currentDistance.toFixed(2)} and the most ` +
+            `recent outgoing forward took place on ${lastOutgoing.time} and paid ${feeRate}ppm.`;
+
+        return yield* this.createFeeDecreaseAction(channel, feeRate, lastOutgoing, reason);
+    }
+
+    private *createFeeDecreaseAction(
+        channel: IChannelStats,
+        feeRate: number,
+        { time }: Readonly<BalanceChange>,
+        reason: string,
+    ) {
+        const elapsedMilliseconds = Date.now() - new Date(time).valueOf();
         const elapsedDays = (elapsedMilliseconds / 24 / 60 / 60 / 1000) - this.config.feeDecreaseWaitDays;
 
         if (elapsedDays > 0) {
-            const feeRate = Actions.getFeeRate(lastOutgoing, channel);
             const decreaseFraction = elapsedDays / (this.config.days - this.config.feeDecreaseWaitDays);
             const newFeeRate = Math.max(Math.round(feeRate * (1 - decreaseFraction)), 0);
 
             if (newFeeRate < channel.properties.fee_rate) {
-                const reason =
-                    `The current distance from the target balance is ${currentDistance.toFixed(2)} and the most ` +
-                    `recent outgoing forward took place on ${lastOutgoing.time} and paid ${feeRate}ppm.`;
-
                 yield this.createFeeAction(channel, newFeeRate, reason);
             }
 
