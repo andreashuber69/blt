@@ -361,7 +361,7 @@ export class Actions {
         if (lastOutgoing) {
             if (isBelowBounds) {
                 const belowOutgoingForwards = this.getBelowOutgoingForwards(getDistance, history);
-                yield* this.getMaxIncreaseFeeAction(channel, currentDistance, belowOutgoingForwards);
+                yield* this.getMaxIncreaseFeeAction(channel, currentDistance, belowOutgoingForwards, Date.now());
             } else {
                 const done = (c: Readonly<BalanceChange>) => getDistance(c.balance) <= -minFeeIncreaseDistance;
                 const notBelowChanges = [...Actions.filterHistory(history, BalanceChange, done)] as const;
@@ -395,6 +395,7 @@ export class Actions {
         channel: IChannelStats,
         currentDistance: number,
         forwards: DeepReadonly<OutgoingForward[]>,
+        timeMilliseconds: number,
     ) {
         // For all changes that pushed the target balance distance below bounds, we calculate the resulting fee
         // increase. In the end we choose the highest fee increase. This approach guarantees that we do the "right
@@ -408,7 +409,7 @@ export class Actions {
         // the immediate fee increase is higher.
         const getIncreaseFeeAction = (change: Readonly<OutgoingForward>) => {
             const feeRate = Actions.getFeeRate(change, channel);
-            const elapsedMilliseconds = Date.now() - new Date(change.time).valueOf();
+            const elapsedMilliseconds = timeMilliseconds - new Date(change.time).valueOf();
             const rawFraction = Math.abs(currentDistance) - this.config.minFeeIncreaseDistance;
             const addFraction = this.getIncreaseFraction(elapsedMilliseconds, rawFraction);
             // If the fee rate has been really low then the formula wouldn't increase it meaningfully. An
