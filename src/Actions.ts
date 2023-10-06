@@ -353,7 +353,7 @@ export class Actions {
         // eslint-disable-next-line @typescript-eslint/naming-convention
         const { properties: { local_balance, capacity, fee_rate }, history } = channel;
         const getDistance = (balance: number) => Actions.getTargetBalanceDistance(balance, target, capacity);
-        const { value: lastOutgoing } = Actions.filterHistory(history, OutForward).next();
+        const { value: lastOut } = Actions.filterHistory(history, OutForward).next();
         const currentDistance = getDistance(local_balance);
         const { minRebalanceDistance, minFeeIncreaseDistance, maxFeeRate } = this.config;
         const isBelowBounds = currentDistance <= -minFeeIncreaseDistance;
@@ -363,7 +363,7 @@ export class Actions {
             return [...Actions.filterHistory(partialHistory, OutForward, done)] as const;
         };
 
-        if (lastOutgoing) {
+        if (lastOut) {
             if (isBelowBounds) {
                 const belowOutForwards = getBelowOutForwards(history);
 
@@ -378,14 +378,14 @@ export class Actions {
                 const notBelowChanges = [...Actions.filterHistory(history, BalanceChange, done)] as const;
 
                 if (
-                    !(yield* this.getFeeDecreaseAction(channel, currentDistance, lastOutgoing, notBelowChanges)) &&
+                    !(yield* this.getFeeDecreaseAction(channel, currentDistance, lastOut, notBelowChanges)) &&
                     // Potentially raising the fee due to forwards coming in through channels that are above bounds only
                     // makes sense if this channel itself is at least as much below the target balance such that it will
                     // be targeted by rebalancing.
                     (currentDistance <= -minRebalanceDistance)
                 ) {
-                    const allOutgoing = [...Actions.filterHistory(history, OutForward)] as const;
-                    yield* this.getAboveBoundsFeeIncreaseAction(channel, currentDistance, lastOutgoing, allOutgoing);
+                    const allOut = [...Actions.filterHistory(history, OutForward)] as const;
+                    yield* this.getAboveBoundsFeeIncreaseAction(channel, currentDistance, lastOut, allOut);
                 }
             }
         } else {
@@ -436,7 +436,7 @@ export class Actions {
     private *getFeeDecreaseAction(
         channel: IChannelStats,
         currentDistance: number,
-        lastOutgoing: Readonly<OutForward>,
+        lastOut: Readonly<OutForward>,
         _changes: DeepReadonly<BalanceChange[]>,
     ) {
         // If target balance distance is either within bounds or above, we simply look for the latest outgoing
@@ -444,26 +444,26 @@ export class Actions {
         // because lower fees are very unlikely to attract outgoing forwards for several hours.
         // TODO: Also determine since when the channel has been within bounds or above and use that or the latest
         // forward.
-        const feeRate = Actions.getFeeRate(lastOutgoing, channel);
+        const feeRate = Actions.getFeeRate(lastOut, channel);
 
         const reason =
             `The current distance from the target balance is ${currentDistance.toFixed(2)} and the most ` +
-            `recent outgoing forward took place on ${lastOutgoing.time} and paid ${feeRate}ppm.`;
+            `recent outgoing forward took place on ${lastOut.time} and paid ${feeRate}ppm.`;
 
-        return yield* this.createFeeDecreaseAction(channel, feeRate, lastOutgoing, reason);
+        return yield* this.createFeeDecreaseAction(channel, feeRate, lastOut, reason);
     }
 
     private *getAboveBoundsFeeIncreaseAction(
         channel: IChannelStats,
         currentDistance: number,
-        lastOutgoing: Readonly<OutForward>,
-        allOutgoing: DeepReadonly<OutForward[]>,
+        lastOut: Readonly<OutForward>,
+        allOut: DeepReadonly<OutForward[]>,
     ) {
         // For any channel with outgoing forwards, it is possible that the majority of the outgoing flow is
         // coming from channels with a balance above bounds. Apparently, ongoing efforts at rebalancing
         // (see assumptions) are unable to rebalance this excess balance back into this channel, which means
         // that the fee for this channel is too low.
-        const incomingChannels = [...new Set(allOutgoing.map((f) => f.incomingChannel))].
+        const incomingChannels = [...new Set(allOut.map((f) => f.incomingChannel))].
             map((c) => this.getChannel(c)).
             // False positive, this is a user-defined type guard.
             // eslint-disable-next-line unicorn/prefer-native-coercion-functions
@@ -475,7 +475,7 @@ export class Actions {
             const weightedAboveBoundsInflow = inflowStats.map((i) => i.channel * i.currentDistance);
 
             const totalOutflow =
-                allOutgoing.filter((f) => f.time >= earliestIsoTime).reduce((p, c) => p + c.amount, 0);
+                allOut.filter((f) => f.time >= earliestIsoTime).reduce((p, c) => p + c.amount, 0);
 
             // When all above bounds inflow of a single channel went out through this channel and this channel had
             // no other outflows, the following ratio can be as low as config.minFeeIncreaseDistance (because the
@@ -487,7 +487,7 @@ export class Actions {
                 // We only increase the fee to degree that the total outflows in this channel were caused by
                 // incoming forwards into above bounds channels and the current target balance distance.
                 const increaseFraction = (ratio - this.config.minFeeIncreaseDistance) * Math.abs(currentDistance);
-                const feeRate = Actions.getFeeRate(lastOutgoing, channel);
+                const feeRate = Actions.getFeeRate(lastOut, channel);
                 const newFeeRate = Math.min(Math.round(feeRate * (1 + increaseFraction)), this.config.maxFeeRate);
 
                 if (newFeeRate > channel.properties.fee_rate) {
@@ -593,7 +593,7 @@ export class Actions {
     }
 
     private *getAboveBoundsInflowStats(
-        forOutgoingChannel: IChannelStats,
+        forOutChannel: IChannelStats,
         [
             // eslint-disable-next-line @typescript-eslint/naming-convention
             { properties: { id, partnerAlias: rawAlias, local_balance, capacity }, history },
@@ -613,7 +613,7 @@ export class Actions {
             let channel = 0;
 
             for (const { time, amount, outgoingChannel } of Actions.filterHistory(history, InForward, done)) {
-                if (outgoingChannel === forOutgoingChannel) {
+                if (outgoingChannel === forOutChannel) {
                     const timeMilliseconds = new Date(time).valueOf();
                     earliest = Math.min(earliest, timeMilliseconds);
                     latest = Math.max(latest, timeMilliseconds);
