@@ -366,7 +366,13 @@ export class Actions {
         if (lastOutgoing) {
             if (isBelowBounds) {
                 const belowOutgoingForwards = getBelowOutgoingForwards(history);
-                yield* this.getMaxIncreaseFeeAction(channel, currentDistance, belowOutgoingForwards, Date.now());
+
+                const action =
+                    this.getMaxIncreaseFeeAction(channel, currentDistance, belowOutgoingForwards, Date.now());
+
+                if (action.target > fee_rate) {
+                    yield action;
+                }
             } else {
                 const done = (c: Readonly<BalanceChange>) => getDistance(c.balance) <= -minFeeIncreaseDistance;
                 const notBelowChanges = [...Actions.filterHistory(history, BalanceChange, done)] as const;
@@ -391,7 +397,7 @@ export class Actions {
         }
     }
 
-    private *getMaxIncreaseFeeAction(
+    private getMaxIncreaseFeeAction(
         channel: IChannelStats,
         currentDistance: number,
         forwards: DeepReadonly<OutgoingForward[]>,
@@ -424,11 +430,7 @@ export class Actions {
         };
 
         const actions = forwards.map((forward) => getIncreaseFeeAction(forward));
-        const action = actions.reduce((p, c) => (p.target > c.target ? p : c));
-
-        if (action.target > channel.properties.fee_rate) {
-            yield action;
-        }
+        return actions.reduce((p, c) => (p.target > c.target ? p : c));
     }
 
     private *getFeeDecreaseAction(
