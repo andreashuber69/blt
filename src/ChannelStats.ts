@@ -51,7 +51,7 @@ export abstract class Forward extends BalanceChange {
     }
 }
 
-export class IncomingForward extends Forward {
+export class InForward extends Forward {
     /**
      * See {@linkcode Forward.constructor}.
      * @param time See {@linkcode Forward.constructor}.
@@ -68,7 +68,7 @@ export class IncomingForward extends Forward {
     }
 }
 
-export class OutgoingForward extends Forward {
+export class OutForward extends Forward {
     /** See {@linkcode Forward.constructor}. */
     public constructor(
         time: string,
@@ -83,12 +83,12 @@ export class OutgoingForward extends Forward {
 export class ChannelStats {
     public constructor(public readonly properties: ChannelsElement & { readonly partnerAlias?: string | undefined }) {}
 
-    public get incomingForwards(): Readonly<typeof this.incomingForwardsImpl> {
-        return this.incomingForwardsImpl;
+    public get inForwards(): Readonly<typeof this.inForwardsImpl> {
+        return this.inForwardsImpl;
     }
 
-    public get outgoingForwards(): Readonly<typeof this.outgoingForwardsImpl> {
-        return this.outgoingForwardsImpl;
+    public get outForwards(): Readonly<typeof this.outForwardsImpl> {
+        return this.outForwardsImpl;
     }
 
     /** Gets the balance history of the channel, sorted from latest to earliest. */
@@ -108,14 +108,14 @@ export class ChannelStats {
         return this.historyImpl;
     }
 
-    public addIncomingForward(time: string, amount: number, fee: number, outgoingChannel: IChannelStats | undefined) {
-        this.addToHistory(new IncomingForward(time, amount, fee, outgoingChannel));
-        this.updateStats(this.incomingForwardsImpl, amount);
+    public addInForward(time: string, amount: number, fee: number, outgoingChannel: IChannelStats | undefined) {
+        this.addToHistory(new InForward(time, amount, fee, outgoingChannel));
+        this.updateStats(this.inForwardsImpl, amount);
     }
 
-    public addOutgoingForward(time: string, amount: number, fee: number, incomingChannel: IChannelStats | undefined) {
-        this.addToHistory(new OutgoingForward(time, amount, fee, incomingChannel));
-        this.updateStats(this.outgoingForwardsImpl, amount);
+    public addOutForward(time: string, amount: number, fee: number, incomingChannel: IChannelStats | undefined) {
+        this.addToHistory(new OutForward(time, amount, fee, incomingChannel));
+        this.updateStats(this.outForwardsImpl, amount);
     }
 
     public addPayment(time: string, amount: number) {
@@ -134,8 +134,8 @@ export class ChannelStats {
 
     private readonly historyImpl = new Array<BalanceChange>();
     private isUnsorted = false;
-    private readonly incomingForwardsImpl = ChannelStats.getNewForwardStats();
-    private readonly outgoingForwardsImpl = ChannelStats.getNewForwardStats();
+    private readonly inForwardsImpl = ChannelStats.getNewForwardStats();
+    private readonly outForwardsImpl = ChannelStats.getNewForwardStats();
 
     private addToHistory(change: BalanceChange) {
         this.isUnsorted = true;
@@ -151,4 +151,4 @@ export class ChannelStats {
 }
 
 /** See {@linkcode ChannelStats}. */
-export type IChannelStats = Pick<ChannelStats, "history" | "incomingForwards" | "outgoingForwards" | "properties">;
+export type IChannelStats = Pick<ChannelStats, "history" | "inForwards" | "outForwards" | "properties">;

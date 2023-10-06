@@ -24,8 +24,8 @@ export class NodeStats {
             const { rawTokens, fee } = this.getTokens(forward);
             const incoming = channelsImpl.get(incoming_channel);
             const outgoing = channelsImpl.get(outgoing_channel);
-            incoming?.addIncomingForward(created_at, -rawTokens - fee, fee, outgoing);
-            outgoing?.addOutgoingForward(created_at, rawTokens, fee, incoming);
+            incoming?.addInForward(created_at, -rawTokens - fee, fee, outgoing);
+            outgoing?.addOutForward(created_at, rawTokens, fee, incoming);
         }
 
         // eslint-disable-next-line @typescript-eslint/naming-convention

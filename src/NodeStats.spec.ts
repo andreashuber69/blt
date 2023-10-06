@@ -3,7 +3,7 @@ import assert from "node:assert";
 import { describe, it } from "node:test";
 
 import type { IChannelStats } from "./ChannelStats.js";
-import { IncomingForward, OutgoingForward } from "./ChannelStats.js";
+import { InForward, OutForward } from "./ChannelStats.js";
 import type { INodeInfo } from "./info/NodeInfo.js";
 import { NodeStats } from "./NodeStats.js";
 
@@ -148,7 +148,7 @@ const verifyFlow = (
     it(channelId, () => {
         const channel = channels.get(channelId);
         assert(channel);
-        const { incomingForwards: incoming, outgoingForwards: outgoing, history } = channel;
+        const { inForwards: incoming, outForwards: outgoing, history } = channel;
         assert(incoming.maxTokens === incomingMaxTokens);
         assert(incoming.count === incomingCount);
         assert(incoming.totalTokens === incomingTotalTokens);
@@ -160,11 +160,11 @@ const verifyFlow = (
         let incomingTokens = 0;
 
         for (const change of history) {
-            if (change instanceof OutgoingForward) {
+            if (change instanceof OutForward) {
                 outgoingTokens += change.amount;
                 assert(change.fee);
                 assert(change.incomingChannel);
-            } else if (change instanceof IncomingForward) {
+            } else if (change instanceof InForward) {
                 incomingTokens -= change.amount;
             }
         }

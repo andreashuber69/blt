@@ -1,6 +1,6 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import type { IChannelStats } from "./ChannelStats.js";
-import { BalanceChange, IncomingForward, OutgoingForward } from "./ChannelStats.js";
+import { BalanceChange, InForward, OutForward } from "./ChannelStats.js";
 import type { DeepReadonly } from "./DeepReadonly.js";
 import type { YieldType } from "./lightning/YieldType.js";
 import type { INodeStats } from "./NodeStats.js";
@@ -205,8 +205,8 @@ export class Actions {
         {
             // eslint-disable-next-line @typescript-eslint/naming-convention
             properties: { id, partnerAlias, capacity, local_balance },
-            incomingForwards: incoming,
-            outgoingForwards: outgoing,
+            inForwards: incoming,
+            outForwards: outgoing,
         }: IChannelStats,
         {
             minChannelBalanceFraction,
@@ -336,7 +336,7 @@ export class Actions {
     }
 
     // eslint-disable-next-line @typescript-eslint/naming-convention
-    private static getFeeRate({ amount, fee }: Readonly<OutgoingForward>, { properties: { base_fee } }: IChannelStats) {
+    private static getFeeRate({ amount, fee }: Readonly<OutForward>, { properties: { base_fee } }: IChannelStats) {
         return Math.round((fee - base_fee) / amount * 1_000_000);
     }
 
@@ -353,22 +353,22 @@ export class Actions {
         // eslint-disable-next-line @typescript-eslint/naming-convention
         const { properties: { local_balance, capacity, fee_rate }, history } = channel;
         const getDistance = (balance: number) => Actions.getTargetBalanceDistance(balance, target, capacity);
-        const { value: lastOutgoing } = Actions.filterHistory(history, OutgoingForward).next();
+        const { value: lastOutgoing } = Actions.filterHistory(history, OutForward).next();
         const currentDistance = getDistance(local_balance);
         const { minRebalanceDistance, minFeeIncreaseDistance, maxFeeRate } = this.config;
         const isBelowBounds = currentDistance <= -minFeeIncreaseDistance;
 
-        const getBelowOutgoingForwards = (partialHistory: DeepReadonly<BalanceChange[]>) => {
+        const getBelowOutForwards = (partialHistory: DeepReadonly<BalanceChange[]>) => {
             const done = (c: Readonly<BalanceChange>) => getDistance(c.balance) > -minFeeIncreaseDistance;
-            return [...Actions.filterHistory(partialHistory, OutgoingForward, done)] as const;
+            return [...Actions.filterHistory(partialHistory, OutForward, done)] as const;
         };
 
         if (lastOutgoing) {
             if (isBelowBounds) {
-                const belowOutgoingForwards = getBelowOutgoingForwards(history);
+                const belowOutForwards = getBelowOutForwards(history);
 
                 const action =
-                    this.getMaxIncreaseFeeAction(channel, currentDistance, belowOutgoingForwards, Date.now());
+                    this.getMaxIncreaseFeeAction(channel, currentDistance, belowOutForwards, Date.now());
 
                 if (action.target > fee_rate) {
                     yield action;
@@ -384,7 +384,7 @@ export class Actions {
                     // be targeted by rebalancing.
                     (currentDistance <= -minRebalanceDistance)
                 ) {
-                    const allOutgoing = [...Actions.filterHistory(history, OutgoingForward)] as const;
+                    const allOutgoing = [...Actions.filterHistory(history, OutForward)] as const;
                     yield* this.getAboveBoundsFeeIncreaseAction(channel, currentDistance, lastOutgoing, allOutgoing);
                 }
             }
@@ -400,7 +400,7 @@ export class Actions {
     private getMaxIncreaseFeeAction(
         channel: IChannelStats,
         currentDistance: number,
-        forwards: DeepReadonly<OutgoingForward[]>,
+        forwards: DeepReadonly<OutForward[]>,
         timeMilliseconds: number,
     ) {
         // For all changes that pushed the target balance distance below bounds, we calculate the resulting fee
@@ -413,7 +413,7 @@ export class Actions {
         // liquidity. In this case it is likely that the long term fee increase is higher than the immediate one. On
         // the other hand, when the time span between the two outgoing forwards is much shorter, it is likely that
         // the immediate fee increase is higher.
-        const getIncreaseFeeAction = (change: Readonly<OutgoingForward>) => {
+        const getIncreaseFeeAction = (change: Readonly<OutForward>) => {
             const feeRate = Actions.getFeeRate(change, channel);
             const elapsedMilliseconds = timeMilliseconds - new Date(change.time).valueOf();
             const rawFraction = Math.abs(currentDistance) - this.config.minFeeIncreaseDistance;
@@ -436,7 +436,7 @@ export class Actions {
     private *getFeeDecreaseAction(
         channel: IChannelStats,
         currentDistance: number,
-        lastOutgoing: Readonly<OutgoingForward>,
+        lastOutgoing: Readonly<OutForward>,
         _changes: DeepReadonly<BalanceChange[]>,
     ) {
         // If target balance distance is either within bounds or above, we simply look for the latest outgoing
@@ -456,8 +456,8 @@ export class Actions {
     private *getAboveBoundsFeeIncreaseAction(
         channel: IChannelStats,
         currentDistance: number,
-        lastOutgoing: Readonly<OutgoingForward>,
-        allOutgoing: DeepReadonly<OutgoingForward[]>,
+        lastOutgoing: Readonly<OutForward>,
+        allOutgoing: DeepReadonly<OutForward[]>,
     ) {
         // For any channel with outgoing forwards, it is possible that the majority of the outgoing flow is
         // coming from channels with a balance above bounds. Apparently, ongoing efforts at rebalancing
@@ -612,7 +612,7 @@ export class Actions {
             let latest = 0;
             let channel = 0;
 
-            for (const { time, amount, outgoingChannel } of Actions.filterHistory(history, IncomingForward, done)) {
+            for (const { time, amount, outgoingChannel } of Actions.filterHistory(history, InForward, done)) {
                 if (outgoingChannel === forOutgoingChannel) {
                     const timeMilliseconds = new Date(time).valueOf();
                     earliest = Math.min(earliest, timeMilliseconds);
