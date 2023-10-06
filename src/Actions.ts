@@ -358,9 +358,14 @@ export class Actions {
         const { minRebalanceDistance, minFeeIncreaseDistance, maxFeeRate } = this.config;
         const isBelowBounds = currentDistance <= -minFeeIncreaseDistance;
 
+        const getBelowOutgoingForwards = (partialHistory: DeepReadonly<BalanceChange[]>) => {
+            const done = (c: Readonly<BalanceChange>) => getDistance(c.balance) > -minFeeIncreaseDistance;
+            return [...Actions.filterHistory(partialHistory, OutgoingForward, done)] as const;
+        };
+
         if (lastOutgoing) {
             if (isBelowBounds) {
-                const belowOutgoingForwards = this.getBelowOutgoingForwards(getDistance, history);
+                const belowOutgoingForwards = getBelowOutgoingForwards(history);
                 yield* this.getMaxIncreaseFeeAction(channel, currentDistance, belowOutgoingForwards, Date.now());
             } else {
                 const done = (c: Readonly<BalanceChange>) => getDistance(c.balance) <= -minFeeIncreaseDistance;
@@ -384,11 +389,6 @@ export class Actions {
                 yield* this.getNoForwardsFeeAction(channel, currentDistance, newFeeRate);
             }
         }
-    }
-
-    private getBelowOutgoingForwards(getDistance: (balance: number) => number, history: DeepReadonly<BalanceChange[]>) {
-        const done = (c: Readonly<BalanceChange>) => getDistance(c.balance) > -this.config.minFeeIncreaseDistance;
-        return [...Actions.filterHistory(history, OutgoingForward, done)] as const;
     }
 
     private *getMaxIncreaseFeeAction(
