@@ -362,9 +362,7 @@ export class Actions {
         if (lastOut) {
             if (isBelowBounds) {
                 const belowOutForwards = getBelowOutForwards(history);
-
-                const action =
-                    this.getMaxIncreaseFeeAction(channel, currentDistance, belowOutForwards, Date.now());
+                const action = this.getMaxIncreaseFeeAction(channel, currentDistance, belowOutForwards, Date.now());
 
                 if (action.target > fee_rate) {
                     yield action;
@@ -372,9 +370,28 @@ export class Actions {
             } else {
                 const done = (c: Readonly<BalanceChange>) => getDistance(c.balance) <= -minFeeIncreaseDistance;
                 const notBelowChanges = [...Actions.filterHistory(history, BalanceChange, done)] as const;
+                const notBelowStart = new Date(notBelowChanges.at(-1)?.time ?? "").toISOString();
 
-                if (
-                    !(yield* this.getFeeDecreaseAction(channel, currentDistance, lastOut, notBelowChanges)) &&
+                if (notBelowStart > lastOut.time) {
+                    // There has been no outgoing forward since the balance has moved to a point that is no longer below
+                    // bounds, which forces us recalculate the fee that was proposed at that point and then calculate
+                    // fee decreases from there.
+                    const belowOutForwards = getBelowOutForwards(history.slice(notBelowChanges.length));
+
+                    if (belowOutForwards[0]) {
+                        const action = this.getMaxIncreaseFeeAction(
+                            channel,
+                            getDistance(belowOutForwards[0].balance),
+                            belowOutForwards,
+                            new Date(notBelowStart).valueOf(),
+                        );
+
+                        yield* this.getFeeDecreaseAction2(channel, currentDistance, action.target, notBelowStart);
+                    }
+                // The latest outgoing forward happened after the balance moved to where it is no longer below
+                // bounds.
+                } else if (
+                    !(yield* this.getFeeDecreaseAction(channel, currentDistance, lastOut)) &&
                     // Potentially raising the fee due to forwards coming in through channels that are above bounds only
                     // makes sense if this channel itself is at least as much below the target balance such that it will
                     // be targeted by rebalancing.
@@ -429,24 +446,28 @@ export class Actions {
         return actions.reduce((p, c) => (p.target > c.target ? p : c));
     }
 
-    private *getFeeDecreaseAction(
+    private *getFeeDecreaseAction2(
         channel: IChannelStats,
         currentDistance: number,
-        lastOut: Readonly<OutForward>,
-        _changes: DeepReadonly<BalanceChange[]>,
+        feeRate: number,
+        notBelowStart: string,
     ) {
-        // If target balance distance is either within bounds or above, we simply look for the latest outgoing
-        // forward and drop the fee depending on how long ago it happened. There is no immediate component here,
-        // because lower fees are very unlikely to attract outgoing forwards for several hours.
-        // TODO: Also determine since when the channel has been within bounds or above and use that or the latest
-        // forward.
+        const reason =
+            `The current distance from the target balance is ${currentDistance.toFixed(2)} and there have been no ` +
+            `outgoing forwards since the balance has moved out of the below bounds zone at ${notBelowStart}. At that ` +
+            `point the proposed fee rate was ${feeRate}ppm.`;
+
+        return yield* this.createFeeDecreaseAction(channel, feeRate, Date.now() - Date.parse(notBelowStart), reason);
+    }
+
+    private *getFeeDecreaseAction(channel: IChannelStats, currentDistance: number, lastOut: Readonly<OutForward>) {
         const feeRate = Actions.getFeeRate(lastOut, channel);
 
         const reason =
             `The current distance from the target balance is ${currentDistance.toFixed(2)} and the most ` +
             `recent outgoing forward took place on ${lastOut.time} and paid ${feeRate}ppm.`;
 
-        return yield* this.createFeeDecreaseAction(channel, feeRate, lastOut, reason);
+        return yield* this.createFeeDecreaseAction(channel, feeRate, Date.now() - Date.parse(lastOut.time), reason);
     }
 
     private *getAboveBoundsFeeIncreaseAction(
@@ -537,10 +558,9 @@ export class Actions {
     private *createFeeDecreaseAction(
         channel: IChannelStats,
         feeRate: number,
-        { time }: Readonly<BalanceChange>,
+        elapsedMilliseconds: number,
         reason: string,
     ) {
-        const elapsedMilliseconds = Date.now() - new Date(time).valueOf();
         const elapsedDays = (elapsedMilliseconds / 24 / 60 / 60 / 1000) - this.config.feeDecreaseWaitDays;
 
         if (elapsedDays > 0) {
