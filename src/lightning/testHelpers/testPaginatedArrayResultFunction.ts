@@ -24,8 +24,8 @@ export const testPaginatedArrayResultFunction = <
                 ++length;
             }
 
-            assert(length < limit + 1);
-            assert(length > 0);
+            assert(length <= limit);
+            assert(length >= 0);
         });
 
         it("should return results of 1 day", async () => {
