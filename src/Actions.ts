@@ -354,15 +354,21 @@ export class Actions {
         const { minRebalanceDistance, minFeeIncreaseDistance, maxFeeRate } = this.config;
         const isBelowBounds = currentDistance <= -minFeeIncreaseDistance;
 
-        const getBelowOutForwards = (partialHistory: DeepReadonly<BalanceChange[]>) => {
+        const getIncreaseAction = (partialHistory: DeepReadonly<BalanceChange[]>, timeMilliseconds: number) => {
             const done = (c: Readonly<BalanceChange>) => getDistance(c.balance) > -minFeeIncreaseDistance;
-            return [...Actions.filterHistory(partialHistory, OutForward, done)] as const;
+            const belowOutForwards = [...Actions.filterHistory(partialHistory, OutForward, done)] as const;
+
+            if (!partialHistory[0] || !belowOutForwards[0]) {
+                throw new Error("Unexpected empty history or no outgoing forwards found!");
+            }
+
+            const distance = getDistance(partialHistory[0].balance);
+            return this.getMaxIncreaseFeeAction(channel, distance, belowOutForwards, timeMilliseconds);
         };
 
         if (lastOut) {
             if (isBelowBounds) {
-                const belowOutForwards = getBelowOutForwards(history);
-                const action = this.getMaxIncreaseFeeAction(channel, currentDistance, belowOutForwards, Date.now());
+                const action = getIncreaseAction(history, Date.now());
 
                 if (action.target > fee_rate) {
                     yield action;
@@ -370,24 +376,14 @@ export class Actions {
             } else {
                 const done = (c: Readonly<BalanceChange>) => getDistance(c.balance) <= -minFeeIncreaseDistance;
                 const notBelowChanges = [...Actions.filterHistory(history, BalanceChange, done)] as const;
-                const notBelowStart = new Date(notBelowChanges.at(-1)?.time ?? "").toISOString();
+                const notBelowStart = notBelowChanges.at(-1)?.time ?? "";
 
                 if (notBelowStart > lastOut.time) {
                     // There has been no outgoing forward since the balance has moved to a point that is no longer below
                     // bounds, which forces us recalculate the fee that was proposed at that point and then calculate
                     // fee decreases from there.
-                    const belowOutForwards = getBelowOutForwards(history.slice(notBelowChanges.length));
-
-                    if (belowOutForwards[0]) {
-                        const action = this.getMaxIncreaseFeeAction(
-                            channel,
-                            getDistance(belowOutForwards[0].balance),
-                            belowOutForwards,
-                            Date.parse(notBelowStart),
-                        );
-
-                        yield* this.getFeeDecreaseAction2(channel, currentDistance, action.target, notBelowStart);
-                    }
+                    const action = getIncreaseAction(history.slice(notBelowChanges.length), Date.parse(notBelowStart));
+                    yield* this.getRebalancedFeeDecreaseAction(channel, currentDistance, action.target, notBelowStart);
                 // The latest outgoing forward happened after the balance moved to where it is no longer below
                 // bounds.
                 } else if (
@@ -446,7 +442,7 @@ export class Actions {
         return actions.reduce((p, c) => (p.target > c.target ? p : c));
     }
 
-    private *getFeeDecreaseAction2(
+    private *getRebalancedFeeDecreaseAction(
         channel: IChannelStats,
         currentDistance: number,
         feeRate: number,
@@ -465,7 +461,7 @@ export class Actions {
 
         const reason =
             `The current distance from the target balance is ${currentDistance.toFixed(2)} and the most ` +
-            `recent outgoing forward took place on ${lastOut.time} and paid ${feeRate}ppm.`;
+            `recent outgoing forward took place at ${lastOut.time} and paid ${feeRate}ppm.`;
 
         return yield* this.createFeeDecreaseAction(channel, feeRate, Date.now() - Date.parse(lastOut.time), reason);
     }
