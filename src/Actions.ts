@@ -383,7 +383,7 @@ export class Actions {
                             channel,
                             getDistance(belowOutForwards[0].balance),
                             belowOutForwards,
-                            new Date(notBelowStart).valueOf(),
+                            Date.parse(notBelowStart),
                         );
 
                         yield* this.getFeeDecreaseAction2(channel, currentDistance, action.target, notBelowStart);
@@ -428,7 +428,7 @@ export class Actions {
         // the immediate fee increase is higher.
         const getIncreaseFeeAction = (change: Readonly<OutForward>) => {
             const feeRate = Actions.getFeeRate(change, channel);
-            const elapsedMilliseconds = timeMilliseconds - new Date(change.time).valueOf();
+            const elapsedMilliseconds = timeMilliseconds - Date.parse(change.time);
             const rawFraction = Math.abs(currentDistance) - this.config.minFeeIncreaseDistance;
             const addFraction = this.getIncreaseFraction(elapsedMilliseconds, rawFraction);
             // If the fee rate has been really low then the formula wouldn't increase it meaningfully. An
@@ -630,7 +630,7 @@ export class Actions {
 
             for (const { time, amount, outChannel } of Actions.filterHistory(history, InForward, done)) {
                 if (outChannel === forOutChannel) {
-                    const timeMilliseconds = new Date(time).valueOf();
+                    const timeMilliseconds = Date.parse(time);
                     earliest = Math.min(earliest, timeMilliseconds);
                     latest = Math.max(latest, timeMilliseconds);
 

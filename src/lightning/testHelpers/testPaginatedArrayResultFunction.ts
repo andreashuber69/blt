@@ -40,7 +40,7 @@ export const testPaginatedArrayResultFunction = <
             });
 
             for await (const result of results) {
-                assert(now - new Date(result.created_at).valueOf() < oneDay);
+                assert(now - Date.parse(result.created_at) < oneDay);
             }
         });
     });
