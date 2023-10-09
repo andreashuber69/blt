@@ -32,13 +32,6 @@ export abstract class BalanceChange {
     private balanceImpl: number | undefined;
 }
 
-export class Payment extends BalanceChange {
-    /** See {@linkcode BalanceChange.constructor}. */
-    public constructor(time: string, amount: number) {
-        super(time, amount);
-    }
-}
-
 export abstract class Forward extends BalanceChange {
     /**
      * See {@linkcode BalanceChange.constructor}.
@@ -77,6 +70,27 @@ export class OutForward extends Forward {
         public readonly inChannel: IChannelStats | undefined,
     ) {
         super(time, amount, fee);
+    }
+}
+
+export class InRebalance extends BalanceChange {
+    /** See {@linkcode BalanceChange.constructor}. */
+    public constructor(time: string, amount: number) {
+        super(time, amount);
+    }
+}
+
+export class OutRebalance extends BalanceChange {
+    /** See {@linkcode BalanceChange.constructor}. */
+    public constructor(time: string, amount: number) {
+        super(time, amount);
+    }
+}
+
+export class Payment extends BalanceChange {
+    /** See {@linkcode BalanceChange.constructor}. */
+    public constructor(time: string, amount: number) {
+        super(time, amount);
     }
 }
 
@@ -121,6 +135,14 @@ export class ChannelStats {
     public addOutForward(time: string, amount: number, fee: number, inChannel: IChannelStats | undefined) {
         this.addToHistory(new OutForward(time, amount, fee, inChannel));
         this.updateStats(this.outForwardsImpl, amount);
+    }
+
+    public addInRebalance(time: string, amount: number) {
+        this.addToHistory(new InRebalance(time, amount));
+    }
+
+    public addOutRebalance(time: string, amount: number) {
+        this.addToHistory(new OutRebalance(time, amount));
     }
 
     public addPayment(time: string, amount: number) {

@@ -42,9 +42,15 @@ export class NodeStats {
                 if (is_confirmed) {
                     const { rawTokens, fee } = this.getTokens(route);
                     const outChannel = channelsImpl.get(route.hops.at(0)?.channel ?? "");
-                    outChannel?.addPayment(confirmed_at, rawTokens);
                     const inChannel = channelsImpl.get(route.hops.at(-1)?.channel ?? "");
-                    inChannel?.addPayment(confirmed_at, -rawTokens + fee);
+
+                    if (outChannel && inChannel) {
+                        outChannel.addOutRebalance(confirmed_at, rawTokens);
+                        inChannel.addInRebalance(confirmed_at, -rawTokens + fee);
+                    } else {
+                        outChannel?.addPayment(confirmed_at, rawTokens);
+                        inChannel?.addPayment(confirmed_at, -rawTokens + fee);
+                    }
                 }
             }
         }
