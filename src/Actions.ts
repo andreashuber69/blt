@@ -9,6 +9,9 @@ type Config = ActionsConfig & { readonly days: number };
 
 const formatSats = (sats: number) => `${Math.round(sats).toLocaleString()}sats`;
 
+const formatDaysAgo = (isoDate: string) =>
+    `${((Date.now() - Date.parse(isoDate)) / 24 / 60 / 60 / 1000).toFixed(1)} days ago`;
+
 /**
  * Exposes various configuration variables that are used by {@linkcode Actions.get} to propose changes.
  * @description Some variables refer to the distance of the local balance from the target balance. This is a
@@ -279,7 +282,7 @@ export class Actions {
         }
 
         const flowStats =
-            `In the last ${days} days, this channel has seen total incoming forwards of ${formatted.totalInTokens} ` +
+            `In the last ${days} days this channel has seen total incoming forwards of ${formatted.totalInTokens} ` +
             `and total outgoing forwards of ${formatted.totalOutTokens}.`;
 
         const minBalance = Math.round(minChannelBalanceFraction * capacity);
@@ -456,7 +459,7 @@ export class Actions {
 
             const reason =
                 `The current distance from the target balance is ${currentDistance.toFixed(2)} and the outgoing ` +
-                `forward at ${change.time} contributed to that situation and paid ${feeRate}ppm.`;
+                `forward ${formatDaysAgo(change.time)} contributed to that situation and paid ${feeRate}ppm.`;
 
             return this.createFeeAction(channel, newFeeRate, reason);
         };
@@ -473,8 +476,8 @@ export class Actions {
     ) {
         const reason =
             `The current distance from the target balance is ${currentDistance.toFixed(2)} and there have been no ` +
-            `outgoing forwards since the balance has moved out of the below bounds zone at ${notBelowStart}. At that ` +
-            `point the proposed fee rate was ${feeRate}ppm.`;
+            "outgoing forwards since the balance has moved out of the below bounds zone " +
+            `${formatDaysAgo(notBelowStart)}. At that point the proposed fee rate was ${feeRate}ppm.`;
 
         return yield* this.createFeeDecreaseAction(channel, feeRate, Date.now() - Date.parse(notBelowStart), reason);
     }
@@ -484,8 +487,8 @@ export class Actions {
         const feeRate = Actions.getFeeRate(lastOut, channel);
 
         const reason =
-            `The current distance from the target balance is ${currentDistance.toFixed(2)} and the most ` +
-            `recent outgoing forward took place at ${lastOut.time} and paid ${feeRate}ppm.`;
+            `The current distance from the target balance is ${currentDistance.toFixed(2)}, the most ` +
+            `recent outgoing forward took place ${formatDaysAgo(lastOut.time)} and paid ${feeRate}ppm.`;
 
         return yield* this.createFeeDecreaseAction(channel, feeRate, Date.now() - Date.parse(lastOut.time), reason);
     }
