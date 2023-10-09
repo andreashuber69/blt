@@ -457,6 +457,7 @@ export class Actions {
     }
 
     private *getFeeDecreaseAction(channel: IChannelStats, currentDistance: number, lastOut: Readonly<OutForward>) {
+        // TODO: only reduce the fee below the partner fee if there were no incoming rebalances
         const feeRate = Actions.getFeeRate(lastOut, channel);
 
         const reason =
