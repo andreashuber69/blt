@@ -60,6 +60,6 @@ export class NodesRefresher extends FullRefresher<"nodes", NodesElement, NodesEm
 
     private async getNode(lndArgs: AuthenticatedLightningArgs, publicKey: string) {
         // eslint-disable-next-line @typescript-eslint/naming-convention
-        return await getNode({ ...lndArgs, is_omitting_channels: true, public_key: publicKey });
+        return await getNode({ ...lndArgs, public_key: publicKey });
     }
 }

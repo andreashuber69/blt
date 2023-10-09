@@ -80,8 +80,13 @@ export class OutForward extends Forward {
     }
 }
 
+export interface NodeProperties {
+    readonly partnerAlias: string | undefined;
+    readonly partnerFeeRate: number | undefined;
+}
+
 export class ChannelStats {
-    public constructor(public readonly properties: ChannelsElement & { readonly partnerAlias?: string | undefined }) {}
+    public constructor(public readonly properties: ChannelsElement & NodeProperties) {}
 
     public get inForwards(): Readonly<typeof this.inForwardsImpl> {
         return this.inForwardsImpl;

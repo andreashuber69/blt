@@ -15,7 +15,14 @@ export class NodeStats {
         const nodesMap = new Map(nodes.map((n) => [n.id, n]));
 
         const channelsImpl = new Map(channels.map(
-            ({ id, ...rest }) => [id, new ChannelStats({ id, partnerAlias: nodesMap.get(id)?.alias, ...rest })],
+            ({ id, ...rest }) => {
+                const node = nodesMap.get(id);
+
+                const partnerFeeRate =
+                    node?.channels?.find((c) => c.id === id)?.policies?.find((p) => p.fee_rate !== undefined)?.fee_rate;
+
+                return [id, new ChannelStats({ id, partnerAlias: node?.alias, partnerFeeRate, ...rest })];
+            },
         ));
 
         for (const forward of forwards) {
