@@ -5,6 +5,10 @@ import type { DeepReadonly } from "./DeepReadonly.js";
 import type { YieldType } from "./lightning/YieldType.js";
 import type { INodeStats } from "./NodeStats.js";
 
+type Config = ActionsConfig & { readonly days: number };
+
+const formatSats = (sats: number) => `${Math.round(sats).toLocaleString()}sats`;
+
 /**
  * Exposes various configuration variables that are used by {@linkcode Actions.get} to propose changes.
  * @description Some variables refer to the distance of the local balance from the target balance. This is a
@@ -164,11 +168,11 @@ export interface Action {
  */
 export class Actions {
     public constructor({ channels, days }: INodeStats, config: ActionsConfig) {
-        this.channels = new Map([...channels.values()].map(
-            (channel) => ([channel, Actions.getChannelBalanceAction(channel, config)]),
-        ));
-
         this.config = { ...config, days };
+
+        this.channels = new Map([...channels.values()].map(
+            (channel) => ([channel, Actions.getChannelBalanceAction(channel, this.config)]),
+        ));
     }
 
     public *get() {
@@ -209,7 +213,8 @@ export class Actions {
             minRebalanceDistance,
             minChannelForwards,
             largestForwardMarginFraction,
-        }: ActionsConfig,
+            days,
+        }: Config,
     ): Action {
         const createAction = (targetBalance: number, reason: string): Action => {
             const target = Math.round(targetBalance);
@@ -254,21 +259,36 @@ export class Actions {
 
         const marginPercent = Math.round(largestForwardMarginFraction * 100);
 
+        const formatted = {
+            maxInTokens: formatSats(inForwards.maxTokens),
+            maxOutTokens: formatSats(outForwards.maxTokens),
+            capacity: formatSats(capacity),
+            totalInTokens: formatSats(inForwards.totalTokens),
+            totalOutTokens: formatSats(outForwards.totalTokens),
+            optimalBalance: formatSats(optimalBalance),
+        } as const;
+
         if (minLargestForwardBalance > maxLargestForwardBalance) {
             // TODO: "Increase" the channel capacity?
             return createAction(
                 0.5 * capacity,
-                `The sum of the largest incoming (${inForwards.maxTokens}) and outgoing (${outForwards.maxTokens}) ` +
-                `forwards + ${marginPercent}% exceeds the capacity of ${capacity}, defaulting to half the capacity.`,
+                `The sum of the largest incoming (${formatted.maxInTokens}) and outgoing (${formatted.maxOutTokens}) ` +
+                `forwards + ${marginPercent}% exceeds the capacity of ${formatted.capacity}, defaulting to half the ` +
+                "capacity.",
             );
         }
+
+        const flowStats =
+            `In the last ${days} days, this channel has seen total incoming forwards of ${formatted.totalInTokens} ` +
+            `and total outgoing forwards of ${formatted.totalOutTokens}.`;
 
         const minBalance = Math.round(minChannelBalanceFraction * capacity);
 
         if (optimalBalance < minBalance) {
             return createAction(
                 minBalance,
-                `The optimal balance according to flow (${optimalBalance}) is below the minimum balance.`,
+                `${flowStats} The optimal balance according to flow (${formatted.optimalBalance}) is below the ` +
+                "minimum balance.",
             );
         }
 
@@ -277,7 +297,8 @@ export class Actions {
         if (optimalBalance > maxBalance) {
             return createAction(
                 maxBalance,
-                `The optimal balance according to flow (${optimalBalance}) is above the maximum balance.`,
+                `${flowStats} The optimal balance according to flow (${formatted.optimalBalance}) is above the ` +
+                "maximum balance.",
             );
         }
 
@@ -285,8 +306,9 @@ export class Actions {
             // TODO: "Increase" the channel capacity?
             return createAction(
                 minLargestForwardBalance,
-                `The optimal balance according to flow (${optimalBalance}) is below the minimum balance to route ` +
-                `the largest past outgoing forward of ${outForwards.maxTokens} + ${marginPercent}%.`,
+                `${flowStats} The optimal balance according to flow (${formatted.optimalBalance}) is below the ` +
+                ` minimum balance to route the largest past outgoing forward of ${formatted.maxOutTokens} ` +
+                `+ ${marginPercent}%.`,
             );
         }
 
@@ -294,12 +316,13 @@ export class Actions {
             // TODO: "Increase" the channel capacity?
             return createAction(
                 maxLargestForwardBalance,
-                `The optimal balance according to flow (${optimalBalance}) is above the maximum balance to route ` +
-                `the largest past incoming forward of ${inForwards.maxTokens} + ${marginPercent}%.`,
+                `${flowStats} The optimal balance according to flow (${formatted.optimalBalance}) is above the ` +
+                `maximum balance to route the largest past incoming forward of ${formatted.maxInTokens} ` +
+                `+ ${marginPercent}%.`,
             );
         }
 
-        return createAction(optimalBalance, "This is the optimal balance according to flow.");
+        return createAction(optimalBalance, `${flowStats} This is the optimal balance according to flow.`);
     }
 
     private static *filterBalanceAction(action: Action) {
@@ -336,8 +359,8 @@ export class Actions {
         return Math.round((fee - base_fee) / amount * 1_000_000);
     }
 
+    private readonly config: Config;
     private readonly channels: ReadonlyMap<IChannelStats, Action>;
-    private readonly config: ActionsConfig & { readonly days: number };
 
     private *getFeeActions() {
         for (const channelEntry of this.channels.entries()) {
