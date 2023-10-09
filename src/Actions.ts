@@ -409,6 +409,7 @@ export class Actions {
                     // bounds, which forces us recalculate the fee that was proposed at that point and then calculate
                     // fee decreases from there.
                     const action = getIncreaseAction(history.slice(notBelowChanges.length), Date.parse(notBelowStart));
+                    // TODO: If this returns false, we should check for above bounds fee increase below
                     yield* this.getRebalancedFeeDecreaseAction(channel, currentDistance, action.target, notBelowStart);
                 // The latest outgoing forward happened after the balance moved to where it is no longer below
                 // bounds.
