@@ -1,6 +1,6 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import type { IChannelStats } from "./ChannelStats.js";
-import { BalanceChange, InForward, OutForward } from "./ChannelStats.js";
+import { Change, InForward, OutForward } from "./ChannelStats.js";
 import type { DeepReadonly } from "./DeepReadonly.js";
 import type { YieldType } from "./lightning/YieldType.js";
 import type { INodeStats } from "./NodeStats.js";
@@ -343,10 +343,10 @@ export class Actions {
     }
 
     // Provides the already filtered history relevant to choose a new fee for the given channel.
-    private static *filterHistory<T extends BalanceChange>(
-        history: DeepReadonly<BalanceChange[]>,
+    private static *filterHistory<T extends Change>(
+        history: DeepReadonly<Change[]>,
         ctor: abstract new (...args: never[]) => T,
-        done?: (change: Readonly<BalanceChange>) => boolean,
+        done?: (change: Readonly<Change>) => boolean,
     ): Generator<Readonly<T>, void> {
         for (const change of history) {
             if (done?.(change)) {
@@ -380,8 +380,8 @@ export class Actions {
         const { minRebalanceDistance, minFeeIncreaseDistance, maxFeeRate } = this.config;
         const isBelowBounds = currentDistance <= -minFeeIncreaseDistance;
 
-        const getIncreaseAction = (partialHistory: DeepReadonly<BalanceChange[]>, timeMilliseconds: number) => {
-            const done = (c: Readonly<BalanceChange>) => getDistance(c.balance) > -minFeeIncreaseDistance;
+        const getIncreaseAction = (partialHistory: DeepReadonly<Change[]>, timeMilliseconds: number) => {
+            const done = (c: Readonly<Change>) => getDistance(c.balance) > -minFeeIncreaseDistance;
             const belowOutForwards = [...Actions.filterHistory(partialHistory, OutForward, done)] as const;
 
             if (!partialHistory[0] || !belowOutForwards[0]) {
@@ -400,8 +400,8 @@ export class Actions {
                     yield action;
                 }
             } else {
-                const done = (c: Readonly<BalanceChange>) => getDistance(c.balance) <= -minFeeIncreaseDistance;
-                const notBelowChanges = [...Actions.filterHistory(history, BalanceChange, done)] as const;
+                const done = (c: Readonly<Change>) => getDistance(c.balance) <= -minFeeIncreaseDistance;
+                const notBelowChanges = [...Actions.filterHistory(history, Change, done)] as const;
                 const notBelowStart = notBelowChanges.at(-1)?.time ?? "";
 
                 if (notBelowStart > lastOut.time) {
@@ -647,7 +647,7 @@ export class Actions {
         const currentDistance = getDistance(local_balance);
 
         if (currentDistance >= this.config.minFeeIncreaseDistance) {
-            const done = (c: Readonly<BalanceChange>) => getDistance(c.balance) < this.config.minFeeIncreaseDistance;
+            const done = (c: Readonly<Change>) => getDistance(c.balance) < this.config.minFeeIncreaseDistance;
             let earliest = Date.now();
             let latest = 0;
             let channel = 0;

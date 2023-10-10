@@ -3,7 +3,7 @@ import type { DeepReadonly } from "./DeepReadonly.js";
 import type { ChannelsElement } from "./info/ChannelsRefresher.js";
 
 /** Contains information about a balance change in a channel. */
-export abstract class BalanceChange {
+export abstract class Change {
     /**
      * Initializes a new instance.
      * @param time The ISO 8601 date &amp; time.
@@ -32,11 +32,11 @@ export abstract class BalanceChange {
     private balanceImpl: number | undefined;
 }
 
-export abstract class Forward extends BalanceChange {
+export abstract class Forward extends Change {
     /**
-     * See {@linkcode BalanceChange.constructor}.
-     * @param time See {@linkcode BalanceChange.constructor}.
-     * @param amount See {@linkcode BalanceChange.constructor}.
+     * See {@linkcode Change.constructor}.
+     * @param time See {@linkcode Change.constructor}.
+     * @param amount See {@linkcode Change.constructor}.
      * @param fee The fee that was paid for the forward.
      */
     protected constructor(time: string, amount: number, public readonly fee: number) {
@@ -73,22 +73,22 @@ export class OutForward extends Forward {
     }
 }
 
-export class InRebalance extends BalanceChange {
-    /** See {@linkcode BalanceChange.constructor}. */
+export class InRebalance extends Change {
+    /** See {@linkcode Change.constructor}. */
     public constructor(time: string, amount: number) {
         super(time, amount);
     }
 }
 
-export class OutRebalance extends BalanceChange {
-    /** See {@linkcode BalanceChange.constructor}. */
+export class OutRebalance extends Change {
+    /** See {@linkcode Change.constructor}. */
     public constructor(time: string, amount: number) {
         super(time, amount);
     }
 }
 
-export class Payment extends BalanceChange {
-    /** See {@linkcode BalanceChange.constructor}. */
+export class Payment extends Change {
+    /** See {@linkcode Change.constructor}. */
     public constructor(time: string, amount: number) {
         super(time, amount);
     }
@@ -111,7 +111,7 @@ export class ChannelStats {
     }
 
     /** Gets the balance history of the channel, sorted from latest to earliest. */
-    public get history(): DeepReadonly<BalanceChange[]> {
+    public get history(): DeepReadonly<Change[]> {
         if (this.isUnsorted) {
             this.historyImpl.sort((a, b) => -a.time.localeCompare(b.time));
             let balance = this.properties.local_balance;
@@ -159,12 +159,12 @@ export class ChannelStats {
         };
     }
 
-    private readonly historyImpl = new Array<BalanceChange>();
+    private readonly historyImpl = new Array<Change>();
     private isUnsorted = false;
     private readonly inForwardsImpl = ChannelStats.getNewForwardStats();
     private readonly outForwardsImpl = ChannelStats.getNewForwardStats();
 
-    private addToHistory(change: BalanceChange) {
+    private addToHistory(change: Change) {
         this.isUnsorted = true;
         this.historyImpl.push(change);
     }
