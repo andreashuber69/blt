@@ -2,7 +2,7 @@
 import type { DeepReadonly } from "./DeepReadonly.js";
 import type { ChannelsElement } from "./info/ChannelsRefresher.js";
 
-/** Contains information about a balance change in a channel. */
+/** Represents a balance change in a channel. */
 export abstract class Change {
     /**
      * Initializes a new instance.
@@ -32,24 +32,30 @@ export abstract class Change {
     private balanceImpl: number | undefined;
 }
 
-export abstract class Forward extends Change {
+/**
+ * Represents a balance change in a channel that leaves the node balance essentially unchanged, because it is
+ * compensated by a simultaneous change in another channel, see subclasses for details.
+ */
+export abstract class SelfChange extends Change {
     /**
      * See {@linkcode Change.constructor}.
      * @param time See {@linkcode Change.constructor}.
      * @param amount See {@linkcode Change.constructor}.
-     * @param fee The fee that was paid for the forward.
+     * @param fee The fee that was paid.
      */
     protected constructor(time: string, amount: number, public readonly fee: number) {
         super(time, amount);
     }
 }
 
-export class InForward extends Forward {
+/** Represents an incoming self change, see {@linkcode SelfChange}. */
+export abstract class InSelfChange extends SelfChange {
     /**
-     * See {@linkcode Forward.constructor}.
-     * @param time See {@linkcode Forward.constructor}.
-     * @param amount See {@linkcode Forward.constructor}.
-     * @param fee See {@linkcode Forward.constructor}.
+     * See {@linkcode SelfChange.constructor}.
+     * @param time See {@linkcode SelfChange.constructor}.
+     * @param amount See {@linkcode SelfChange.constructor}.
+     * @param fee See {@linkcode SelfChange.constructor}.
+     * @param outChannel The outgoing channel participating in this self change.
      */
     public constructor(
         time: string,
@@ -61,8 +67,15 @@ export class InForward extends Forward {
     }
 }
 
-export class OutForward extends Forward {
-    /** See {@linkcode Forward.constructor}. */
+/** Represents an outgoing self change, see {@linkcode SelfChange}. */
+export class OutSelfChange extends SelfChange {
+    /**
+     * See {@linkcode SelfChange.constructor}.
+     * @param time See {@linkcode SelfChange.constructor}.
+     * @param amount See {@linkcode SelfChange.constructor}.
+     * @param fee See {@linkcode SelfChange.constructor}.
+     * @param inChannel The incoming channel participating in this self change.
+     */
     public constructor(
         time: string,
         amount: number,
@@ -73,17 +86,35 @@ export class OutForward extends Forward {
     }
 }
 
-export class InRebalance extends Change {
-    /** See {@linkcode Change.constructor}. */
-    public constructor(time: string, amount: number) {
-        super(time, amount);
+/** Represents an incoming forward. */
+export class InForward extends InSelfChange {
+    /** See {@linkcode InSelfChange.constructor}. */
+    public constructor(time: string, amount: number, fee: number, outChannel: IChannelStats | undefined) {
+        super(time, amount, fee, outChannel);
     }
 }
 
-export class OutRebalance extends Change {
-    /** See {@linkcode Change.constructor}. */
-    public constructor(time: string, amount: number) {
-        super(time, amount);
+/** Represents an outgoing forward. */
+export class OutForward extends OutSelfChange {
+    /** See {@linkcode OutSelfChange.constructor}. */
+    public constructor(time: string, amount: number, fee: number, inChannel: IChannelStats | undefined) {
+        super(time, amount, fee, inChannel);
+    }
+}
+
+/** Represents an incoming rebalance. */
+export class InRebalance extends InSelfChange {
+    /** See {@linkcode InSelfChange.constructor}. */
+    public constructor(time: string, amount: number, fee: number, outChannel: IChannelStats | undefined) {
+        super(time, amount, fee, outChannel);
+    }
+}
+
+/** Represents an outgoing rebalance. */
+export class OutRebalance extends OutSelfChange {
+    /** See {@linkcode OutSelfChange.constructor}. */
+    public constructor(time: string, amount: number, fee: number, inChannel: IChannelStats | undefined) {
+        super(time, amount, fee, inChannel);
     }
 }
 
@@ -137,12 +168,12 @@ export class ChannelStats {
         this.updateStats(this.outForwardsImpl, amount);
     }
 
-    public addInRebalance(time: string, amount: number) {
-        this.addToHistory(new InRebalance(time, amount));
+    public addInRebalance(time: string, amount: number, fee: number, outChannel: IChannelStats | undefined) {
+        this.addToHistory(new InRebalance(time, amount, fee, outChannel));
     }
 
-    public addOutRebalance(time: string, amount: number) {
-        this.addToHistory(new OutRebalance(time, amount));
+    public addOutRebalance(time: string, amount: number, fee: number, inChannel: IChannelStats | undefined) {
+        this.addToHistory(new OutRebalance(time, amount, fee, inChannel));
     }
 
     public addPayment(time: string, amount: number) {

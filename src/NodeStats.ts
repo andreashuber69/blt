@@ -45,8 +45,8 @@ export class NodeStats {
                     const inChannel = channelsImpl.get(route.hops.at(-1)?.channel ?? "");
 
                     if (outChannel && inChannel) {
-                        outChannel.addOutRebalance(confirmed_at, rawTokens);
-                        inChannel.addInRebalance(confirmed_at, -rawTokens + fee);
+                        outChannel.addOutRebalance(confirmed_at, rawTokens, fee, inChannel);
+                        inChannel.addInRebalance(confirmed_at, -rawTokens + fee, fee, outChannel);
                     } else {
                         outChannel?.addPayment(confirmed_at, rawTokens);
                         inChannel?.addPayment(confirmed_at, -rawTokens + fee);
