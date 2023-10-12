@@ -103,18 +103,18 @@ export class OutForward extends OutSelfChange {
 }
 
 /** Represents an incoming rebalance. */
-export class InRebalance extends InSelfChange {
-    /** See {@linkcode InSelfChange.constructor}. */
-    public constructor(time: string, amount: number, fee: number, outChannel: IChannelStats | undefined) {
-        super(time, amount, fee, outChannel);
+export class InRebalance extends SelfChange {
+    /** See {@linkcode SelfChange.constructor}. */
+    public constructor(time: string, amount: number, fee: number) {
+        super(time, amount, fee);
     }
 }
 
 /** Represents an outgoing rebalance. */
-export class OutRebalance extends OutSelfChange {
-    /** See {@linkcode OutSelfChange.constructor}. */
-    public constructor(time: string, amount: number, fee: number, inChannel: IChannelStats | undefined) {
-        super(time, amount, fee, inChannel);
+export class OutRebalance extends SelfChange {
+    /** See {@linkcode SelfChange.constructor}. */
+    public constructor(time: string, amount: number, fee: number) {
+        super(time, amount, fee);
     }
 }
 
@@ -168,12 +168,12 @@ export class ChannelStats {
         this.updateStats(this.outForwardsImpl, amount);
     }
 
-    public addInRebalance(time: string, amount: number, fee: number, outChannel: IChannelStats | undefined) {
-        this.addToHistory(new InRebalance(time, amount, fee, outChannel));
+    public addInRebalance(time: string, amount: number, fee: number) {
+        this.addToHistory(new InRebalance(time, amount, fee));
     }
 
-    public addOutRebalance(time: string, amount: number, fee: number, inChannel: IChannelStats | undefined) {
-        this.addToHistory(new OutRebalance(time, amount, fee, inChannel));
+    public addOutRebalance(time: string, amount: number, fee: number) {
+        this.addToHistory(new OutRebalance(time, amount, fee));
     }
 
     public addPayment(time: string, amount: number) {
