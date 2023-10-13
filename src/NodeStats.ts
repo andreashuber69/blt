@@ -7,6 +7,7 @@ export class NodeStats {
     public static get(
         {
             channels: { data: channels },
+            closedChannels: { data: closedChannels },
             nodes: { data: nodes },
             forwards: { data: forwards, days },
             payments: { data: payments },
@@ -25,6 +26,8 @@ export class NodeStats {
             },
         ));
 
+        const closedChannelIds = new Set(closedChannels.map((c) => c.id));
+
         for (const forward of forwards) {
             // eslint-disable-next-line @typescript-eslint/naming-convention
             const { created_at, incoming_channel, outgoing_channel } = forward;
@@ -41,12 +44,16 @@ export class NodeStats {
             for (const { is_confirmed, route } of attempts) {
                 if (is_confirmed) {
                     const { rawTokens, fee } = this.getTokens(route);
-                    const outChannel = channelsImpl.get(route.hops.at(0)?.channel ?? "");
-                    const inChannel = channelsImpl.get(route.hops.at(-1)?.channel ?? "");
+                    const outId = route.hops.at(0)?.channel ?? "";
+                    const outChannel = channelsImpl.get(outId);
+                    const inId = route.hops.at(-1)?.channel ?? "";
+                    const inChannel = channelsImpl.get(inId);
 
-                    if (outChannel && inChannel) {
-                        outChannel.addOutRebalance(confirmed_at, rawTokens, fee);
-                        inChannel.addInRebalance(confirmed_at, -rawTokens + fee, fee);
+                    // Make sure that rebalances are recognized as such even if one of the involved channels has been
+                    // closed.
+                    if ((outChannel ?? closedChannelIds.has(outId)) && (inChannel ?? closedChannelIds.has(inId))) {
+                        outChannel?.addOutRebalance(confirmed_at, rawTokens, fee);
+                        inChannel?.addInRebalance(confirmed_at, -rawTokens + fee, fee);
                     } else {
                         outChannel?.addPayment(confirmed_at, rawTokens);
                         inChannel?.addPayment(confirmed_at, -rawTokens + fee);
