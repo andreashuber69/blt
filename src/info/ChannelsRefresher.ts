@@ -21,10 +21,10 @@ export interface IChannelsRefresherArgs {
 
 export type ChannelsElement = Channel & FeeRate;
 
-/** Implements {@linkcode IRefresher} for public channels. */
+/** Implements {@linkcode IRefresher} for open public channels. */
 export class ChannelsRefresher extends FullRefresher<"channels", ChannelsElement, ChannelsEmitters> {
     /**
-     * Creates a new object implementing {@linkcode IRefresher} for public channels.
+     * Creates a new object implementing {@linkcode IRefresher} for open public channels.
      * @param args See {@linkcode IChannelsRefresherArgs}.
      */
     public static async create(args: IChannelsRefresherArgs) {
