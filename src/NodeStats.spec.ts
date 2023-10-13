@@ -32,6 +32,10 @@ const nodeInfo: INodeInfo = {
         ],
         ...getManagerMembers<"channels">(),
     },
+    closedChannels: {
+        data: [],
+        ...getManagerMembers<"closedChannels">(),
+    },
     nodes: {
         data: [
             { alias: "Node 1", id: "0x3609x2" },

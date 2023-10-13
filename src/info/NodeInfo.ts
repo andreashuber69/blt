@@ -5,6 +5,8 @@ import { getIdentity } from "lightning";
 import type { Identity } from "../lightning/Identity.js";
 import type { ChannelsElement } from "./ChannelsRefresher.js";
 import { ChannelsRefresher } from "./ChannelsRefresher.js";
+import type { ClosedChannelsElement } from "./ClosedChannelsRefresher.js";
+import { ClosedChannelsRefresher } from "./ClosedChannelsRefresher.js";
 import type { ForwardsElement } from "./ForwardsRefresher.js";
 import { ForwardsRefresher } from "./ForwardsRefresher.js";
 import type { NodesElement } from "./NodesRefresher.js";
@@ -14,7 +16,7 @@ import type { PaymentsElement } from "./PaymentsRefresher.js";
 import { PaymentsRefresher } from "./PaymentsRefresher.js";
 import type { IRefresher, Refresher } from "./Refresher.js";
 
-const refresherNames = ["channels", "nodes", "forwards", "payments"] as const;
+const refresherNames = ["channels", "closedChannels", "nodes", "forwards", "payments"] as const;
 
 type RefresherName = (typeof refresherNames)[number];
 
@@ -30,6 +32,7 @@ type RefresherProperty<Name extends RefresherName, Data> = {
  */
 export class NodeInfo implements
     RefresherProperty<"channels", ChannelsElement[]>,
+    RefresherProperty<"closedChannels", ClosedChannelsElement[]>,
     RefresherProperty<"nodes", NodesElement[]>,
     RefresherProperty<"forwards", ForwardsElement[]>,
     RefresherProperty<"payments", PaymentsElement[]> {
@@ -49,6 +52,7 @@ export class NodeInfo implements
         return new NodeInfo(
             await getIdentity(args.lndArgs),
             await ChannelsRefresher.create(args),
+            await ClosedChannelsRefresher.create(args),
             await NodesRefresher.create(args),
             await ForwardsRefresher.create(args),
             await PaymentsRefresher.create(args),
@@ -87,6 +91,7 @@ export class NodeInfo implements
     private constructor(
         public readonly identity: Identity,
         public readonly channels: IRefresher<"channels", ChannelsElement[]>,
+        public readonly closedChannels: IRefresher<"closedChannels", ClosedChannelsElement[]>,
         public readonly nodes: IRefresher<"nodes", NodesElement[]>,
         public readonly forwards: IPartialRefresher<"forwards", ForwardsElement>,
         public readonly payments: IPartialRefresher<"payments", PaymentsElement>,
@@ -102,5 +107,6 @@ export class NodeInfo implements
 /** See {@linkcode NodeInfo}. */
 export type INodeInfo = Pick<
     NodeInfo,
-    "channels" | "forwards" | "identity" | "nodes" | "onChanged" | "onError" | "payments" | "removeAllListeners"
+    "channels" | "closedChannels" | "forwards" | "identity" | "nodes" | "onChanged" | "onError" | "payments" |
+    "removeAllListeners"
 >;
