@@ -412,21 +412,25 @@ export class Actions {
                 const notBelowStart = notBelowChanges.at(-1)?.time ?? "";
 
                 if (notBelowStart > lastOut.time) {
-                    // There has been no outgoing forward since the balance has moved to a point that is no longer below
-                    // bounds, which forces us recalculate the fee that was proposed at that point and then calculate
-                    // fee decreases from there.
-                    const action = getIncreaseAction(history.slice(notBelowChanges.length), Date.parse(notBelowStart));
-                    // TODO: If this returns false, we should check for above bounds fee increase below
-                    yield* this.getRebalancedFeeDecreaseAction(channel, currentDistance, action.target, notBelowStart);
-                // The latest outgoing forward happened after the balance moved to where it is no longer below
-                // bounds.
-                } else if (
-                    !(yield* this.getFeeDecreaseAction(channel, currentDistance, lastOut)) &&
-                    // Potentially raising the fee due to forwards coming in through channels that are above bounds only
-                    // makes sense if this channel itself is at least as much below the target balance such that it will
-                    // be targeted by rebalancing.
-                    (currentDistance <= -minRebalanceDistance)
-                ) {
+                    // There has been no outgoing forward since the balance has moved out of the below bounds zone,
+                    // which forces us recalculate the fee rate that was proposed at that point and then calculate fee
+                    // decreases from there.
+                    const { target: feeRate } =
+                        getIncreaseAction(history.slice(notBelowChanges.length), Date.parse(notBelowStart));
+
+                    if (yield* this.getRebalancedFeeDecreaseAction(channel, currentDistance, feeRate, notBelowStart)) {
+                        return;
+                    }
+                } else if (yield* this.getFeeDecreaseAction(channel, currentDistance, lastOut)) {
+                    // The latest outgoing forward happened after the balance moved out of the below bounds zone and a
+                    // fee decrease was proposed.
+                    return;
+                }
+
+                // Potentially raising the fee due to forwards coming in through channels that are above bounds only
+                // makes sense if this channel itself is at least as much below the target balance such that it will
+                // be targeted by rebalancing.
+                if (currentDistance <= -minRebalanceDistance) {
                     const allOut = [...Actions.filterHistory(history, OutForward)] as const;
                     yield* this.getAboveBoundsFeeIncreaseAction(channel, currentDistance, lastOut, allOut);
                 }
@@ -516,8 +520,9 @@ export class Actions {
             // eslint-disable-next-line unicorn/prefer-native-coercion-functions
             filter(<T extends NonNullable<unknown>>(c: T | undefined): c is T => Boolean(c));
 
-        if (inChannels.length > 0) {
-            const inflowStats = [...this.getAllAboveBoundsInflowStats(channel, inChannels)];
+        const inflowStats = [...this.getAllAboveBoundsInflowStats(channel, inChannels)];
+
+        if (inflowStats.length > 0) {
             const earliestIsoTime = new Date(Math.min(...inflowStats.map((i) => i.earliest))).toISOString();
             const weightedAboveBoundsInflow = inflowStats.map((i) => i.channel * i.currentDistance);
 
@@ -611,9 +616,10 @@ export class Actions {
     private getMinFeeRate(channel: IChannelStats, reason: string) {
         const { history, properties: { partnerFeeRate } } = channel;
 
-        const minRebalanceRates = [...Actions.filterHistory(history, InRebalance, () => false)].map(
-            (r) => Actions.getFeeRate(r.fee, r.amount),
-        ).sort((a, b) => a - b).slice(0, 3);
+        const minRebalanceRates = [...Actions.filterHistory(history, InRebalance)].
+            map((r) => Actions.getFeeRate(r.fee, r.amount)).
+            sort((a, b) => a - b).
+            slice(0, 3);
 
         const rebalanceRate = minRebalanceRates.reduce((p, c) => p + c, 0) / minRebalanceRates.length;
 
