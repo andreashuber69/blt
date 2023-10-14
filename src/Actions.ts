@@ -1,5 +1,5 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
-import type { IChannelStats } from "./ChannelStats.js";
+import type { IChannelStats, SelfChange } from "./ChannelStats.js";
 import { Change, InForward, OutForward } from "./ChannelStats.js";
 import type { DeepReadonly } from "./DeepReadonly.js";
 import type { YieldType } from "./lightning/YieldType.js";
@@ -357,9 +357,16 @@ export class Actions {
         }
     }
 
-    // eslint-disable-next-line @typescript-eslint/naming-convention
-    private static getFeeRate({ amount, fee }: Readonly<OutForward>, { properties: { base_fee } }: IChannelStats) {
-        return Math.round((fee - base_fee) / amount * 1_000_000);
+    private static getChannelFeeRate(
+        { amount, fee }: Readonly<SelfChange>,
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        { properties: { base_fee } }: IChannelStats,
+    ) {
+        return this.getFeeRate(fee - base_fee, amount);
+    }
+
+    private static getFeeRate(fee: number, amount: number) {
+        return Math.round(fee / Math.abs(amount) * 1_000_000);
     }
 
     private readonly config: Config;
@@ -450,7 +457,7 @@ export class Actions {
         // the other hand, when the time span between the two outgoing forwards is much shorter, it is likely that
         // the immediate fee increase is higher.
         const getIncreaseFeeAction = (change: Readonly<OutForward>) => {
-            const feeRate = Actions.getFeeRate(change, channel);
+            const feeRate = Actions.getChannelFeeRate(change, channel);
             const elapsedMilliseconds = timeMilliseconds - Date.parse(change.time);
             const rawFraction = Math.abs(currentDistance) - this.config.minFeeIncreaseDistance;
             const addFraction = this.getIncreaseFraction(elapsedMilliseconds, rawFraction);
@@ -485,7 +492,7 @@ export class Actions {
 
     private *getFeeDecreaseAction(channel: IChannelStats, currentDistance: number, lastOut: Readonly<OutForward>) {
         // TODO: only reduce the fee below the partner fee if there were no incoming rebalances
-        const feeRate = Actions.getFeeRate(lastOut, channel);
+        const feeRate = Actions.getChannelFeeRate(lastOut, channel);
 
         const reason =
             `The current distance from the target balance is ${currentDistance.toFixed(2)}, the most ` +
@@ -528,7 +535,7 @@ export class Actions {
                 // We only increase the fee to degree that the total outflows in this channel were caused by
                 // incoming forwards into above bounds channels and the current target balance distance.
                 const increaseFraction = (ratio - this.config.minFeeIncreaseDistance) * Math.abs(currentDistance);
-                const feeRate = Actions.getFeeRate(lastOut, channel);
+                const feeRate = Actions.getChannelFeeRate(lastOut, channel);
                 const newFeeRate = Math.min(Math.round(feeRate * (1 + increaseFraction)), this.config.maxFeeRate);
 
                 if (newFeeRate > channel.properties.fee_rate) {
