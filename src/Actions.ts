@@ -557,12 +557,13 @@ export class Actions {
     }
 
     private *getNoForwardsFeeAction(channel: IChannelStats, currentDistance: number, feeRate: number) {
-        // TODO: Check whether the channel has been open for this long
-        const reason =
-            `The current distance from the target balance is ${currentDistance.toFixed(2)} and no outgoing ` +
-            `forwards have been observed in the last ${this.config.days} days.`;
+        if (Date.now() - Date.parse(channel.properties.created_at) >= this.config.days * 24 * 60 * 60 * 1000) {
+            const reason =
+                `The current distance from the target balance is ${currentDistance.toFixed(2)} and no outgoing ` +
+                `forwards have been observed in the last ${this.config.days} days.`;
 
-        yield this.createFeeAction(channel, feeRate, reason);
+            yield this.createFeeAction(channel, feeRate, reason);
+        }
     }
 
     private getIncreaseFraction(elapsedMilliseconds: number, rawFraction: number) {
