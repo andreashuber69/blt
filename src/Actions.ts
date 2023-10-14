@@ -1,6 +1,6 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 import type { IChannelStats, SelfChange } from "./ChannelStats.js";
-import { Change, InForward, OutForward } from "./ChannelStats.js";
+import { Change, InForward, InRebalance, OutForward } from "./ChannelStats.js";
 import type { DeepReadonly } from "./DeepReadonly.js";
 import type { YieldType } from "./lightning/YieldType.js";
 import type { INodeStats } from "./NodeStats.js";
@@ -491,7 +491,6 @@ export class Actions {
     }
 
     private *getFeeDecreaseAction(channel: IChannelStats, currentDistance: number, lastOut: Readonly<OutForward>) {
-        // TODO: only reduce the fee below the partner fee if there were no incoming rebalances
         const feeRate = Actions.getChannelFeeRate(lastOut, channel);
 
         const reason =
@@ -596,12 +595,63 @@ export class Actions {
 
         if (elapsedDays > 0) {
             const decreaseFraction = elapsedDays / (this.config.days - this.config.feeDecreaseWaitDays);
-            const newFeeRate = Math.max(Math.round(feeRate * (1 - decreaseFraction)), 0);
+            const newFeeRate = Math.round(feeRate * (1 - decreaseFraction));
+            const { minFeeRate, minReason } = this.getMinFeeRate(channel, reason);
 
-            if (newFeeRate < channel.properties.fee_rate) {
-                yield this.createFeeAction(channel, newFeeRate, reason);
+            if (newFeeRate <= minFeeRate) {
+                return yield* this.checkCreateAction(channel, minFeeRate, minReason);
             }
 
+            return yield* this.checkCreateAction(channel, newFeeRate, reason);
+        }
+
+        return false;
+    }
+
+    private getMinFeeRate(channel: IChannelStats, reason: string) {
+        const { history, properties: { partnerFeeRate } } = channel;
+
+        const minRebalanceRates = [...Actions.filterHistory(history, InRebalance, () => false)].map(
+            (r) => Actions.getFeeRate(r.fee, r.amount),
+        ).sort((a, b) => a - b).slice(0, 3);
+
+        const rebalanceRate = minRebalanceRates.reduce((p, c) => p + c, 0) / minRebalanceRates.length;
+
+        if (Number.isFinite(rebalanceRate)) {
+            // We only get here if there are any in rebalances in the history, which means we cannot reduce the fees
+            // below the cost of those rebalances or the current partner fee rate, whichever is higher
+            const realPartnerFeeRate = partnerFeeRate ?? 0;
+
+            if (rebalanceRate >= realPartnerFeeRate) {
+                return {
+                    minFeeRate: rebalanceRate,
+                    minReason:
+                        `${reason} At least one rebalance in transaction has been necessary in the last ` +
+                        `${this.config.days} days, which is why the fee rate should not currently be lowered below ` +
+                        "the minimal rebalancing cost.",
+                } as const;
+            }
+
+            return {
+                minFeeRate: realPartnerFeeRate,
+                minReason:
+                    `${reason} At least one rebalance in transaction has been necessary in the last ` +
+                    `${this.config.days} days, which is why the fee rate should not currently be lowered below the ` +
+                    "partner fee rate (which is currently higher than the cost of the past rebalances).",
+            } as const;
+        }
+
+        return {
+            minFeeRate: 0,
+            minReason:
+                `${reason} No rebalance in transactions were necessary in the last ${this.config.days}, ` +
+                "so the fee rate can be lowered below the partner fee rate.",
+        } as const;
+    }
+
+    private *checkCreateAction(channel: IChannelStats, newFeeRate: number, newReason: string) {
+        if (newFeeRate < channel.properties.fee_rate) {
+            yield this.createFeeAction(channel, newFeeRate, newReason);
             return true;
         }
 

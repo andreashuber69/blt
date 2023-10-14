@@ -19,8 +19,10 @@ export class NodeStats {
             ({ id, ...rest }) => {
                 const node = nodesMap.get(id);
 
-                const partnerFeeRate =
-                    node?.channels?.find((c) => c.id === id)?.policies?.find((p) => p.fee_rate !== undefined)?.fee_rate;
+                const partnerFeeRate = node?.channels?.
+                    find((c) => c.id === id)?.policies?.
+                    find((p) => p.public_key === rest.partner_public_key)?.
+                    fee_rate;
 
                 return [id, new ChannelStats({ id, partnerAlias: node?.alias, partnerFeeRate, ...rest })];
             },
