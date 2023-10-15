@@ -614,6 +614,37 @@ export class Actions {
         return false;
     }
 
+    private getChannel(channel: IChannelStats | undefined) {
+        if (channel) {
+            const action = this.channels.get(channel);
+
+            if (!action) {
+                throw new Error("Channel not found!");
+            }
+
+            return [channel, action] as const;
+        }
+
+        return undefined;
+    }
+
+    private *getAllAboveBoundsInflowStats(
+        outChannel: IChannelStats,
+        inChannels: ReadonlyArray<readonly [IChannelStats, Action]>,
+    ) {
+        for (const inChannel of inChannels) {
+            yield* this.getAboveBoundsInflowStats(outChannel, inChannel);
+        }
+    }
+
+    private getChannelStats(
+        { name, currentDistance, earliest, latest, channel }: YieldType<typeof this.getAboveBoundsInflowStats>,
+        totalOutflow: number,
+    ) {
+        return `${name}: ${currentDistance.toFixed(2)} ${Math.round(channel / totalOutflow * 100)}% ` +
+            `(${new Date(earliest).toISOString()} - ${new Date(latest).toISOString()})`;
+    }
+
     private getMinFeeRate(channel: IChannelStats, reason: string) {
         const { history, properties: { partnerFeeRate } } = channel;
 
@@ -663,37 +694,6 @@ export class Actions {
         }
 
         return false;
-    }
-
-    private getChannel(channel: IChannelStats | undefined) {
-        if (channel) {
-            const action = this.channels.get(channel);
-
-            if (!action) {
-                throw new Error("Channel not found!");
-            }
-
-            return [channel, action] as const;
-        }
-
-        return undefined;
-    }
-
-    private *getAllAboveBoundsInflowStats(
-        outChannel: IChannelStats,
-        inChannels: ReadonlyArray<readonly [IChannelStats, Action]>,
-    ) {
-        for (const inChannel of inChannels) {
-            yield* this.getAboveBoundsInflowStats(outChannel, inChannel);
-        }
-    }
-
-    private getChannelStats(
-        { name, currentDistance, earliest, latest, channel }: YieldType<typeof this.getAboveBoundsInflowStats>,
-        totalOutflow: number,
-    ) {
-        return `${name}: ${currentDistance.toFixed(2)} ${Math.round(channel / totalOutflow * 100)}% ` +
-            `(${new Date(earliest).toISOString()} - ${new Date(latest).toISOString()})`;
     }
 
     private *getAboveBoundsInflowStats(
