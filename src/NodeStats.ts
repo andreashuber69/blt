@@ -11,20 +11,26 @@ export class NodeStats {
             nodes: { data: nodes },
             forwards: { data: forwards, days },
             payments: { data: payments },
+            transactions: { data: transactions },
         }: INodeInfo,
     ): INodeStats {
         const nodesMap = new Map(nodes.map((n) => [n.id, n]));
+        const transactionsMap = new Map(transactions.map((t) => [t.id, t.created_at]));
 
         const channelsImpl = new Map(channels.map(
-            ({ id, ...rest }) => {
+            // eslint-disable-next-line @typescript-eslint/naming-convention
+            ({ id, partner_public_key, transaction_id, ...rest }) => {
                 const node = nodesMap.get(id);
 
                 const partnerFeeRate = node?.channels?.
                     find((c) => c.id === id)?.policies?.
-                    find((p) => p.public_key === rest.partner_public_key)?.
+                    find((p) => p.public_key === partner_public_key)?.
                     fee_rate;
 
-                return [id, new ChannelStats({ id, partnerAlias: node?.alias, partnerFeeRate, ...rest })];
+                // We only see confirmed transactions. Should we see a channel even though its funding transactions has
+                // not been confirmed yet, we take the current time as opening time.
+                const openedAt = transactionsMap.get(transaction_id) ?? new Date().toISOString();
+                return [id, new ChannelStats({ id, partnerAlias: node?.alias, partnerFeeRate, openedAt, ...rest })];
             },
         ));
 

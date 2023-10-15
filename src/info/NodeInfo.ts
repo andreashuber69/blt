@@ -15,8 +15,10 @@ import type { IPartialRefresher } from "./PartialRefresher.js";
 import type { PaymentsElement } from "./PaymentsRefresher.js";
 import { PaymentsRefresher } from "./PaymentsRefresher.js";
 import type { IRefresher, Refresher } from "./Refresher.js";
+import type { TransactionsElement } from "./TransactionsRefresher.js";
+import { TransactionsRefresher } from "./TransactionsRefresher.js";
 
-const refresherNames = ["channels", "closedChannels", "nodes", "forwards", "payments"] as const;
+const refresherNames = ["channels", "closedChannels", "nodes", "forwards", "payments", "transactions"] as const;
 
 type RefresherName = (typeof refresherNames)[number];
 
@@ -35,7 +37,8 @@ export class NodeInfo implements
     RefresherProperty<"closedChannels", ClosedChannelsElement[]>,
     RefresherProperty<"nodes", NodesElement[]>,
     RefresherProperty<"forwards", ForwardsElement[]>,
-    RefresherProperty<"payments", PaymentsElement[]> {
+    RefresherProperty<"payments", PaymentsElement[]>,
+    RefresherProperty<"transactions", TransactionsElement[]> {
     /**
      * Gets information about a node.
      * @param args See properties for details.
@@ -56,6 +59,7 @@ export class NodeInfo implements
             await NodesRefresher.create(args),
             await ForwardsRefresher.create(args),
             await PaymentsRefresher.create(args),
+            await TransactionsRefresher.create(args),
         );
     }
 
@@ -95,6 +99,7 @@ export class NodeInfo implements
         public readonly nodes: IRefresher<"nodes", NodesElement[]>,
         public readonly forwards: IPartialRefresher<"forwards", ForwardsElement>,
         public readonly payments: IPartialRefresher<"payments", PaymentsElement>,
+        public readonly transactions: IRefresher<"transactions", TransactionsElement[]>,
     ) {}
 
     private forEachRefresher(callback: (refresher: NodeInfo[RefresherName]) => void) {
@@ -108,5 +113,5 @@ export class NodeInfo implements
 export type INodeInfo = Pick<
     NodeInfo,
     "channels" | "closedChannels" | "forwards" | "identity" | "nodes" | "onChanged" | "onError" | "payments" |
-    "removeAllListeners"
+    "removeAllListeners" | "transactions"
 >;

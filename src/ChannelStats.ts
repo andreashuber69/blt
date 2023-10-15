@@ -2,6 +2,8 @@
 import type { DeepReadonly } from "./DeepReadonly.js";
 import type { ChannelsElement } from "./info/ChannelsRefresher.js";
 
+type ChannelProps = "base_fee" | "capacity" | "fee_rate" | "id" | "local_balance";
+
 /** Represents a balance change in a channel. */
 export abstract class Change {
     /**
@@ -125,13 +127,14 @@ export class Payment extends Change {
     }
 }
 
-export interface NodeProperties {
+export interface AdditionalProperties {
+    readonly openedAt: string;
     readonly partnerAlias: string | undefined;
     readonly partnerFeeRate: number | undefined;
 }
 
 export class ChannelStats {
-    public constructor(public readonly properties: ChannelsElement & NodeProperties) {}
+    public constructor(public readonly properties: AdditionalProperties & Pick<ChannelsElement, ChannelProps>) {}
 
     public get inForwards(): Readonly<typeof this.inForwardsImpl> {
         return this.inForwardsImpl;

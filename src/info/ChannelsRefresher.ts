@@ -2,8 +2,6 @@
 import type { AuthenticatedLightningArgs, SubscribeToForwardsForwardEvent } from "lightning";
 import { subscribeToChannels, subscribeToForwards, subscribeToPayments } from "lightning";
 
-import type { ChainTransaction } from "../lightning/getChainTransactions.js";
-import { getChainTransactions } from "../lightning/getChainTransactions.js";
 import type { Channel } from "../lightning/getChannels.js";
 import { getChannels } from "../lightning/getChannels.js";
 import type { FeeRate } from "../lightning/getFeeRates.js";
@@ -21,7 +19,7 @@ export interface IChannelsRefresherArgs {
     readonly delayMilliseconds?: number;
 }
 
-export type ChannelsElement = Channel & FeeRate & Pick<ChainTransaction, "created_at">;
+export type ChannelsElement = Channel & FeeRate;
 
 /** Implements {@linkcode IRefresher} for open public channels. */
 export class ChannelsRefresher extends FullRefresher<"channels", ChannelsElement, ChannelsEmitters> {
@@ -39,10 +37,6 @@ export class ChannelsRefresher extends FullRefresher<"channels", ChannelsElement
         const result = new Array<ChannelsElement>();
         const feeRates = new Map((await getFeeRates(lndArgs)).map(({ id, ...rest }) => [id, rest]));
 
-        const chainTxs = new Map(
-            (await getChainTransactions(lndArgs)).filter((t) => t.is_confirmed).map(({ id, ...rest }) => [id, rest]),
-        );
-
         // eslint-disable-next-line @typescript-eslint/naming-convention
         for (const channel of await getChannels({ ...lndArgs, is_public: true })) {
             const feeRate = feeRates.get(channel.id);
@@ -51,13 +45,7 @@ export class ChannelsRefresher extends FullRefresher<"channels", ChannelsElement
                 throw new Error(`Fee rate missing for channel ${channel.id}.`);
             }
 
-            // eslint-disable-next-line @typescript-eslint/naming-convention
-            const { created_at } = chainTxs.get(channel.transaction_id) ?? {};
-
-            if (created_at) {
-                // eslint-disable-next-line @typescript-eslint/naming-convention
-                result.push({ ...channel, ...feeRate, created_at });
-            }
+            result.push({ ...channel, ...feeRate });
         }
 
         return result;

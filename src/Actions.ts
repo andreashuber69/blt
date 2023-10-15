@@ -557,7 +557,7 @@ export class Actions {
     }
 
     private *getNoForwardsFeeAction(channel: IChannelStats, currentDistance: number, feeRate: number) {
-        if (Date.now() - Date.parse(channel.properties.created_at) >= this.config.days * 24 * 60 * 60 * 1000) {
+        if (Date.now() - Date.parse(channel.properties.openedAt) >= this.config.days * 24 * 60 * 60 * 1000) {
             const reason =
                 `The current distance from the target balance is ${currentDistance.toFixed(2)} and no outgoing ` +
                 `forwards have been observed in the last ${this.config.days} days.`;
