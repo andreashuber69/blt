@@ -572,7 +572,6 @@ export class Actions {
     }
 
     private createFeeAction(channel: IChannelStats, target: number, reason: string): Action {
-        // eslint-disable-next-line @typescript-eslint/naming-convention
         const { properties: { id, partnerAlias: alias, fee_rate: actual } } = channel;
         const max = this.config.maxFeeRate;
         return { entity: "channel", id, alias, priority: 1, variable: "feeRate", actual, target, max, reason };
