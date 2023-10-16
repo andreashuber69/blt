@@ -518,7 +518,7 @@ export class Actions {
             // eslint-disable-next-line unicorn/prefer-native-coercion-functions
             filter(<T extends NonNullable<unknown>>(c: T | undefined): c is T => Boolean(c));
 
-        const inflowStats = [...this.getAllAboveBoundsInflowStats(channel, inChannels)];
+        const inflowStats = [...this.getAllAboveBoundsInflowStats(channel, inChannels)] as const;
 
         if (inflowStats.length > 0) {
             const earliestIsoTime = new Date(Math.min(...inflowStats.map((i) => i.earliest))).toISOString();
@@ -631,6 +631,7 @@ export class Actions {
     private getMinFeeRate(channel: IChannelStats, reason: string) {
         const { history, properties: { partnerFeeRate } } = channel;
 
+        // TODO: use only the most recent in rebalances
         const minRebalanceRates = [...Actions.filterHistory(history, InRebalance)].
             map((r) => Actions.getFeeRate(r.fee, r.amount)).
             sort((a, b) => a - b).
