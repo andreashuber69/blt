@@ -190,21 +190,11 @@ export class Actions {
             yield* Actions.filterBalanceAction(balanceAction);
         }
 
-        const nodeBalanceAction: Action = {
-            entity: "node",
-            variable: "balance",
-            priority: Actions.getPriority(
-                4,
-                Actions.getTargetBalanceDistance(actual, target, max),
-                this.config.minRebalanceDistance,
-            ),
-            actual,
-            target,
-            max,
-            reason: "This is the sum of the target balances of all channels.",
-        };
-
-        yield* Actions.filterBalanceAction(nodeBalanceAction);
+        const distance = Actions.getTargetBalanceDistance(actual, target, max);
+        const priority = Actions.getPriority(4, distance, this.config.minRebalanceDistance);
+        const reason = "This is the sum of the target balances of all channels.";
+        const action = { entity: "node", variable: "balance", priority, actual, target, max, reason } as const;
+        yield* Actions.filterBalanceAction(action);
         yield* this.getFeeActions();
     }
 
