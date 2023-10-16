@@ -432,7 +432,7 @@ export class Actions {
                 // be targeted by rebalancing.
                 if (currentDistance <= -minRebalanceDistance) {
                     const allOut = [...Actions.filterHistory(history, OutForward)] as const;
-                    yield* this.getAboveBoundsFeeIncreaseAction(channel, currentDistance, lastOut, allOut);
+                    yield* this.getAboveBoundsFeeIncreaseAction(channel, lastOut, allOut);
                 }
             }
         } else {
@@ -506,7 +506,6 @@ export class Actions {
 
     private *getAboveBoundsFeeIncreaseAction(
         channel: IChannelStats,
-        currentDistance: number,
         lastOut: Readonly<OutForward>,
         allOut: DeepReadonly<OutForward[]>,
     ) {
@@ -537,7 +536,9 @@ export class Actions {
             if (ratio > this.config.minFeeIncreaseDistance) {
                 // We only increase the fee to degree that the total outflows in this channel were caused by
                 // incoming forwards into above bounds channels and the current target balance distance.
-                const increaseFraction = (ratio - this.config.minFeeIncreaseDistance) * Math.abs(currentDistance);
+                const increaseFraction =
+                    (ratio - this.config.minFeeIncreaseDistance) * Math.abs(this.getCurrentDistance(channel));
+
                 const feeRate = Actions.getChannelFeeRate(lastOut, channel);
                 const newFeeRate = Math.min(Math.round(feeRate * (1 + increaseFraction)), this.config.maxFeeRate);
 
