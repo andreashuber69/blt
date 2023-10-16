@@ -198,35 +198,20 @@ export class Actions {
         yield* this.getFeeActions();
     }
 
-    private static getChannelBalanceAction(
-        // eslint-disable-next-line @typescript-eslint/naming-convention
-        { properties: { id, partnerAlias, capacity, local_balance }, inForwards, outForwards }: IChannelStats,
-        {
-            minChannelBalanceFraction,
-            minRebalanceDistance,
-            minChannelForwards,
-            largestForwardMarginFraction,
-            days,
-        }: Config,
-    ): Action {
+    private static getChannelBalanceAction(channel: IChannelStats, config: Config): Action {
+        const { properties, inForwards, outForwards } = channel;
+        const { id, partnerAlias: alias, capacity, local_balance: actual } = properties;
+
+        const {
+            minChannelBalanceFraction, minRebalanceDistance, minChannelForwards, largestForwardMarginFraction, days,
+        } = config;
+
         const createAction = (targetBalance: number, reason: string): Action => {
             const target = Math.round(targetBalance);
-
-            return {
-                entity: "channel",
-                id,
-                alias: partnerAlias,
-                priority: this.getPriority(
-                    2,
-                    this.getTargetBalanceDistance(local_balance, target, capacity),
-                    minRebalanceDistance,
-                ),
-                variable: "balance",
-                actual: local_balance,
-                target,
-                max: capacity,
-                reason,
-            };
+            const distance = this.getTargetBalanceDistance(actual, target, capacity);
+            const priority = this.getPriority(2, distance, minRebalanceDistance);
+            const max = capacity;
+            return { entity: "channel", id, alias, priority, variable: "balance", actual, target, max, reason };
         };
 
         const optimalBalance =
@@ -241,15 +226,12 @@ export class Actions {
         }
 
         const largestForwardMarginMultiplier = (1 + largestForwardMarginFraction);
-
         // What minimum balance do we need to have in the channel to accommodate the largest outgoing forward?
         // To accommodate still larger future forwards, we apply the multiplier.
         const minLargestForwardBalance = Math.round(outForwards.maxTokens * largestForwardMarginMultiplier);
-
         // What maximum balance can we have in the channel to accommodate the largest incoming forward? To
         // accommodate still larger future forwards, we apply the multiplier.
         const maxLargestForwardBalance = Math.round(capacity - (inForwards.maxTokens * largestForwardMarginMultiplier));
-
         const marginPercent = Math.round(largestForwardMarginFraction * 100);
 
         const formatted = {
