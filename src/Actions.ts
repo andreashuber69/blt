@@ -373,29 +373,28 @@ export class Actions {
     private readonly channels: ReadonlyMap<IChannelStats, Action>;
 
     private *getFeeActions() {
-        for (const channelEntry of this.channels.entries()) {
-            yield* this.getFeeAction(channelEntry);
+        for (const channel of this.channels.keys()) {
+            yield* this.getFeeAction(channel);
         }
     }
 
-    private *getFeeAction([channel, { target }]: readonly [IChannelStats, Action]) {
+    private *getFeeAction(channel: IChannelStats) {
         // eslint-disable-next-line @typescript-eslint/naming-convention
-        const { properties: { local_balance, capacity, fee_rate }, history } = channel;
-        const getDistance = (balance: number) => Actions.getTargetBalanceDistance(balance, target, capacity);
+        const { properties: { fee_rate }, history } = channel;
         const { value: lastOut } = Actions.filterHistory(history, OutForward).next();
-        const currentDistance = getDistance(local_balance);
+        const currentDistance = this.getCurrentDistance(channel);
         const { minRebalanceDistance, minFeeIncreaseDistance, maxFeeRate } = this.config;
         const isBelowBounds = currentDistance <= -minFeeIncreaseDistance;
 
         const getIncreaseAction = (partialHistory: DeepReadonly<Change[]>, timeMilliseconds: number) => {
-            const done = (c: Readonly<Change>) => getDistance(c.balance) > -minFeeIncreaseDistance;
+            const done = (c: Readonly<Change>) => this.getDistance(channel, c.balance) > -minFeeIncreaseDistance;
             const belowOutForwards = [...Actions.filterHistory(partialHistory, OutForward, done)] as const;
 
             if (!partialHistory[0] || !belowOutForwards[0]) {
                 throw new Error("Unexpected empty history or no outgoing forwards found!");
             }
 
-            const distance = getDistance(partialHistory[0].balance);
+            const distance = this.getDistance(channel, partialHistory[0].balance);
             return this.getMaxIncreaseFeeAction(channel, distance, belowOutForwards, timeMilliseconds);
         };
 
@@ -407,7 +406,7 @@ export class Actions {
                     yield action;
                 }
             } else {
-                const done = (c: Readonly<Change>) => getDistance(c.balance) <= -minFeeIncreaseDistance;
+                const done = (c: Readonly<Change>) => this.getDistance(channel, c.balance) <= -minFeeIncreaseDistance;
                 const notBelowChanges = [...Actions.filterHistory(history, Change, done)] as const;
                 const notBelowStart = notBelowChanges.at(-1)?.time ?? "";
 
