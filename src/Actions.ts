@@ -515,7 +515,6 @@ export class Actions {
         // (see assumptions) are unable to rebalance this excess balance back into this channel, which means
         // that the fee for this channel is too low.
         const inChannels = [...new Set(allOut.map((f) => f.inChannel))].
-            map((c) => this.getChannel(c)).
             // False positive, this is a user-defined type guard.
             // eslint-disable-next-line unicorn/prefer-native-coercion-functions
             filter(<T extends NonNullable<unknown>>(c: T | undefined): c is T => Boolean(c));
@@ -614,24 +613,7 @@ export class Actions {
         return false;
     }
 
-    private getChannel(channel: IChannelStats | undefined) {
-        if (channel) {
-            const action = this.channels.get(channel);
-
-            if (!action) {
-                throw new Error("Channel not found!");
-            }
-
-            return [channel, action] as const;
-        }
-
-        return undefined;
-    }
-
-    private *getAllAboveBoundsInflowStats(
-        outChannel: IChannelStats,
-        inChannels: ReadonlyArray<readonly [IChannelStats, Action]>,
-    ) {
+    private *getAllAboveBoundsInflowStats(outChannel: IChannelStats, inChannels: readonly IChannelStats[]) {
         for (const inChannel of inChannels) {
             yield* this.getAboveBoundsInflowStats(outChannel, inChannel);
         }
@@ -696,22 +678,14 @@ export class Actions {
         return false;
     }
 
-    private *getAboveBoundsInflowStats(
-        forOutChannel: IChannelStats,
-        [
-            // eslint-disable-next-line @typescript-eslint/naming-convention
-            { properties: { id, partnerAlias: rawAlias, local_balance, capacity }, history },
-            { target },
-        ]: readonly [
-            IChannelStats,
-            Action,
-        ],
-    ) {
-        const getDistance = (balance: number) => Actions.getTargetBalanceDistance(balance, target, capacity);
-        const currentDistance = getDistance(local_balance);
+    private *getAboveBoundsInflowStats(forOutChannel: IChannelStats, inChannel: IChannelStats) {
+        const currentDistance = this.getCurrentDistance(inChannel);
 
         if (currentDistance >= this.config.minFeeIncreaseDistance) {
-            const done = (c: Readonly<Change>) => getDistance(c.balance) < this.config.minFeeIncreaseDistance;
+            const done =
+                (c: Readonly<Change>) => this.getDistance(inChannel, c.balance) < this.config.minFeeIncreaseDistance;
+
+            const { history, properties: { id, partnerAlias: rawAlias } } = inChannel;
             let earliest = Date.now();
             let latest = 0;
             let channel = 0;
@@ -735,5 +709,19 @@ export class Actions {
                 yield { name, currentDistance, earliest, latest, channel } as const;
             }
         }
+    }
+
+    private getCurrentDistance(channel: IChannelStats) {
+        return this.getDistance(channel, channel.properties.local_balance);
+    }
+
+    private getDistance(channel: IChannelStats, balance: number) {
+        const { target } = this.channels.get(channel) ?? {};
+
+        if (!target) {
+            throw new Error("Channel not found!");
+        }
+
+        return Actions.getTargetBalanceDistance(balance, target, channel.properties.capacity);
     }
 }
