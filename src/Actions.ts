@@ -571,23 +571,11 @@ export class Actions {
         return isRecent ? rawFraction : rawFraction * elapsedDays / this.config.days;
     }
 
-    private createFeeAction(
+    private createFeeAction(channel: IChannelStats, target: number, reason: string): Action {
         // eslint-disable-next-line @typescript-eslint/naming-convention
-        { properties: { id, partnerAlias, fee_rate } }: IChannelStats,
-        target: number,
-        reason: string,
-    ): Action {
-        return {
-            entity: "channel",
-            id,
-            alias: partnerAlias,
-            priority: 1,
-            variable: "feeRate",
-            actual: fee_rate,
-            target,
-            max: this.config.maxFeeRate,
-            reason,
-        };
+        const { properties: { id, partnerAlias: alias, fee_rate: actual } } = channel;
+        const max = this.config.maxFeeRate;
+        return { entity: "channel", id, alias, priority: 1, variable: "feeRate", actual, target, max, reason };
     }
 
     private *createFeeDecreaseAction(
