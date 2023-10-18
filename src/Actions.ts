@@ -588,12 +588,11 @@ export class Actions {
 
     private getMinFeeRate(channel: IChannelStats, reason: string) {
         const { history, properties: { partnerFeeRate } } = channel;
+        let count = 0;
+        const done = (c: Readonly<Change>) => c instanceof InRebalance && ++count === 3;
 
-        // TODO: use only the most recent in rebalances
-        const minRebalanceRates = [...Actions.filterHistory(history, InRebalance)].
-            map((r) => Actions.getFeeRate(r.fee, r.amount)).
-            sort((a, b) => a - b).
-            slice(0, 3);
+        const minRebalanceRates = [...Actions.filterHistory(history, InRebalance, done)].
+            map((r) => Actions.getFeeRate(r.fee, r.amount));
 
         const rebalanceRate = minRebalanceRates.reduce((p, c) => p + c, 0) / minRebalanceRates.length;
 
@@ -608,7 +607,7 @@ export class Actions {
                     minReason:
                         `${reason} At least one rebalance in transaction has been necessary in the last ` +
                         `${this.config.days} days, which is why the fee rate should not currently be lowered below ` +
-                        "the minimal rebalancing cost.",
+                        "the recent rebalancing cost.",
                 } as const;
             }
 
@@ -617,7 +616,7 @@ export class Actions {
                 minReason:
                     `${reason} At least one rebalance in transaction has been necessary in the last ` +
                     `${this.config.days} days, which is why the fee rate should not currently be lowered below the ` +
-                    "partner fee rate (which is currently higher than the cost of the past rebalances).",
+                    "partner fee rate (which is currently higher than the cost of recent rebalances).",
             } as const;
         }
 
