@@ -85,14 +85,37 @@ export interface ActionsConfig {
 }
 
 export interface Action {
+    /** To what entity does this apply? */
     readonly entity: "channel" | "node";
+
+    /** The standard id of the channel, if {@linkcode Action.entity} equals `"channel"`. */
     readonly id?: string;
+
+    /** The alias of the channel partner (if set), if {@linkcode Action.entity} equals `"channel"`. */
     readonly alias?: string | undefined;
+
+    /**
+     * The priority of the action, the higher the number the sooner this action should be implemented. If the priority
+     * equals 0, no action should be taken and the reason explains why.
+     */
     readonly priority: number;
+
+    /** The affected variable. */
     readonly variable: string;
+
+    /** The current value of the variable. */
     readonly actual: number;
+
+    /** The target value of the variable. */
     readonly target: number;
+
+    /** The maximum value of the variable. */
     readonly max: number;
+
+    /**
+     * The reason why the action should be taken, if {@linkcode Action.priority} > 0. If {@linkcode Action.priority}
+     * = 0, why no action is currently necessary.
+     */
     readonly reason: string;
 }
 
