@@ -2,15 +2,15 @@
 import type { IChannelStats, SelfChange } from "./ChannelStats.js";
 import { Change, InForward, InRebalance, OutForward } from "./ChannelStats.js";
 import type { DeepReadonly } from "./DeepReadonly.js";
+import { getDays } from "./info/getDays.js";
+import { getMilliseconds } from "./info/getMilliseconds.js";
 import type { YieldType } from "./lightning/YieldType.js";
 import type { INodeStats } from "./NodeStats.js";
 
 type Config = ActionsConfig & { readonly days: number };
 
 const formatSats = (sats: number) => `${Math.round(sats).toLocaleString()}sats`;
-
-const formatDaysAgo = (isoDate: string) =>
-    `${((Date.now() - Date.parse(isoDate)) / 24 / 60 / 60 / 1000).toFixed(1)} days ago`;
+const formatDaysAgo = (isoDate: string) => `${getDays(Date.now() - Date.parse(isoDate)).toFixed(1)} days ago`;
 
 /**
  * Exposes various configuration variables that are used by {@linkcode Actions.get} to propose changes.
@@ -551,7 +551,7 @@ export class Actions {
     }
 
     private *getNoForwardsFeeAction(channel: IChannelStats, currentDistance: number, feeRate: number) {
-        if (Date.now() - Date.parse(channel.properties.openedAt) >= this.config.days * 24 * 60 * 60 * 1000) {
+        if (Date.now() - Date.parse(channel.properties.openedAt) >= getMilliseconds(this.config.days)) {
             const reason =
                 `The current distance from the target balance is ${currentDistance.toFixed(2)} and no outgoing ` +
                 `forwards have been observed in the last ${this.config.days} days.`;
@@ -562,7 +562,7 @@ export class Actions {
 
     private getIncreaseFraction(elapsedMilliseconds: number, rawFraction: number) {
         const isRecent = elapsedMilliseconds < 5 * 60 * 1000;
-        const elapsedDays = elapsedMilliseconds / 24 / 60 / 60 / 1000 * this.config.feeIncreaseMultiplier;
+        const elapsedDays = getDays(elapsedMilliseconds) * this.config.feeIncreaseMultiplier;
         return isRecent ? rawFraction : rawFraction * elapsedDays / this.config.days;
     }
 
@@ -578,7 +578,7 @@ export class Actions {
         elapsedMilliseconds: number,
         reason: string,
     ) {
-        const elapsedDays = (elapsedMilliseconds / 24 / 60 / 60 / 1000) - this.config.feeDecreaseWaitDays;
+        const elapsedDays = getDays(elapsedMilliseconds) - this.config.feeDecreaseWaitDays;
 
         if (elapsedDays > 0) {
             const decreaseFraction = elapsedDays / (this.config.days - this.config.feeDecreaseWaitDays);

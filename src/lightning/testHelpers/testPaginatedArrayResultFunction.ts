@@ -3,6 +3,7 @@ import assert from "node:assert";
 import { describe, it } from "node:test";
 import type { AuthenticatedLightningArgs, PaginationArgs } from "lightning";
 
+import { getMilliseconds } from "../../info/getMilliseconds.js";
 import type { TimeBoundElement } from "../../TimeBoundElement.js";
 import { connectLnd } from "../connectLnd.js";
 
@@ -29,7 +30,7 @@ export const testPaginatedArrayResultFunction = <
         });
 
         it("should return results of 1 day", async () => {
-            const oneDay = 24 * 60 * 60 * 1000;
+            const oneDay = getMilliseconds(1);
             const now = Date.now();
             const oneDayAgo = now - oneDay;
 

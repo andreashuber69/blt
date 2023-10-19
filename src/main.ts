@@ -6,6 +6,7 @@ import { deletePayment } from "lightning";
 
 import type { ActionsConfig } from "./Actions.js";
 import { Actions } from "./Actions.js";
+import { getMilliseconds } from "./info/getMilliseconds.js";
 import { NodeInfo } from "./info/NodeInfo.js";
 import { connectLnd } from "./lightning/connectLnd.js";
 import { getFailedPayments } from "./lightning/getFailedPayments.js";
@@ -25,7 +26,7 @@ const deleteOldFailedPayments = async (authenticatedLnd: AuthenticatedLightningA
         // eslint-disable-next-line @typescript-eslint/naming-convention
         created_after: new Date(2018, 0).toISOString(),
         // eslint-disable-next-line @typescript-eslint/naming-convention
-        created_before: new Date(Date.now() - (days * 24 * 60 * 60 * 1000)).toISOString(),
+        created_before: new Date(Date.now() - getMilliseconds(days)).toISOString(),
     };
 
     let count = 0;

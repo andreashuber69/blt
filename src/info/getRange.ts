@@ -1,4 +1,6 @@
+import { getMilliseconds } from "./getMilliseconds.js";
+
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
 const getRangeAfter = (after: Date) => ({ after: after.toISOString(), before: new Date().toISOString() });
 
-export const getRangeDays = (days: number) => getRangeAfter(new Date(Date.now() - (days * 24 * 60 * 60 * 1000)));
+export const getRangeDays = (days: number) => getRangeAfter(new Date(Date.now() - getMilliseconds(days)));
