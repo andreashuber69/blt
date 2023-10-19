@@ -601,22 +601,22 @@ export class Actions {
             // below the cost of those rebalances or the current partner fee rate, whichever is higher
             const realPartnerFeeRate = partnerFeeRate ?? 0;
 
+            const reasonPrefix =
+                `${reason} At least one rebalance in transaction has been necessary in the last ${this.config.days} ` +
+                "days, which is why the fee rate should not currently be lowered below the";
+
             if (rebalanceRate >= realPartnerFeeRate) {
                 return {
                     minFeeRate: rebalanceRate,
-                    minReason:
-                        `${reason} At least one rebalance in transaction has been necessary in the last ` +
-                        `${this.config.days} days, which is why the fee rate should not currently be lowered below ` +
-                        "the recent rebalancing cost.",
+                    minReason: `${reasonPrefix} fee rate paid for recent rebalances.`,
                 } as const;
             }
 
             return {
                 minFeeRate: realPartnerFeeRate,
                 minReason:
-                    `${reason} At least one rebalance in transaction has been necessary in the last ` +
-                    `${this.config.days} days, which is why the fee rate should not currently be lowered below the ` +
-                    "partner fee rate (which is currently higher than the cost of recent rebalances).",
+                    `${reasonPrefix} partner fee rate (which is currently higher than the fee rate paid for recent ` +
+                    "rebalances).",
             } as const;
         }
 
