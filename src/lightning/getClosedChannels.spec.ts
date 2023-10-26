@@ -2,4 +2,4 @@
 import { getClosedChannels } from "./getClosedChannels.js";
 import { testArrayResultFunction } from "./testHelpers/testArrayResultFunction.js";
 
-testArrayResultFunction(getClosedChannels);
+await testArrayResultFunction(getClosedChannels);

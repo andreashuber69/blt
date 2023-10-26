@@ -2,4 +2,4 @@
 import { getPayments } from "./getPayments.js";
 import { testPaginatedArrayResultFunction } from "./testHelpers/testPaginatedArrayResultFunction.js";
 
-testPaginatedArrayResultFunction(getPayments, "created_after", "created_before");
+await testPaginatedArrayResultFunction(getPayments, "created_after", "created_before");

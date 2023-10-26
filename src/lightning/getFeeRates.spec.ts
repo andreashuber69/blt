@@ -2,4 +2,4 @@
 import { getFeeRates } from "./getFeeRates.js";
 import { testArrayResultFunction } from "./testHelpers/testArrayResultFunction.js";
 
-testArrayResultFunction(getFeeRates);
+await testArrayResultFunction(getFeeRates);

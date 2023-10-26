@@ -1,4 +1,5 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
+// eslint-disable-next-line @typescript-eslint/naming-convention
 import CappedPromise from "capped-promise";
 import type { AuthenticatedLightningArgs } from "lightning";
 import { subscribeToChannels } from "lightning";

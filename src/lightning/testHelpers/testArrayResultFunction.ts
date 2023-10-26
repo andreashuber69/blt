@@ -5,11 +5,11 @@ import type { AuthenticatedLightningArgs } from "lightning";
 
 import { connectLnd } from "../connectLnd.js";
 
-export const testArrayResultFunction = <Return extends unknown[]>(
+export const testArrayResultFunction = async <Return extends unknown[]>(
     func: (args: AuthenticatedLightningArgs) => Promise<Return>,
 ) => {
-    describe(func.name, () => {
-        it("should return a non-empty array", async () => {
+    await describe(func.name, async () => {
+        await it("should return a non-empty array", async () => {
             assert((await func(await connectLnd())).length > 0);
         });
     });

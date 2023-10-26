@@ -2,4 +2,4 @@
 import { getForwards } from "./getForwards.js";
 import { testPaginatedArrayResultFunction } from "./testHelpers/testPaginatedArrayResultFunction.js";
 
-testPaginatedArrayResultFunction(getForwards, "after", "before");
+await testPaginatedArrayResultFunction(getForwards, "after", "before");

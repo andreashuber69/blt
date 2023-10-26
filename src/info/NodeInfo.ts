@@ -92,6 +92,7 @@ export class NodeInfo implements
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+    // eslint-disable-next-line @typescript-eslint/max-params
     private constructor(
         public readonly identity: Identity,
         public readonly channels: IRefresher<"channels", ChannelsElement[]>,

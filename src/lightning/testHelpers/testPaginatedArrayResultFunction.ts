@@ -7,7 +7,7 @@ import { getMilliseconds } from "../../info/getMilliseconds.js";
 import type { TimeBoundElement } from "../../TimeBoundElement.js";
 import { connectLnd } from "../connectLnd.js";
 
-export const testPaginatedArrayResultFunction = <
+export const testPaginatedArrayResultFunction = async <
     Element extends TimeBoundElement,
     After extends string,
     Before extends string,
@@ -16,8 +16,8 @@ export const testPaginatedArrayResultFunction = <
     after: After,
     before: Before,
 ) => {
-    describe(func.name, () => {
-        it("should yield a number of elements not higher than defined by the limit", async () => {
+    await describe(func.name, async () => {
+        await it("should yield a number of elements not higher than defined by the limit", async () => {
             const limit = 3;
             let length = 0;
 
@@ -29,7 +29,7 @@ export const testPaginatedArrayResultFunction = <
             assert(length >= 0);
         });
 
-        it("should return results of 1 day", async () => {
+        await it("should return results of 1 day", async () => {
             const oneDay = getMilliseconds(1);
             const now = Date.now();
             const oneDayAgo = now - oneDay;

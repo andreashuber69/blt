@@ -2,4 +2,4 @@
 import { getChainTransactions } from "./getChainTransactions.js";
 import { testArrayResultFunction } from "./testHelpers/testArrayResultFunction.js";
 
-testArrayResultFunction(getChainTransactions);
+await testArrayResultFunction(getChainTransactions);

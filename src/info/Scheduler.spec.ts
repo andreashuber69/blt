@@ -5,11 +5,11 @@ import { describe, it } from "node:test";
 import { Scheduler } from "./Scheduler.js";
 import { delay } from "./testHelpers/delay.js";
 
-describe(Scheduler.name, () => {
-    describe(Scheduler.prototype.call.name, () => {
+await describe(Scheduler.name, async () => {
+    await describe(Scheduler.prototype.call.name, async () => {
         const delayMilliseconds = 1000;
 
-        it("should delay execution", async () => {
+        await it("should delay execution", async () => {
             const scheduler = new Scheduler(delayMilliseconds);
             let done = false;
             const task = () => void (done = true);
@@ -19,7 +19,7 @@ describe(Scheduler.name, () => {
             assert(done);
         });
 
-        it("should not make other calls while busy", async () => {
+        await it("should not make other calls while busy", async () => {
             const scheduler = new Scheduler(delayMilliseconds);
             let count = 0;
             const task = () => void (++count);
@@ -36,7 +36,7 @@ describe(Scheduler.name, () => {
             assert(count as number === 2);
         });
 
-        it("should emit errors", async () => {
+        await it("should emit errors", async () => {
             const scheduler = new Scheduler(delayMilliseconds);
             const errorMessage = "oops!";
 

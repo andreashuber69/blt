@@ -143,7 +143,7 @@ const nodeInfo: INodeInfo = {
     ...getManagerMembers<"channels" | "forwards" | "payments">(),
 };
 
-const verifyFlow = (
+const verifyFlow = async (
     channels: ReadonlyMap<string, IChannelStats>,
     channelId: string,
     inMaxTokens: number,
@@ -152,8 +152,9 @@ const verifyFlow = (
     outMaxTokens: number,
     outCount: number,
     outTotalTokens: number,
+// eslint-disable-next-line @typescript-eslint/max-params
 ) => {
-    it(channelId, () => {
+    await it(channelId, () => {
         const channel = channels.get(channelId);
         assert(channel);
         const { inForwards, outForwards, history } = channel;
@@ -182,18 +183,18 @@ const verifyFlow = (
     });
 };
 
-describe(NodeStats.name, () => {
-    describe("channels", () => {
-        describe("should contain the correct flows", () => {
+await describe(NodeStats.name, async () => {
+    await describe("channels", async () => {
+        await describe("should contain the correct flows", async () => {
             const { channels } = NodeStats.get(nodeInfo);
 
             assert([...channels.keys()].length === nodeInfo.channels.data.length);
-            verifyFlow(channels, "0x3609x2", 43_502, 2, 79_455, 0, 0, 0);
-            verifyFlow(channels, "0x1657x1", 0, 0, 0, 61_526, 7, 338_005);
-            verifyFlow(channels, "0x3609x1", 61_533, 4, 198_265, 0, 0, 0);
-            verifyFlow(channels, "0x2091x1", 60_323, 4, 216_282, 0, 0, 0);
-            verifyFlow(channels, "0x1657x0", 0, 0, 0, 49_845, 1, 49_845);
-            verifyFlow(channels, "0x2916x2", 0, 0, 0, 58_089, 2, 106_097);
+            await verifyFlow(channels, "0x3609x2", 43_502, 2, 79_455, 0, 0, 0);
+            await verifyFlow(channels, "0x1657x1", 0, 0, 0, 61_526, 7, 338_005);
+            await verifyFlow(channels, "0x3609x1", 61_533, 4, 198_265, 0, 0, 0);
+            await verifyFlow(channels, "0x2091x1", 60_323, 4, 216_282, 0, 0, 0);
+            await verifyFlow(channels, "0x1657x0", 0, 0, 0, 49_845, 1, 49_845);
+            await verifyFlow(channels, "0x2916x2", 0, 0, 0, 58_089, 2, 106_097);
         });
     });
 });

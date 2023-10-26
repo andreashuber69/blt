@@ -2,4 +2,4 @@
 import { getChannels } from "./getChannels.js";
 import { testArrayResultFunction } from "./testHelpers/testArrayResultFunction.js";
 
-testArrayResultFunction(getChannels);
+await testArrayResultFunction(getChannels);
