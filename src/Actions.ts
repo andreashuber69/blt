@@ -585,11 +585,11 @@ export class Actions {
             const newFeeRate = Math.round(feeRate * (1 - decreaseFraction));
             const { minFeeRate, minReason } = this.getMinFeeRate(channel, reason);
 
-            if (newFeeRate <= minFeeRate) {
-                return yield* this.checkCreateAction(channel, minFeeRate, minReason);
-            }
+            yield* newFeeRate <= minFeeRate ?
+                this.checkCreateAction(channel, minFeeRate, minReason) :
+                this.checkCreateAction(channel, newFeeRate, reason);
 
-            return yield* this.checkCreateAction(channel, newFeeRate, reason);
+            return true;
         }
 
         return false;
@@ -654,10 +654,7 @@ export class Actions {
     private *checkCreateAction(channel: IChannelStats, newFeeRate: number, newReason: string) {
         if (newFeeRate < channel.properties.fee_rate) {
             yield this.createFeeAction(channel, newFeeRate, newReason);
-            return true;
         }
-
-        return false;
     }
 
     private *getAboveBoundsInflowStats(forOutChannel: IChannelStats, inChannel: IChannelStats) {
