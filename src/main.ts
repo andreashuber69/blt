@@ -79,6 +79,7 @@ while (true) {
                 minFeeIncreaseDistance: 0.3,
                 feeIncreaseMultiplier: 3,
                 feeDecreaseWaitDays: 4,
+                minFlowRatio: 0.5,
                 maxFeeRate: 2500,
             };
 

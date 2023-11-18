@@ -66,7 +66,7 @@ export interface ActionsConfig {
     readonly minFeeIncreaseDistance: number;
 
     /**
-     * Determines how fast the fee rate is raised for long term fee increases. A value of 1 means that the calculated
+     * Determines how fast the fee is raised for long term fee increases. A value of 1 means that the calculated
      * fee rate (see {@linkcode ActionsConfig.minFeeIncreaseDistance}) is only suggested after
      * {@linkcode INodeStats.days} have passed since the last forward and linearly interpolated in between. A value of
      * a least 2 is probably sensible.
@@ -79,6 +79,14 @@ export interface ActionsConfig {
      * {@linkcode ActionsConfig.feeDecreaseWaitDays}.
      */
     readonly feeDecreaseWaitDays: number;
+
+    /**
+     * The minimal ratio between inflow and outflow of a channel for fee decreases to disregard recent rebalance costs
+     * and the current partner fee rate. If the ratio is lower than this number, then the fee rate is never lowered
+     * below recent rebalance costs or the current partner fee rate (whichever is higher). If the ratio is higher than
+     * this number, the fee rate can potentially drop to zero. A value of at least 0.5 is probably sensible.
+     */
+    readonly minFlowRatio: number;
 
     /** The maximum fee rate on a channel in PPM. */
     readonly maxFeeRate: number;
@@ -584,11 +592,7 @@ export class Actions {
             const decreaseFraction = elapsedDays / (this.config.days - this.config.feeDecreaseWaitDays);
             const newFeeRate = Math.round(feeRate * (1 - decreaseFraction));
             const { minFeeRate, minReason } = this.getMinFeeRate(channel, reason);
-
-            yield* newFeeRate <= minFeeRate ?
-                this.checkCreateAction(channel, minFeeRate, minReason) :
-                this.checkCreateAction(channel, newFeeRate, reason);
-
+            yield* this.checkCreateAction(channel, Math.max(minFeeRate, newFeeRate), minReason);
             return true;
         }
 
@@ -610,7 +614,7 @@ export class Actions {
     }
 
     private getMinFeeRate(channel: IChannelStats, reason: string) {
-        const { history, properties: { partnerFeeRate } } = channel;
+        const { inForwards, outForwards, history, properties: { partnerFeeRate } } = channel;
         let count = 0;
         const done = (c: Readonly<Change>) => c instanceof InRebalance && ++count === 3;
 
@@ -618,36 +622,47 @@ export class Actions {
             map((r) => Actions.getFeeRate(r.fee, r.amount));
 
         const rebalanceRate = minRebalanceRates.reduce((p, c) => p + c, 0) / minRebalanceRates.length;
+        const flowRatio = inForwards.totalTokens / outForwards.totalTokens;
 
-        if (Number.isFinite(rebalanceRate)) {
-            // We only get here if there are any in rebalances in the history, which means we cannot reduce the fees
-            // below the cost of those rebalances or the current partner fee rate, whichever is higher
-            const realPartnerFeeRate = partnerFeeRate ?? 0;
-
-            const reasonPrefix =
-                `${reason} At least one rebalance in transaction has been necessary in the last ${this.config.days} ` +
-                "days, which is why the fee rate should not currently be lowered below the";
-
-            if (rebalanceRate >= realPartnerFeeRate) {
-                return {
-                    minFeeRate: rebalanceRate,
-                    minReason: `${reasonPrefix} fee rate paid for recent rebalances.`,
-                } as const;
-            }
-
+        if (!Number.isFinite(rebalanceRate)) {
             return {
-                minFeeRate: realPartnerFeeRate,
+                minFeeRate: 0,
                 minReason:
-                    `${reasonPrefix} partner fee rate (which is currently higher than the fee rate paid for recent ` +
-                    "rebalances).",
+                    `${reason} No rebalance in transactions were necessary in the last ${this.config.days} days` +
+                    ", so the lowest sensible fee rate is 0.",
+            } as const;
+        }
+
+        // The rebalance rate (or partner fee rate) should only be taken as a lower bound for the fee rate if the ratio
+        // of inflows and outflows is below the minimum flow ratio. Otherwise, we should be able to set the fee rate
+        // such that an equilibrium is reached.
+        if (!Number.isFinite(flowRatio) || (flowRatio > this.config.minFlowRatio)) {
+            return {
+                minFeeRate: 0,
+                minReason:
+                    `${reason} In the last ${this.config.days} days, the ratio between inflows and outflows was ` +
+                    `above the minimum of ${this.config.minFlowRatio}, so the lowest sensible fee rate is 0.`,
+            } as const;
+        }
+
+        const realPartnerFeeRate = partnerFeeRate ?? 0;
+
+        const reasonPrefix =
+            `${reason} With a ratio of ${flowRatio.toFixed(2)} between inflows and outflows and the necessity of ` +
+            `rebalancing in the last ${this.config.days} days, the lowest sensible fee rate is the `;
+
+        if (rebalanceRate >= realPartnerFeeRate) {
+            return {
+                minFeeRate: rebalanceRate,
+                minReason: `${reasonPrefix} average of ${rebalanceRate}ppm paid for the most recent in rebalances.`,
             } as const;
         }
 
         return {
-            minFeeRate: 0,
+            minFeeRate: realPartnerFeeRate,
             minReason:
-                `${reason} No rebalance in transactions were necessary in the last ${this.config.days}, ` +
-                "so the fee rate can be lowered below the partner fee rate.",
+                `${reasonPrefix} partner fee rate of ${realPartnerFeeRate}ppm (which is currently higher than the ` +
+                "fee rate paid for most recent rebalances).",
         } as const;
     }
 
