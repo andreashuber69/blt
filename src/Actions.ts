@@ -81,12 +81,13 @@ export interface ActionsConfig {
     readonly feeDecreaseWaitDays: number;
 
     /**
-     * The minimal ratio between inflow and outflow of a channel for fee decreases to disregard recent rebalance costs
-     * and the current partner fee rate. If the ratio is lower than this number, then the fee rate is never lowered
-     * below recent rebalance costs or the current partner fee rate (whichever is higher). If the ratio is higher than
-     * this number, the fee rate can potentially drop to zero. A value of at least 0.5 is probably sensible.
+     * The minimal inflow expressed as a fraction of the total flow a channel must have for fee decreases to disregard
+     * recent rebalance costs and the current partner fee rate. If the fraction is lower than this number, then the fee
+     * rate is never lowered below recent rebalance costs or the current partner fee rate (whichever is higher). If the
+     * fraction is higher than this number, the fee rate can potentially drop to zero. A value of at least 0.3 is
+     * probably sensible.
      */
-    readonly minFlowRatio: number;
+    readonly minInflowFraction: number;
 
     /** The maximum fee rate on a channel in PPM. */
     readonly maxFeeRate: number;
@@ -530,16 +531,16 @@ export class Actions {
                 allOut.filter((f) => f.time >= earliestIsoTime).reduce((p, c) => p + c.amount, 0);
 
             // When all above bounds inflow of a single channel went out through this channel and this channel had
-            // no other outflows, the following ratio can be as low as config.minFeeIncreaseDistance (because the
+            // no other outflows, the following fraction can be as low as config.minFeeIncreaseDistance (because the
             // inflow is weighted with the current target balance distance of the incoming channel). When the
-            // balance of the incoming channel is as close to the capacity as possible, the ratio will approach 1.
-            const ratio = weightedAboveBoundsInflow.reduce((p, c) => p + c) / totalOutflow;
+            // balance of the incoming channel is as close to the capacity as possible, the fraction will approach 1.
+            const fraction = weightedAboveBoundsInflow.reduce((p, c) => p + c) / totalOutflow;
 
-            if (ratio > this.config.minFeeIncreaseDistance) {
+            if (fraction > this.config.minFeeIncreaseDistance) {
                 // We only increase the fee to degree that the total outflows in this channel were caused by
                 // incoming forwards into above bounds channels and the current target balance distance.
                 const increaseFraction =
-                    (ratio - this.config.minFeeIncreaseDistance) * Math.abs(this.getCurrentDistance(channel));
+                    (fraction - this.config.minFeeIncreaseDistance) * Math.abs(this.getCurrentDistance(channel));
 
                 const feeRate = Actions.getChannelFeeRate(lastOut, channel);
                 const newFeeRate = Math.min(Math.round(feeRate * (1 + increaseFraction)), this.config.maxFeeRate);
@@ -622,7 +623,6 @@ export class Actions {
             map((r) => Actions.getFeeRate(r.fee, r.amount));
 
         const rebalanceRate = minRebalanceRates.reduce((p, c) => p + c, 0) / minRebalanceRates.length;
-        const flowRatio = inForwards.totalTokens / outForwards.totalTokens;
 
         if (!Number.isFinite(rebalanceRate)) {
             return {
@@ -633,22 +633,24 @@ export class Actions {
             } as const;
         }
 
-        // The rebalance rate (or partner fee rate) should only be taken as a lower bound for the fee rate if the ratio
-        // of inflows and outflows is below the minimum flow ratio. Otherwise, we should be able to set the fee rate
-        // such that an equilibrium is reached.
-        if (!Number.isFinite(flowRatio) || (flowRatio > this.config.minFlowRatio)) {
+        const inflowFraction = inForwards.totalTokens / (outForwards.totalTokens + inForwards.totalTokens);
+
+        // The rebalance rate (or partner fee rate) should only be taken as a lower bound for the fee rate if the inflow
+        // fraction is below the minimum fraction. Otherwise, we should be able to set the fee rate such that an
+        // equilibrium is reached.
+        if (!Number.isFinite(inflowFraction) || (inflowFraction > this.config.minInflowFraction)) {
             return {
                 minFeeRate: 0,
                 minReason:
-                    `${reason} In the last ${this.config.days} days, the ratio between inflows and outflows was ` +
-                    `above the minimum of ${this.config.minFlowRatio}, so the lowest sensible fee rate is 0.`,
+                    `${reason} In the last ${this.config.days} days, the inflow fraction of the total flow was ` +
+                    `above the minimum of ${this.config.minInflowFraction}, so the lowest sensible fee rate is 0.`,
             } as const;
         }
 
         const realPartnerFeeRate = partnerFeeRate ?? 0;
 
         const reasonPrefix =
-            `${reason} With a ratio of ${flowRatio.toFixed(2)} between inflows and outflows and the necessity of ` +
+            `${reason} With a inflow fraction of ${inflowFraction.toFixed(2)} of the total flow and the necessity of ` +
             `rebalancing in the last ${this.config.days} days, the lowest sensible fee rate is the `;
 
         if (rebalanceRate >= realPartnerFeeRate) {
