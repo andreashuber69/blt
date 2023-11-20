@@ -616,13 +616,18 @@ export class Actions {
 
     private getMinFeeRate(channel: IChannelStats, reason: string) {
         const { inForwards, outForwards, history, properties: { partnerFeeRate } } = channel;
-        let count = 0;
-        const done = (c: Readonly<Change>) => c instanceof InRebalance && ++count === 3;
 
-        const minRebalanceRates = [...Actions.filterHistory(history, InRebalance, done)].
-            map((r) => Actions.getFeeRate(r.fee, r.amount));
+        const getAverageRebalanceRate = () => {
+            let count = 0;
+            const done = (c: Readonly<Change>) => c instanceof InRebalance && ++count === 3;
 
-        const rebalanceRate = minRebalanceRates.reduce((p, c) => p + c, 0) / minRebalanceRates.length;
+            const minRebalanceRates = [...Actions.filterHistory(history, InRebalance, done)].
+                map((r) => Actions.getFeeRate(r.fee, r.amount));
+
+            return minRebalanceRates.reduce((p, c) => p + c, 0) / minRebalanceRates.length;
+        };
+
+        const rebalanceRate = getAverageRebalanceRate();
 
         if (!Number.isFinite(rebalanceRate)) {
             return {
