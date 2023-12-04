@@ -25,6 +25,7 @@ const formatDaysAgo = (isoDate: string) => `${getDays(Date.now() - Date.parse(is
  * varying between 35% and 85% without any fee increases ever being proposed.
  */
 export interface ActionsConfig {
+    // TODO: Add min forward amount to count as a real forward for fee calculation
     /** The minimum number of past forwards routed through a channel to consider it as indicative for future flow. */
     readonly minChannelForwards: number;
 
@@ -384,7 +385,7 @@ export class Actions {
 
     private *getFeeAction(channel: IChannelStats) {
         // eslint-disable-next-line @typescript-eslint/naming-convention
-        const { properties: { fee_rate }, history } = channel;
+        const { properties: { fee_rate, id }, history } = channel;
         const { value: lastOut } = Actions.filterHistory(history, OutForward).next();
         const currentDistance = this.getCurrentDistance(channel);
         const { minRebalanceDistance, minFeeIncreaseDistance, maxFeeRate } = this.config;
@@ -395,7 +396,7 @@ export class Actions {
             const belowOutForwards = [...Actions.filterHistory(partialHistory, OutForward, done)] as const;
 
             if (!partialHistory[0] || !belowOutForwards[0]) {
-                throw new Error("Unexpected empty history or no outgoing forwards found!");
+                throw new Error(`Unexpected empty history or no outgoing forwards found for channel ${id}!`);
             }
 
             const distance = this.getDistance(channel, partialHistory[0].balance);
