@@ -440,6 +440,7 @@ export class Actions {
                 }
             }
         } else {
+            // TODO: Take rebalancing cost as a reasonable estimate for a fee starting point
             const newFeeRate = isBelowBounds ? maxFeeRate : 0;
 
             if (fee_rate !== newFeeRate) {
