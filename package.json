@@ -22,7 +22,7 @@
     "name": "Andreas Huber"
   },
   "engines": {
-    "node": ">=18.16"
+    "node": ">=20.10"
   },
   "type": "module",
   "main": "dist/main.js",
@@ -47,15 +47,18 @@
     "show-coverage": "vite 'coverage/lcov-report' --logLevel error --open",
     "ci": "npm run build"
   },
+  "overrides": {
+    "tsconfig-paths": "^4.2.0"
+  },
   "dependencies": {
     "capped-promise": "^1.0.3",
     "lightning": "^10.1.4",
     "tslib": "^2.6.2"
   },
   "devDependencies": {
-    "@andreashuber69/eslint-config": "^1.1.70",
-    "@tsconfig/node-lts-strictest-esm": "^18.12.1",
-    "@types/node": "^20.10.4",
+    "@andreashuber69/eslint-config": "^1.1.73",
+    "@tsconfig/node-lts": "^20.1.0",
+    "@tsconfig/strictest": "^2.0.2",
     "c8": "^8.0.1",
     "coveralls": "^3.1.1",
     "cspell": "^8.1.3",
