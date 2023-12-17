@@ -12,7 +12,7 @@
   "homepage": "https://github.com/andreashuber69/lightning-node-operator/blob/develop/README.md",
   "repository": {
     "type": "git",
-    "url": "https://github.com/andreashuber69/lightning-node-operator.git"
+    "url": "git+https://github.com/andreashuber69/lightning-node-operator.git"
   },
   "bugs": {
     "url": "https://github.com/andreashuber69/lightning-node-operator/issues"
@@ -26,7 +26,9 @@
   },
   "type": "module",
   "main": "dist/main.js",
-  "bin": "dist/main.js",
+  "bin": {
+    "lightning-node-operator": "dist/main.js"
+  },
   "files": [
     "/dist/",
     "!/dist/test/**",
