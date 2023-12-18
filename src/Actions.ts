@@ -529,7 +529,7 @@ export class Actions {
     ) {
         const reason =
             `The current distance from the target balance is ${currentDistance.toFixed(2)}, the most recent outgoing ` +
-            `forwards adding to at least ${channel.properties.capacity * this.config.minChannelBalanceFraction}sats` +
+            `forwards adding to at least ${channel.properties.capacity * this.config.minOutFeeForwardFraction}sats ` +
             `took place before ${formatDaysAgo(lastOut.time)} and paid an average of ${lastOutFeeRate}ppm.`;
 
         return yield* this.createFeeDecreaseAction(
@@ -695,14 +695,14 @@ export class Actions {
         if (rebalanceRate >= realPartnerFeeRate) {
             return {
                 minFeeRate: rebalanceRate,
-                minReason: `${reasonPrefix} average of ${rebalanceRate}ppm paid for the most recent in rebalances.`,
+                minReason: `${reasonPrefix}average of ${rebalanceRate}ppm paid for the most recent in rebalances.`,
             } as const;
         }
 
         return {
             minFeeRate: realPartnerFeeRate,
             minReason:
-                `${reasonPrefix} partner fee rate of ${realPartnerFeeRate}ppm (which is currently higher than the ` +
+                `${reasonPrefix}partner fee rate of ${realPartnerFeeRate}ppm (which is currently higher than the ` +
                 "fee rate paid for most recent rebalances).",
         } as const;
     }
