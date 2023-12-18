@@ -472,7 +472,7 @@ export class Actions {
             const addFraction = this.getIncreaseFraction(elapsedMilliseconds, rawFraction);
             // If the fee rate has been really low then the formula wouldn't increase it meaningfully. An
             // increase to at least 30 seems like a good idea.
-            const newFeeRate = Math.max(Math.round(feeRate * (1 + addFraction)), 30);
+            const newFeeRate = Math.min(Math.max(Math.round(feeRate * (1 + addFraction)), 30), this.config.maxFeeRate);
 
             const reason =
                 `The current distance from the target balance is ${currentDistance.toFixed(2)} and the outgoing ` +
