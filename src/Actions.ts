@@ -1,5 +1,5 @@
 // https://github.com/andreashuber69/lightning-node-operator/develop/README.md
-import type { IChannelStats, SelfChange } from "./ChannelStats.js";
+import type { IChannelStats } from "./ChannelStats.js";
 import { Change, InForward, InRebalance, OutForward } from "./ChannelStats.js";
 import type { DeepReadonly } from "./DeepReadonly.js";
 import { getDays } from "./info/getDays.js";
@@ -373,14 +373,6 @@ export class Actions {
         }
     }
 
-    private static getChannelFeeRate(
-        { amount, fee }: Readonly<SelfChange>,
-        // eslint-disable-next-line @typescript-eslint/naming-convention
-        { properties: { base_fee } }: IChannelStats,
-    ) {
-        return this.getFeeRate(fee - base_fee, amount);
-    }
-
     private static getFeeRate(fee: number, amount: number) {
         return Math.round(fee / Math.abs(amount) * 1_000_000);
     }
@@ -496,7 +488,7 @@ export class Actions {
         // the other hand, when the time span between the two outgoing forwards is much shorter, it is likely that
         // the immediate fee increase is higher.
         const getIncreaseFeeAction = (change: Readonly<OutForward>) => {
-            const feeRate = Actions.getChannelFeeRate(change, channel);
+            const feeRate = Actions.getFeeRate(change.fee - channel.properties.base_fee, change.amount);
             const elapsedMilliseconds = timeMilliseconds - Date.parse(change.time);
             const rawFraction = Math.abs(currentDistance) - this.config.minFeeIncreaseDistance;
             const addFraction = this.getIncreaseFraction(elapsedMilliseconds, rawFraction);
