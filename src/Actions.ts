@@ -253,7 +253,7 @@ export class Actions {
         const createAction = (targetBalance: number, reason: string): Action => {
             const target = Math.round(targetBalance);
             const distance = this.getTargetBalanceDistance(actual, target, capacity);
-            const priority = this.getPriority(2, distance, minRebalanceDistance);
+            const priority = this.getPriority(1, distance, minRebalanceDistance);
             const max = capacity;
             return { entity: "channel", id, alias, priority, variable: "balance", actual, target, max, reason };
         };
@@ -355,7 +355,7 @@ export class Actions {
     }
 
     private static getPriority(base: number, distance: number, minRebalanceDistance: number) {
-        return base ** Math.floor(Math.abs(distance) / minRebalanceDistance);
+        return base * Math.floor(Math.abs(distance) / minRebalanceDistance);
     }
 
     // Provides the already filtered history relevant to choose a new fee for the given channel.
