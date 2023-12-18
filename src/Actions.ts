@@ -25,9 +25,20 @@ const formatDaysAgo = (isoDate: string) => `${getDays(Date.now() - Date.parse(is
  * varying between 35% and 85% without any fee increases ever being proposed.
  */
 export interface ActionsConfig {
-    // TODO: Add min forward amount to count as a real forward for fee calculation
     /** The minimum number of past forwards routed through a channel to consider it as indicative for future flow. */
     readonly minChannelForwards: number;
+
+    /**
+     * The minimal fraction of the channel capacity that must be routed out to calculate the outgoing fee rate.
+     * @description The current fee rate of a channel is sometimes probed with micro-payments of e.g. 1 satoshi with a
+     * ridiculously high fee limit of say 50000ppm. The fees paid with such transactions are of course not indicative
+     * of what normal network participants are willing to pay. The last out fee rate is therefore calculated as follows:
+     * Take the last outgoing forwards that sum up to at least {@linkcode ActionsConfig.minOutFeeForwardFraction} times
+     * the channel capacity and divide the total fees paid by the total forward amount. The resulting fee rate in PPM is
+     * indicative of what real network participants were willing to pay. 0 means that only the latest outgoing forward
+     * is considered (which is not recommended, see above). A value of 0.01 is probably sensible.
+     */
+    readonly minOutFeeForwardFraction: number;
 
     /**
      * The minimal balance a channel should have as a fraction of its capacity.
@@ -377,6 +388,24 @@ export class Actions {
     private readonly config: Config;
     private readonly channels: ReadonlyMap<IChannelStats, Action>;
 
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    private getLastOutFeeRate({ properties: { capacity, base_fee }, history }: IChannelStats) {
+        const minAmount = capacity * this.config.minOutFeeForwardFraction;
+        let total = 0;
+        const done = (c: Readonly<Change>) => c instanceof OutForward && (total += c.amount) >= minAmount + c.amount;
+        const forwards = [...Actions.filterHistory(history, OutForward, done)];
+
+        if (total >= minAmount) {
+            const baseFees = forwards.length * base_fee;
+            return Actions.getFeeRate(
+                forwards.reduce((p, c) => p + c.fee, 0) - baseFees,
+                forwards.reduce((p, c) => p + c.amount, 0),
+            );
+        }
+
+        return undefined;
+    }
+
     private *getFeeActions() {
         for (const channel of this.channels.keys()) {
             yield* this.getFeeAction(channel);
@@ -387,6 +416,7 @@ export class Actions {
         // eslint-disable-next-line @typescript-eslint/naming-convention
         const { properties: { fee_rate, id }, history } = channel;
         const { value: lastOut } = Actions.filterHistory(history, OutForward).next();
+        const lastOutFeeRate = this.getLastOutFeeRate(channel);
         const currentDistance = this.getCurrentDistance(channel);
         const { minRebalanceDistance, minFeeIncreaseDistance, maxFeeRate } = this.config;
         const isBelowBounds = currentDistance <= -minFeeIncreaseDistance;
@@ -403,7 +433,7 @@ export class Actions {
             return this.getMaxIncreaseFeeAction(channel, distance, belowOutForwards, timeMilliseconds);
         };
 
-        if (lastOut) {
+        if (lastOut && lastOutFeeRate) {
             if (isBelowBounds) {
                 const action = getIncreaseAction(history, Date.now());
 
@@ -425,7 +455,7 @@ export class Actions {
                     if (yield* this.getRebalancedFeeDecreaseAction(channel, currentDistance, feeRate, notBelowStart)) {
                         return;
                     }
-                } else if (yield* this.getFeeDecreaseAction(channel, currentDistance, lastOut)) {
+                } else if (yield* this.getFeeDecreaseAction(channel, currentDistance, lastOut, lastOutFeeRate)) {
                     // The latest outgoing forward happened after the balance moved out of the below bounds zone and a
                     // fee decrease was proposed.
                     return;
@@ -436,7 +466,7 @@ export class Actions {
                 // be targeted by rebalancing.
                 if (currentDistance <= -minRebalanceDistance) {
                     const allOut = [...Actions.filterHistory(history, OutForward)] as const;
-                    yield* this.getAboveBoundsFeeIncreaseAction(channel, lastOut, allOut);
+                    yield* this.getAboveBoundsFeeIncreaseAction(channel, lastOutFeeRate, allOut);
                 }
             }
         } else {
@@ -499,19 +529,28 @@ export class Actions {
         return yield* this.createFeeDecreaseAction(channel, feeRate, Date.now() - Date.parse(notBelowStart), reason);
     }
 
-    private *getFeeDecreaseAction(channel: IChannelStats, currentDistance: number, lastOut: Readonly<OutForward>) {
-        const feeRate = Actions.getChannelFeeRate(lastOut, channel);
-
+    private *getFeeDecreaseAction(
+        channel: IChannelStats,
+        currentDistance: number,
+        lastOut: Readonly<OutForward>,
+        lastOutFeeRate: number,
+    ) {
         const reason =
-            `The current distance from the target balance is ${currentDistance.toFixed(2)}, the most ` +
-            `recent outgoing forward took place ${formatDaysAgo(lastOut.time)} and paid ${feeRate}ppm.`;
+            `The current distance from the target balance is ${currentDistance.toFixed(2)}, the most recent outgoing ` +
+            `forwards adding to at least ${channel.properties.capacity * this.config.minChannelBalanceFraction}sats` +
+            `took place before ${formatDaysAgo(lastOut.time)} and paid an average of ${lastOutFeeRate}ppm.`;
 
-        return yield* this.createFeeDecreaseAction(channel, feeRate, Date.now() - Date.parse(lastOut.time), reason);
+        return yield* this.createFeeDecreaseAction(
+            channel,
+            lastOutFeeRate,
+            Date.now() - Date.parse(lastOut.time),
+            reason,
+        );
     }
 
     private *getAboveBoundsFeeIncreaseAction(
         channel: IChannelStats,
-        lastOut: Readonly<OutForward>,
+        lastOutFeeRate: number,
         allOut: DeepReadonly<OutForward[]>,
     ) {
         // For any channel with outgoing forwards, it is possible that the majority of the outgoing flow is
@@ -544,8 +583,8 @@ export class Actions {
                 const increaseFraction =
                     (fraction - this.config.minFeeIncreaseDistance) * Math.abs(this.getCurrentDistance(channel));
 
-                const feeRate = Actions.getChannelFeeRate(lastOut, channel);
-                const newFeeRate = Math.min(Math.round(feeRate * (1 + increaseFraction)), this.config.maxFeeRate);
+                const newFeeRate =
+                    Math.min(Math.round(lastOutFeeRate * (1 + increaseFraction)), this.config.maxFeeRate);
 
                 if (newFeeRate > channel.properties.fee_rate) {
                     const aboveBoundsInflow = inflowStats.map((i) => i.channel).reduce((p, c) => p + c);
@@ -564,8 +603,9 @@ export class Actions {
     private *getNoForwardsFeeAction(channel: IChannelStats, currentDistance: number, feeRate: number) {
         if (Date.now() - Date.parse(channel.properties.openedAt) >= getMilliseconds(this.config.days)) {
             const reason =
-                `The current distance from the target balance is ${currentDistance.toFixed(2)} and no outgoing ` +
-                `forwards have been observed in the last ${this.config.days} days.`;
+                `The current distance from the target balance is ${currentDistance.toFixed(2)} and less than ` +
+                `${this.config.minOutFeeForwardFraction * channel.properties.capacity}sats of outgoing forwards ` +
+                `have been observed in the last ${this.config.days} days.`;
 
             yield this.createFeeAction(channel, feeRate, reason);
         }

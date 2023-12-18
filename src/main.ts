@@ -73,6 +73,7 @@ while (true) {
 
             const config: ActionsConfig = {
                 minChannelForwards: 20,
+                minOutFeeForwardFraction: 0.01,
                 minChannelBalanceFraction: 0.25,
                 minRebalanceDistance: 0.05,
                 largestForwardMarginFraction: 0.1,
