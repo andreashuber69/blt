@@ -345,7 +345,7 @@ export class Actions {
     }
 
     private static *filterBalanceAction(action: Action) {
-        if (action.priority > 1) {
+        if (action.priority > 0) {
             yield action;
         }
     }
@@ -530,7 +530,7 @@ export class Actions {
         const reason =
             `The current distance from the target balance is ${currentDistance.toFixed(2)}, the most recent outgoing ` +
             `forwards adding to at least ${channel.properties.capacity * this.config.minOutFeeForwardFraction}sats ` +
-            `took place before ${formatDaysAgo(lastOut.time)} and paid an average of ${lastOutFeeRate}ppm.`;
+            `took place ${formatDaysAgo(lastOut.time)} and paid an average of ${lastOutFeeRate}ppm.`;
 
         return yield* this.createFeeDecreaseAction(
             channel,
@@ -580,11 +580,11 @@ export class Actions {
 
                 if (newFeeRate > channel.properties.fee_rate) {
                     const aboveBoundsInflow = inflowStats.map((i) => i.channel).reduce((p, c) => p + c);
+                    const formattedStats = inflowStats.map((i) => this.getChannelStats(i, totalOutflow)).join("\n");
 
                     const reason =
                         `Total forwards of ${formatSats(aboveBoundsInflow)} incoming from above bounds channels ` +
-                        "contributed to the total outflow from this channel as follows:\n" +
-                        `${inflowStats.map((i) => this.getChannelStats(i, totalOutflow)).join("\n")}`;
+                        `contributed to the total outflow from this channel as follows:\n${formattedStats}`;
 
                     yield this.createFeeAction(channel, newFeeRate, reason);
                 }
