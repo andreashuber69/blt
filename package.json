@@ -54,16 +54,16 @@
   },
   "dependencies": {
     "capped-promise": "^1.0.3",
-    "lightning": "^10.2.0",
+    "lightning": "^10.2.1",
     "tslib": "^2.6.2"
   },
   "devDependencies": {
-    "@andreashuber69/eslint-config": "^1.1.76",
+    "@andreashuber69/eslint-config": "^1.1.77",
     "@tsconfig/node-lts": "^20.1.0",
     "@tsconfig/strictest": "^2.0.2",
     "c8": "^8.0.1",
     "coveralls": "^3.1.1",
-    "cspell": "^8.2.1",
+    "cspell": "^8.2.3",
     "markdownlint-cli": "^0.38.0",
     "tsx": "^4.7.0",
     "typedoc": "^0.25.4",
