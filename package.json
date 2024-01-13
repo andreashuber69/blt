@@ -49,9 +49,6 @@
     "show-coverage": "vite 'coverage/lcov-report' --logLevel error --open",
     "ci": "npm run build"
   },
-  "overrides": {
-    "tsconfig-paths": "^4.2.0"
-  },
   "dependencies": {
     "capped-promise": "^1.0.3",
     "lightning": "^10.2.1",
