@@ -17,6 +17,7 @@
     "typescript"
   ],
   "ignorePaths": [
+    "/cc-test-reporter",
     "/code-doc/**",
     "/coverage/**",
     "/dist/**",
