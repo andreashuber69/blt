@@ -2,8 +2,8 @@
   Lightning Node Operator
 </h1>
 <p align="center">
-  <a href="https://travis-ci.com/github/andreashuber69/lightning-node-operator">
-    <img src="https://travis-ci.com/andreashuber69/lightning-node-operator.svg?branch=master" alt="Build">
+  <a href="https://github.com/andreashuber69/lightning-node-operator/actions/workflows/ci.yml">
+    <img src="https://github.com/andreashuber69/lightning-node-operator/actions/workflows/ci.yml/badge.svg" alt="CI">
   </a>
   <a href="https://github.com/andreashuber69/lightning-node-operator/issues">
     <img src="https://img.shields.io/github/issues-raw/andreashuber69/lightning-node-operator.svg" alt="Issues">
