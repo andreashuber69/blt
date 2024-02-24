@@ -54,12 +54,12 @@
     "finish-release": "git flow release finish -p -m \"Finish release\" v`cat package.json | jq -r '.version'`"
   },
   "dependencies": {
-    "capped-promise": "^1.0.3",
-    "lightning": "^10.6.0",
+    "capped-promise": "^1.0.4",
+    "lightning": "^10.6.1",
     "tslib": "^2.6.2"
   },
   "devDependencies": {
-    "@andreashuber69/eslint-config": "^1.1.90",
+    "@andreashuber69/eslint-config": "^1.1.92",
     "@tsconfig/node-lts": "^20.1.1",
     "@tsconfig/strictest": "^2.0.3",
     "c8": "^9.1.0",
