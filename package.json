@@ -59,16 +59,16 @@
     "tslib": "^2.6.2"
   },
   "devDependencies": {
-    "@andreashuber69/eslint-config": "^1.1.92",
+    "@andreashuber69/eslint-config": "^1.1.94",
     "@tsconfig/node-lts": "^20.1.1",
     "@tsconfig/strictest": "^2.0.3",
     "c8": "^9.1.0",
     "coveralls": "^3.1.1",
-    "cspell": "^8.4.1",
+    "cspell": "^8.6.0",
     "markdownlint-cli": "^0.39.0",
     "tsx": "^4.7.1",
-    "typedoc": "^0.25.8",
+    "typedoc": "^0.25.11",
     "typescript": "^5.3.3",
-    "vite": "^5.1.4"
+    "vite": "^5.1.5"
   }
 }
