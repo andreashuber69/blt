@@ -39,7 +39,7 @@
   "scripts": {
     "start": "tsc && node .",
     "prelint": "cspell '**' && markdownlint '**/*.md'",
-    "lint": "eslint --report-unused-disable-directives 'src/**'",
+    "lint": "eslint --ext .ts,.cjs --report-unused-disable-directives .",
     "prebuild": "npm run lint",
     "build": "tsc",
     "build-code-doc": "typedoc 'src/**/*.ts' --excludePrivate --out 'code-doc'",
