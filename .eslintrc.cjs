@@ -5,5 +5,5 @@ module.exports = {
         node: true,
     },
     extends: ["@andreashuber69"],
-    ignorePatterns: ["/coverage/", "/dist/", "/code-doc"],
+    ignorePatterns: ["/coverage/", "/dist/", "/code-doc/"],
 };
