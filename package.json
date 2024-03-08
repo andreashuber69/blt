@@ -37,11 +37,11 @@
     "/*.md"
   ],
   "scripts": {
-    "start": "tsc && node .",
+    "start": "tsx './src/main.ts'",
     "prelint": "cspell '**' && markdownlint '**/*.md'",
     "lint": "eslint --ext .ts,.cjs --report-unused-disable-directives .",
     "prebuild": "npm run lint",
-    "build": "tsc",
+    "build": "tsc -p './src/tsconfig.json'",
     "build-code-doc": "typedoc 'src/**/*.ts' --excludePrivate --out 'code-doc'",
     "show-code-doc": "vite 'code-doc' --logLevel error --open",
     "test-no-coverage": "node --import tsx --test src/*.spec.ts src/lightning/*.spec.ts src/info/*.spec.ts",
