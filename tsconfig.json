@@ -10,6 +10,6 @@
   },
   "include": [
     "./.eslintrc.cjs",
-    "./*.ts",
+    "./*.ts"
   ]
 }
