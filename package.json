@@ -39,19 +39,18 @@
   "scripts": {
     "start": "tsx './src/main.ts'",
     "prelint": "cspell '**' && markdownlint '**/*.md'",
-    "lint": "eslint --ext .ts,.cjs --report-unused-disable-directives .",
-    "prebuild": "npm run lint",
+    "lint": "eslint --ext .cjs,.ts --report-unused-disable-directives '.'",
     "build": "tsc -p './src/tsconfig.json'",
     "build-code-doc": "typedoc 'src/**/*.ts' --excludePrivate --out 'code-doc'",
     "show-code-doc": "vite 'code-doc' --logLevel error --open",
     "test-no-coverage": "node --import tsx --test src/*.spec.ts src/lightning/*.spec.ts src/info/*.spec.ts",
     "test": "c8 --exclude 'src/*.spec.ts' --exclude 'src/testHelpers/*' --reporter=text --reporter=lcov npm run test-no-coverage",
     "show-coverage": "vite 'coverage/lcov-report' --logLevel error --open",
-    "ci": "npm run build",
+    "ci": "npm run lint && npm run build",
     "preversion": "git checkout develop && git push && git pull",
     "version": "git flow release start v`cat package.json | jq -r '.version' && git stash push >/dev/null 2>&1` && git stash pop",
-    "postversion": "git commit -a -m \"Start release v`cat package.json | jq -r '.version'`\"",
-    "finish-release": "git flow release finish -p -m \"Finish release\" v`cat package.json | jq -r '.version'`"
+    "postversion": "git commit -a -m \"chore: start release v`cat package.json | jq -r '.version'`\"",
+    "finish-release": "git flow release finish -p -m \"chore: finish release\" v`cat package.json | jq -r '.version'`"
   },
   "dependencies": {
     "capped-promise": "^1.0.4",
