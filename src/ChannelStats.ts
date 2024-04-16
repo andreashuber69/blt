@@ -2,7 +2,7 @@
 import type { DeepReadonly } from "./DeepReadonly.js";
 import type { ChannelsElement } from "./info/ChannelsRefresher.js";
 
-type ChannelProps = "base_fee" | "capacity" | "fee_rate" | "id" | "local_balance";
+export type ChannelProps = "base_fee" | "capacity" | "fee_rate" | "id" | "local_balance";
 
 /** Represents a balance change in a channel. */
 export abstract class Change {

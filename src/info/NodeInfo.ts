@@ -22,7 +22,7 @@ const refresherNames = ["channels", "closedChannels", "nodes", "forwards", "paym
 
 type RefresherName = (typeof refresherNames)[number];
 
-type RefresherProperty<Name extends RefresherName, Data> = {
+export type RefresherProperty<Name extends RefresherName, Data> = {
     readonly [name in Name]: IRefresher<Name, Data>;
 };
 

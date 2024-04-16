@@ -41,7 +41,7 @@
     "prelint": "cspell '**' && markdownlint '**/*.md'",
     "lint": "eslint --ext .cjs,.ts --report-unused-disable-directives '.'",
     "build": "tsc -p './src/tsconfig.json'",
-    "build-code-doc": "typedoc 'src/**/*.ts' --excludePrivate --out 'code-doc'",
+    "build-code-doc": "typedoc 'src/**/*.ts' --tsconfig './src/tsconfig.json' --excludePrivate --out 'code-doc'",
     "show-code-doc": "vite 'code-doc' --logLevel error --open",
     "test-no-coverage": "node --import tsx --test src/*.spec.ts src/lightning/*.spec.ts src/info/*.spec.ts",
     "test": "c8 --exclude 'src/*.spec.ts' --exclude 'src/testHelpers/*' --reporter=text --reporter=lcov npm run test-no-coverage",
