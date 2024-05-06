@@ -40,7 +40,7 @@
     "start": "tsx './src/main.ts'",
     "prelint": "cspell '**' && markdownlint '**/*.md'",
     "lint": "eslint --ext .cjs,.ts --report-unused-disable-directives '.'",
-    "build": "tsc -p './src/tsconfig.json'",
+    "build": "tsc -p './src'",
     "build-code-doc": "typedoc 'src/**/*.ts' --tsconfig './src/tsconfig.json' --excludePrivate --out 'code-doc'",
     "show-code-doc": "vite 'code-doc' --logLevel error --open",
     "test-no-coverage": "node --import tsx --test src/*.spec.ts src/lightning/*.spec.ts src/info/*.spec.ts",
